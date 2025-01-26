@@ -156,7 +156,7 @@ CanReturnError(size_t) memorySize(Memory memory) {
 }
 
 
-CanReturnError(void) memoryCopy(Memory destination, const Memory source, size_t size) {
+CanReturnError(void) memoryCopy(Memory source, const Memory destination, size_t sizeInBytes) {
     voidResult result;
 
     if (destination == NULL || source == NULL) {
@@ -165,20 +165,20 @@ CanReturnError(void) memoryCopy(Memory destination, const Memory source, size_t 
     }
 
     // Check for overlap
-    if ((destination < source && destination + size > source) ||
-        (source < destination && source + size > destination)) {
+    if ((destination < source && destination + sizeInBytes > source) ||
+        (source < destination && source + sizeInBytes > destination)) {
         // Handle overlapping memory regions
         uint8_t* dest = (uint8_t*)destination;
         const uint8_t* src = (const uint8_t*)source;
 
         if (dest > src) {
             // Copy from end to start
-            for (size_t i = size; i > 0; --i) {
+            for (size_t i = sizeInBytes; i > 0; --i) {
                 dest[i-1] = src[i-1];
             }
         } else {
             // Copy from start to end
-            for (size_t i = 0; i < size; ++i) {
+            for (size_t i = 0; i < sizeInBytes; ++i) {
                 dest[i] = src[i];
             }
         }
@@ -188,17 +188,17 @@ CanReturnError(void) memoryCopy(Memory destination, const Memory source, size_t 
         const uint8_t* src = (const uint8_t*)source;
 
         // Copy 8 bytes at a time if possible
-        while (size >= 8) {
+        while (sizeInBytes >= 8) {
             *(uint64_t*)dest = *(const uint64_t*)src;
             dest += 8;
             src += 8;
-            size -= 8;
+            sizeInBytes -= 8;
         }
 
         // Copy remaining bytes
-        while (size > 0) {
+        while (sizeInBytes > 0) {
             *dest++ = *src++;
-            --size;
+            --sizeInBytes;
         }
     }
 
