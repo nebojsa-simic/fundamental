@@ -7,15 +7,15 @@
 #define ERROR_CODE_NO_ERROR 0;
 
 typedef struct {
-    uint8_t code;
-    const char* message;
+	uint8_t code;
+	const char *message;
 } ErrorResult;
 
-#define DEFINE_RESULT_TYPE(T) \
-typedef struct { \
-    T value; \
-    ErrorResult error; \
-} T##Result
+#define DEFINE_RESULT_TYPE(T)      \
+	typedef struct {           \
+		T value;           \
+		ErrorResult error; \
+	} T##Result
 
 // Define result types for common simple types
 DEFINE_RESULT_TYPE(char);
@@ -33,24 +33,27 @@ DEFINE_RESULT_TYPE(size_t);
 
 // Special case for void
 typedef struct {
-    ErrorResult error;
+	ErrorResult error;
 } voidResult;
 
 // Indicates that the function returns an error
 #define CanReturnError(...) __VA_ARGS__##Result
 
 // Helper functions for error creation and checking
-static inline ErrorResult errorResultCreate(uint8_t code, const char* message) {
-    ErrorResult result = {code, message};
-    return result;
+static inline ErrorResult errorResultCreate(uint8_t code, const char *message)
+{
+	ErrorResult result = { code, message };
+	return result;
 }
 
-static inline int errorResultOccurred(ErrorResult error) {
-    return error.code != ERROR_CODE_NO_ERROR;
+static inline int errorResultOccurred(ErrorResult error)
+{
+	return error.code != ERROR_CODE_NO_ERROR;
 }
 
-static inline const char* errorResultGetMessage(ErrorResult error) {
-    return error.message ? error.message : "No error message provided";
+static inline const char *errorResultGetMessage(ErrorResult error)
+{
+	return error.message ? error.message : "No error message provided";
 }
 
 #endif // LIBRARY_ERROR_RESULT_H
