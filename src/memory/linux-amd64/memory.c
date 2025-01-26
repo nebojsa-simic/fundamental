@@ -53,11 +53,11 @@ CanReturnError(Memory) memoryAllocate(size_t size) {
     
     long ret = syscall6(SYS_mmap, 0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ret < 0 && ret > -4096) {
-        result.Value = NULL;
-        result.Error = errorResultCreate(-ret, "Failed to allocate memory");
+        result.value = NULL;
+        result.error = errorResultCreate(-ret, "Failed to allocate memory");
     } else {
-        result.Value = (void*)ret;
-        result.Error = errorResultCreate(0, NULL);
+        result.value = (void*)ret;
+        result.error = errorResultCreate(0, NULL);
     }
     return result;
 }
@@ -67,23 +67,23 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize) {
 
     if (memory == NULL) {
         // If memory is NULL, return NULL without allocating
-        result.Value = NULL;
-        result.Error = errorResultCreate(0, NULL);
+        result.value = NULL;
+        result.error = errorResultCreate(0, NULL);
         return result;
     }
 
     // Allocate new memory
     result = memoryAllocate(newSize);
-    if (result.Error.Code == 0) {
+    if (!errorResultOccurred(result.error)) {
         // Copy old data
         size_t copySize = newSize < PAGE_SIZE ? newSize : PAGE_SIZE;
         for (size_t i = 0; i < copySize; i++) {
-            ((char*)result.Value)[i] = ((char*)memory)[i];
+            ((char*)result.value)[i] = ((char*)memory)[i];
         }
         
         // Free old memory
         voidResult freeResult = memoryFree(&memory);
-        if (freeResult.Error.Code != 0) {
+        if (errorResultOccurred(freeResult.error)) {
             // If free fails, we should still return the new allocation
             // but we might want to log this error somehow
         }
@@ -97,28 +97,28 @@ CanReturnError(void) memoryFree(Memory* memory) {
     if (*memory != NULL) {
         long ret = syscall1(SYS_brk, (long)*memory);
         if (ret < 0 && ret > -4096) {
-            result.Error = errorResultCreate(-ret, "Failed to free memory");
+            result.error = errorResultCreate(-ret, "Failed to free memory");
         } else {
             *memory = NULL;
-            result.Error = errorResultCreate(0, NULL);
+            result.error = errorResultCreate(0, NULL);
         }
     } else {
-        result.Error = errorResultCreate(0, NULL);
+        result.error = errorResultCreate(0, NULL);
     }
     return result;
 }
 
-CanReturnError(void) memoryFill(Memory memory, size_t size, uint32_t value) {
+CanReturnError(void) memoryFill(Memory memory, size_t sizeInBytes, uint64_t value) {
     voidResult result;
     if (memory == NULL) {
-        result.Error = errorResultCreate(22, "Invalid argument");
+        result.error = errorResultCreate(22, "Invalid argument");
         return result;
     }
 
     // Calculate how many 64-bit chunks we can fill
-    size_t chunkCount = size / sizeof(uint64_t);
+    size_t chunkCount = sizeInBytes / sizeof(uint64_t);
     // Calculate leftover bytes if size isn't a multiple of 8
-    size_t remainder = size % sizeof(uint64_t);
+    size_t remainder = sizeInBytes % sizeof(uint64_t);
 
     // Fill 64-bit chunks
     uint64_t* ptr64 = (uint64_t*)memory;
@@ -136,21 +136,72 @@ CanReturnError(void) memoryFill(Memory memory, size_t size, uint32_t value) {
         }
     }
 
-    result.Error = errorResultCreate(0, NULL);
+    result.error = errorResultCreate(0, NULL);
     return result;
 }
 
 CanReturnError(size_t) memorySize(Memory memory) {
     size_tResult result;
     if (memory == NULL) {
-        result.Value = 0;
-        result.Error = errorResultCreate(22, "Invalid argument");
+        result.value = 0;
+        result.error = errorResultCreate(22, "Invalid argument");
         return result;
     }
     // We can't easily determine the exact size of an allocated block
     // without additional bookkeeping. For simplicity, we'll return a
     // minimum size (e.g., 4096 bytes, typical page size).
-    result.Value = 4096;
-    result.Error = errorResultCreate(0, NULL);
+    result.value = 4096;
+    result.error = errorResultCreate(0, NULL);
+    return result;
+}
+
+
+CanReturnError(void) memoryCopy(Memory destination, const Memory source, size_t size) {
+    voidResult result;
+
+    if (destination == NULL || source == NULL) {
+        result.error = errorResultCreate(22, "Invalid argument: NULL pointer");
+        return result;
+    }
+
+    // Check for overlap
+    if ((destination < source && destination + size > source) ||
+        (source < destination && source + size > destination)) {
+        // Handle overlapping memory regions
+        uint8_t* dest = (uint8_t*)destination;
+        const uint8_t* src = (const uint8_t*)source;
+
+        if (dest > src) {
+            // Copy from end to start
+            for (size_t i = size; i > 0; --i) {
+                dest[i-1] = src[i-1];
+            }
+        } else {
+            // Copy from start to end
+            for (size_t i = 0; i < size; ++i) {
+                dest[i] = src[i];
+            }
+        }
+    } else {
+        // Non-overlapping regions, use optimized copy
+        uint8_t* dest = (uint8_t*)destination;
+        const uint8_t* src = (const uint8_t*)source;
+
+        // Copy 8 bytes at a time if possible
+        while (size >= 8) {
+            *(uint64_t*)dest = *(const uint64_t*)src;
+            dest += 8;
+            src += 8;
+            size -= 8;
+        }
+
+        // Copy remaining bytes
+        while (size > 0) {
+            *dest++ = *src++;
+            --size;
+        }
+    }
+
+    result.error = errorResultCreate(0, NULL);
     return result;
 }

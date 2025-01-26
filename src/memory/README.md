@@ -36,7 +36,7 @@ Frees a previously allocated memory block.
 - Safe to call with NULL pointer.
 - Multiple calls with the same pointer (double free) do not result in an error.
 
-### `memoryFill(Memory memory, size_t size, uint32_t value)`
+### `memoryFill(Memory memory, size_t size, uint64_t value)`
 
 Fills a memory block with a specified value.
 
@@ -78,11 +78,11 @@ Include the `memory.h` header in your project and link against the Fundamental l
 
 int main() {
     MemoryResult result = memoryAllocate(1024);
-    if (!errorResultOccurred(result.Error)) {
+    if (!errorResultOccurred(result.error)) {
         // Use the allocated memory
 
         // And free it
-        memoryFree(&result.Value);
+        memoryFree(&result.value);
     }
     return 0;
 }

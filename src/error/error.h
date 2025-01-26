@@ -7,15 +7,15 @@
 #define ERROR_CODE_NO_ERROR 0;
 
 typedef struct {
-    uint8_t Code;
-    const char* Message;
+    uint8_t code;
+    const char* message;
 } ErrorResult;
 
-#define DEFINE_RESULT_TYPE(ResultType) \
+#define DEFINE_RESULT_TYPE(T) \
 typedef struct { \
-    ResultType Value; \
-    ErrorResult Error; \
-} ResultType##Result
+    T value; \
+    ErrorResult error; \
+} T##Result
 
 // Define result types for common simple types
 DEFINE_RESULT_TYPE(char);
@@ -33,7 +33,7 @@ DEFINE_RESULT_TYPE(size_t);
 
 // Special case for void
 typedef struct {
-    ErrorResult Error;
+    ErrorResult error;
 } voidResult;
 
 // Indicates that the function returns an error
@@ -46,11 +46,11 @@ static inline ErrorResult errorResultCreate(uint8_t code, const char* message) {
 }
 
 static inline int errorResultOccurred(ErrorResult error) {
-    return error.Code != ERROR_CODE_NO_ERROR;
+    return error.code != ERROR_CODE_NO_ERROR;
 }
 
 static inline const char* errorResultGetMessage(ErrorResult error) {
-    return error.Message ? error.Message : "No error message provided";
+    return error.message ? error.message : "No error message provided";
 }
 
 #endif // LIBRARY_ERROR_RESULT_H
