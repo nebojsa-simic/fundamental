@@ -26,11 +26,6 @@ typedef struct {
 	String key;
 	StringTemplateValue value;
 } StringTemplateParam;
-// Define the corresponding error type
-DEFINE_RESULT_TYPE(String);
-DEFINE_RESULT_TYPE(StringLength);
-DEFINE_RESULT_TYPE(StringDifference);
-DEFINE_RESULT_TYPE(StringPosition);
 
 // Interface
 

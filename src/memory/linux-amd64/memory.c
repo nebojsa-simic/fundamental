@@ -40,7 +40,7 @@ static inline long syscall6(long n, long a1, long a2, long a3, long a4, long a5,
 	return ret;
 }
 
-CanReturnError(Memory) memoryAllocate(size_t size)
+CanReturnError(Memory) fun_memory_allocate(size_t size)
 {
 	MemoryResult result;
 
@@ -64,7 +64,7 @@ CanReturnError(Memory) memoryAllocate(size_t size)
 	return result;
 }
 
-CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
+CanReturnError(Memory) fun_memory_reallocate(Memory memory, size_t newSize)
 {
 	MemoryResult result;
 
@@ -76,7 +76,7 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 	}
 
 	// Allocate new memory
-	result = memoryAllocate(newSize);
+	result = fun_memory_allocate(newSize);
 	if (fun_error_is_ok(result.error)) {
 		// Copy old data
 		size_t copySize = newSize < PAGE_SIZE ? newSize : PAGE_SIZE;
@@ -85,7 +85,7 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 		}
 
 		// Free old memory
-		voidResult freeResult = memoryFree(&memory);
+		voidResult freeResult = fun_memory_free(&memory);
 		if (fun_error_is_error(freeResult.error)) {
 			// If free fails, we should still return the new allocation
 			// but we might want to log this error somehow
@@ -95,7 +95,7 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 	return result;
 }
 
-CanReturnError(void) memoryFree(Memory *memory)
+CanReturnError(void) fun_memory_free(Memory *memory)
 {
 	voidResult result;
 	if (*memory != NULL) {
@@ -113,7 +113,7 @@ CanReturnError(void) memoryFree(Memory *memory)
 }
 
 CanReturnError(void)
-	memoryFill(Memory memory, size_t sizeInBytes, uint64_t value)
+	fun_memory_fill(Memory memory, size_t sizeInBytes, uint64_t value)
 {
 	voidResult result;
 	if (memory == NULL) {
@@ -146,7 +146,7 @@ CanReturnError(void)
 	return result;
 }
 
-CanReturnError(size_t) memorySize(Memory memory)
+CanReturnError(size_t) fun_memory_size(Memory memory)
 {
 	size_tResult result;
 	if (memory == NULL) {
@@ -163,7 +163,7 @@ CanReturnError(size_t) memorySize(Memory memory)
 }
 
 CanReturnError(void)
-	memoryCopy(Memory source, const Memory destination, size_t sizeInBytes)
+	fun_memory_copy(Memory source, const Memory destination, size_t sizeInBytes)
 {
 	voidResult result;
 

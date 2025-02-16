@@ -1,7 +1,7 @@
 #include "../memory.h"
 #include <windows.h>
 
-CanReturnError(Memory) memoryAllocate(size_t size)
+CanReturnError(Memory) fun_memory_allocate(size_t size)
 {
 	MemoryResult result;
 	HANDLE hHeap = GetProcessHeap();
@@ -15,7 +15,7 @@ CanReturnError(Memory) memoryAllocate(size_t size)
 	return result;
 }
 
-CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
+CanReturnError(Memory) fun_memory_reallocate(Memory memory, size_t newSize)
 {
 	MemoryResult result;
 	HANDLE hHeap = GetProcessHeap();
@@ -29,7 +29,7 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 	return result;
 }
 
-CanReturnError(void) memoryFree(Memory *memory)
+CanReturnError(void) fun_memory_free(Memory *memory)
 {
 	voidResult result;
 	HANDLE hHeap = GetProcessHeap();
@@ -43,7 +43,7 @@ CanReturnError(void) memoryFree(Memory *memory)
 	return result;
 }
 
-CanReturnError(void) memoryFill(Memory memory, size_t size, uint64_t value)
+CanReturnError(void) fun_memory_fill(Memory memory, size_t size, uint64_t value)
 {
 	voidResult result;
 	// Validate the memory pointer
@@ -86,7 +86,7 @@ CanReturnError(void) memoryFill(Memory memory, size_t size, uint64_t value)
 	return result;
 }
 
-CanReturnError(size_t) memorySize(Memory memory)
+CanReturnError(size_t) fun_memory_size(Memory memory)
 {
 	size_tResult result;
 
@@ -109,7 +109,7 @@ CanReturnError(size_t) memorySize(Memory memory)
 	return result;
 }
 
-CanReturnError(void) memoryCopy(const Memory source, const Memory destination,
+CanReturnError(void) fun_memory_copy(const Memory source, const Memory destination,
 								size_t sizeInBytes)
 {
 	voidResult result;
