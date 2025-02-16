@@ -7,10 +7,10 @@ CanReturnError(Memory) memoryAllocate(size_t size)
 	HANDLE hHeap = GetProcessHeap();
 	result.value = HeapAlloc(hHeap, 0, size);
 	if (result.value == NULL) {
-		result.error = errorResultCreate(GetLastError(),
-						 "Failed to allocate memory");
+		result.error =
+			fun_error_result(GetLastError(), "Failed to allocate memory");
 	} else {
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 	}
 	return result;
 }
@@ -21,10 +21,10 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 	HANDLE hHeap = GetProcessHeap();
 	result.value = HeapReAlloc(hHeap, 0, memory, newSize);
 	if (result.value == NULL) {
-		result.error = errorResultCreate(GetLastError(),
-						 "Failed to reallocate memory");
+		result.error =
+			fun_error_result(GetLastError(), "Failed to reallocate memory");
 	} else {
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 	}
 	return result;
 }
@@ -34,11 +34,11 @@ CanReturnError(void) memoryFree(Memory *memory)
 	voidResult result;
 	HANDLE hHeap = GetProcessHeap();
 	if (HeapFree(hHeap, 0, *memory)) {
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 		*memory = NULL;
 	} else {
-		result.error = errorResultCreate(GetLastError(),
-						 "Failed to free memory");
+		result.error =
+			fun_error_result(GetLastError(), "Failed to free memory");
 	}
 	return result;
 }
@@ -48,16 +48,16 @@ CanReturnError(void) memoryFill(Memory memory, size_t size, uint64_t value)
 	voidResult result;
 	// Validate the memory pointer
 	if (memory == NULL) {
-		result.error = errorResultCreate(ERROR_INVALID_PARAMETER,
-						 "Invalid memory pointer");
+		result.error = fun_error_result(ERROR_INVALID_PARAMETER,
+										 "Invalid memory pointer");
 		return result;
 	}
 
 	HANDLE hHeap = GetProcessHeap();
 	// Check if the memory block is valid using HeapValidate
 	if (!HeapValidate(hHeap, 0, memory)) {
-		result.error = errorResultCreate(GetLastError(),
-						 "Invalid memory block");
+		result.error =
+			fun_error_result(GetLastError(), "Invalid memory block");
 		return result;
 	}
 
@@ -82,7 +82,7 @@ CanReturnError(void) memoryFill(Memory memory, size_t size, uint64_t value)
 		}
 	}
 
-	result.error = errorResultCreate(0, NULL);
+	result.error = ERROR_RESULT_NO_ERROR;
 	return result;
 }
 
@@ -92,9 +92,8 @@ CanReturnError(size_t) memorySize(Memory memory)
 
 	if (memory == NULL) {
 		result.value = 0;
-		result.error =
-			errorResultCreate(ERROR_INVALID_PARAMETER,
-					  "Cannot get size of NULL pointer");
+		result.error = fun_error_result(ERROR_INVALID_PARAMETER,
+										 "Cannot get size of NULL pointer");
 		return result;
 	}
 
@@ -102,29 +101,27 @@ CanReturnError(size_t) memorySize(Memory memory)
 	size_t size = HeapSize(hHeap, 0, memory);
 	if (size == (size_t)-1) {
 		result.value = 0;
-		result.error =
-			errorResultCreate(1, "Failed to get memory size");
+		result.error = fun_error_result(1, "Failed to get memory size");
 	} else {
 		result.value = size;
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 	}
 	return result;
 }
 
 CanReturnError(void) memoryCopy(const Memory source, const Memory destination,
-				size_t sizeInBytes)
+								size_t sizeInBytes)
 {
 	voidResult result;
 
 	if (destination == NULL || source == NULL) {
-		result.error =
-			errorResultCreate(22, "Invalid argument: NULL pointer");
+		result.error = fun_error_result(22, "Invalid argument: NULL pointer");
 		return result;
 	}
 
 	// Check for overlap
 	if ((destination < source && destination + sizeInBytes > source) ||
-	    (source < destination && source + sizeInBytes > destination)) {
+		(source < destination && source + sizeInBytes > destination)) {
 		// Handle overlapping memory regions
 		uint8_t *dest = (uint8_t *)destination;
 		const uint8_t *src = (const uint8_t *)source;
@@ -160,6 +157,6 @@ CanReturnError(void) memoryCopy(const Memory source, const Memory destination,
 		}
 	}
 
-	result.error = errorResultCreate(0, NULL);
+	result.error = ERROR_RESULT_NO_ERROR;
 	return result;
 }

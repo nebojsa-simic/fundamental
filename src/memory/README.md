@@ -78,7 +78,7 @@ Include the `memory.h` header in your project and link against the Fundamental l
 
 int main() {
     MemoryResult result = memoryAllocate(1024);
-    if (!errorResultOccurred(result.error)) {
+    if (fun_error_is_ok(result.error)) {
         // Use the allocated memory
 
         // And free it

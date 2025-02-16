@@ -19,24 +19,24 @@ static inline long syscall1(long n, long a1)
 {
 	long ret;
 	__asm__ __volatile__("syscall"
-			     : "=a"(ret)
-			     : "a"(n), "D"(a1)
-			     : "rcx", "r11", "memory");
+						 : "=a"(ret)
+						 : "a"(n), "D"(a1)
+						 : "rcx", "r11", "memory");
 	return ret;
 }
 
 static inline long syscall6(long n, long a1, long a2, long a3, long a4, long a5,
-			    long a6)
+							long a6)
 {
 	long ret;
 	register long r10 __asm__("r10") = a4;
 	register long r8 __asm__("r8") = a5;
 	register long r9 __asm__("r9") = a6;
 	__asm__ __volatile__("syscall"
-			     : "=a"(ret)
-			     : "a"(n), "D"(a1), "S"(a2), "d"(a3), "r"(r10),
-			       "r"(r8), "r"(r9)
-			     : "rcx", "r11", "memory");
+						 : "=a"(ret)
+						 : "a"(n), "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8),
+						   "r"(r9)
+						 : "rcx", "r11", "memory");
 	return ret;
 }
 
@@ -53,14 +53,13 @@ CanReturnError(Memory) memoryAllocate(size_t size)
 	}
 
 	long ret = syscall6(SYS_mmap, 0, size, PROT_READ | PROT_WRITE,
-			    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+						MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (ret < 0 && ret > -4096) {
 		result.value = NULL;
-		result.error =
-			errorResultCreate(-ret, "Failed to allocate memory");
+		result.error = fun_error_result(-ret, "Failed to allocate memory");
 	} else {
 		result.value = (void *)ret;
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 	}
 	return result;
 }
@@ -72,13 +71,13 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 	if (memory == NULL) {
 		// If memory is NULL, return NULL without allocating
 		result.value = NULL;
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 		return result;
 	}
 
 	// Allocate new memory
 	result = memoryAllocate(newSize);
-	if (!errorResultOccurred(result.error)) {
+	if (fun_error_is_ok(result.error)) {
 		// Copy old data
 		size_t copySize = newSize < PAGE_SIZE ? newSize : PAGE_SIZE;
 		for (size_t i = 0; i < copySize; i++) {
@@ -87,7 +86,7 @@ CanReturnError(Memory) memoryReallocate(Memory memory, size_t newSize)
 
 		// Free old memory
 		voidResult freeResult = memoryFree(&memory);
-		if (errorResultOccurred(freeResult.error)) {
+		if (fun_error_is_error(freeResult.error)) {
 			// If free fails, we should still return the new allocation
 			// but we might want to log this error somehow
 		}
@@ -102,14 +101,13 @@ CanReturnError(void) memoryFree(Memory *memory)
 	if (*memory != NULL) {
 		long ret = syscall1(SYS_brk, (long)*memory);
 		if (ret < 0 && ret > -4096) {
-			result.error = errorResultCreate(
-				-ret, "Failed to free memory");
+			result.error = fun_error_result(-ret, "Failed to free memory");
 		} else {
 			*memory = NULL;
-			result.error = errorResultCreate(0, NULL);
+			result.error = ERROR_RESULT_NO_ERROR;
 		}
 	} else {
-		result.error = errorResultCreate(0, NULL);
+		result.error = ERROR_RESULT_NO_ERROR;
 	}
 	return result;
 }
@@ -119,7 +117,7 @@ CanReturnError(void)
 {
 	voidResult result;
 	if (memory == NULL) {
-		result.error = errorResultCreate(22, "Invalid argument");
+		result.error = fun_error_result(22, "Invalid argument");
 		return result;
 	}
 
@@ -144,7 +142,7 @@ CanReturnError(void)
 		}
 	}
 
-	result.error = errorResultCreate(0, NULL);
+	result.error = ERROR_RESULT_NO_ERROR;
 	return result;
 }
 
@@ -153,14 +151,14 @@ CanReturnError(size_t) memorySize(Memory memory)
 	size_tResult result;
 	if (memory == NULL) {
 		result.value = 0;
-		result.error = errorResultCreate(22, "Invalid argument");
+		result.error = fun_error_result(22, "Invalid argument");
 		return result;
 	}
 	// We can't easily determine the exact size of an allocated block
 	// without additional bookkeeping. For simplicity, we'll return a
 	// minimum size (e.g., 4096 bytes, typical page size).
 	result.value = 4096;
-	result.error = errorResultCreate(0, NULL);
+	result.error = ERROR_RESULT_NO_ERROR;
 	return result;
 }
 
@@ -170,14 +168,13 @@ CanReturnError(void)
 	voidResult result;
 
 	if (destination == NULL || source == NULL) {
-		result.error =
-			errorResultCreate(22, "Invalid argument: NULL pointer");
+		result.error = fun_error_result(22, "Invalid argument: NULL pointer");
 		return result;
 	}
 
 	// Check for overlap
 	if ((destination < source && destination + sizeInBytes > source) ||
-	    (source < destination && source + sizeInBytes > destination)) {
+		(source < destination && source + sizeInBytes > destination)) {
 		// Handle overlapping memory regions
 		uint8_t *dest = (uint8_t *)destination;
 		const uint8_t *src = (const uint8_t *)source;
@@ -213,6 +210,6 @@ CanReturnError(void)
 		}
 	}
 
-	result.error = errorResultCreate(0, NULL);
+	result.error = ERROR_RESULT_NO_ERROR;
 	return result;
 }

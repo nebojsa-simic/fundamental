@@ -3,21 +3,24 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
-#define ERROR_CODE_NO_ERROR 0;
+#define ERROR_CODE_NO_ERROR 0
+#define ERROR_CODE_NULL_POINTER 1
 
 typedef struct {
 	uint8_t code;
 	const char *message;
 } ErrorResult;
 
-#define DEFINE_RESULT_TYPE(T)      \
-	typedef struct {           \
-		T value;           \
-		ErrorResult error; \
+#define DEFINE_RESULT_TYPE(T) \
+	typedef struct {          \
+		T value;              \
+		ErrorResult error;    \
 	} T##Result
 
 // Define result types for common simple types
+DEFINE_RESULT_TYPE(bool);
 DEFINE_RESULT_TYPE(char);
 DEFINE_RESULT_TYPE(float);
 DEFINE_RESULT_TYPE(double);
@@ -40,20 +43,25 @@ typedef struct {
 #define CanReturnError(...) __VA_ARGS__##Result
 
 // Helper functions for error creation and checking
-static inline ErrorResult errorResultCreate(uint8_t code, const char *message)
+static inline ErrorResult fun_error_result(uint8_t code, const char *message)
 {
 	ErrorResult result = { code, message };
 	return result;
 }
 
-static inline int errorResultOccurred(ErrorResult error)
+// Standard errors
+static ErrorResult ERROR_RESULT_NO_ERROR = { ERROR_CODE_NO_ERROR, NULL };
+static ErrorResult ERROR_RESULT_NULL_POINTER = { ERROR_CODE_NULL_POINTER,
+												 "Null pointer provided" };
+
+static inline bool fun_error_is_error(ErrorResult error)
 {
 	return error.code != ERROR_CODE_NO_ERROR;
 }
 
-static inline const char *errorResultGetMessage(ErrorResult error)
+static inline bool fun_error_is_ok(ErrorResult error)
 {
-	return error.message ? error.message : "No error message provided";
+	return error.code == ERROR_CODE_NO_ERROR;
 }
 
 #endif // LIBRARY_ERROR_RESULT_H

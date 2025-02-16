@@ -18,6 +18,6 @@ CanReturnError(void) memoryFree(Memory *memory);
 CanReturnError(void) memoryFill(Memory memory, size_t size, uint64_t value);
 CanReturnError(size_t) memorySize(Memory memory);
 CanReturnError(void) memoryCopy(const Memory source, const Memory destination,
-				size_t sizeInBytes);
+								size_t sizeInBytes);
 
 #endif // LIBRARY_MEMORY_H
