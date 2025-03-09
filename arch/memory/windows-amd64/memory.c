@@ -1,4 +1,6 @@
-#include "../memory.h"
+#include "memory/memory.h"
+
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 CanReturnError(Memory) fun_memory_allocate(size_t size)

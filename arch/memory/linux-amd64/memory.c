@@ -1,4 +1,4 @@
-#include "../memory.h"
+#include "memory/memory.h"
 
 // System call numbers
 #define SYS_mmap 9
