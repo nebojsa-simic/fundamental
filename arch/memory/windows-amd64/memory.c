@@ -50,16 +50,15 @@ CanReturnError(void) fun_memory_fill(Memory memory, size_t size, uint64_t value)
 	voidResult result;
 	// Validate the memory pointer
 	if (memory == NULL) {
-		result.error = fun_error_result(ERROR_INVALID_PARAMETER,
-										 "Invalid memory pointer");
+		result.error =
+			fun_error_result(ERROR_INVALID_PARAMETER, "Invalid memory pointer");
 		return result;
 	}
 
 	HANDLE hHeap = GetProcessHeap();
 	// Check if the memory block is valid using HeapValidate
 	if (!HeapValidate(hHeap, 0, memory)) {
-		result.error =
-			fun_error_result(GetLastError(), "Invalid memory block");
+		result.error = fun_error_result(GetLastError(), "Invalid memory block");
 		return result;
 	}
 
@@ -95,7 +94,7 @@ CanReturnError(size_t) fun_memory_size(Memory memory)
 	if (memory == NULL) {
 		result.value = 0;
 		result.error = fun_error_result(ERROR_INVALID_PARAMETER,
-										 "Cannot get size of NULL pointer");
+										"Cannot get size of NULL pointer");
 		return result;
 	}
 
@@ -111,8 +110,9 @@ CanReturnError(size_t) fun_memory_size(Memory memory)
 	return result;
 }
 
-CanReturnError(void) fun_memory_copy(const Memory source, const Memory destination,
-								size_t sizeInBytes)
+CanReturnError(void)
+	fun_memory_copy(const Memory source, const Memory destination,
+					size_t sizeInBytes)
 {
 	voidResult result;
 

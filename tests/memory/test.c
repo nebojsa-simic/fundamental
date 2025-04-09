@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../src/memory/memory.h"
+#include "../../include/memory/memory.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 

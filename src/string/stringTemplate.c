@@ -1,5 +1,5 @@
-#include "../memory/memory.h"
-#include "string.h"
+#include "memory/memory.h"
+#include "string/string.h"
 
 void fun_string_template(String template, StringTemplateParam *params,
 						 size_t paramCount, OutputString output)
@@ -65,7 +65,7 @@ void fun_string_template(String template, StringTemplateParam *params,
 						// Copy formatted value to output
 						char *b = buffer;
 						while (*b)
-							*out++ = *b++;						
+							*out++ = *b++;
 					}
 
 					t = end + 1;

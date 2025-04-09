@@ -1,5 +1,5 @@
-#include "../memory/memory.h"
-#include "string.h"
+#include "memory/memory.h"
+#include "string/string.h"
 
 #define MAX_NUMBER_LENGTH 256
 

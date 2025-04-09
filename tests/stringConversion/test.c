@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../src/error/error.h"
-#include "../../src/string/string.h"
-#include "../../src/memory/memory.h"
+#include "../../include/error/error.h"
+#include "../../include/string/string.h"
+#include "../../include/memory/memory.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 
