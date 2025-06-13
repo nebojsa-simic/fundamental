@@ -38,6 +38,34 @@ static inline ErrorResult initialize_io_ring(IoRingContext *ctx)
 	return ERROR_RESULT_NO_ERROR;
 }
 
+static inline AsyncStatus poll_io_ring(AsyncResult *result)
+{
+	RingReadState *state = result->state;
+	IORING_CQE cqe;
+
+	if (state->async_status != ASYNC_PENDING) {
+		AsyncStatus status = state->async_status;
+		if (state->file_handle != INVALID_HANDLE_VALUE) {
+			CloseHandle(state->file_handle);
+			fun_memory_free(&state);
+		}
+		return status;
+	} else if (SUCCEEDED(
+				   PopIoRingCompletion(state->global_context->io_ring, &cqe))) {
+		AsyncStatus status = cqe.ResultCode >= 0 ? ASYNC_COMPLETED :
+												   ASYNC_ERROR;
+		state->async_status = status;
+		if (cqe.UserData == state->request_id) {
+			if (state->file_handle != INVALID_HANDLE_VALUE) {
+				CloseHandle(state->file_handle);
+				fun_memory_free(&state);
+			}
+			return status;
+		}
+	}
+	return ASYNC_PENDING;
+}
+
 AsyncResult fun_read_file_in_memory(Read parameters)
 {
 	static IoRingContext global_context = { 0 };
@@ -110,31 +138,6 @@ cleanup:
 	if (file != INVALID_HANDLE_VALUE) {
 		CloseHandle(file);
 	}
-	return (AsyncResult){ .status = ASYNC_ERROR, .error = { .code = hr } };
-}
-
-static AsyncStatus poll_io_ring(AsyncResult *result)
-{
-	RingReadState *state = result->state;
-	IORING_CQE cqe;
-
-	if (state->async_status != ASYNC_PENDING) {
-		AsyncStatus status = state->async_status;
-		if (state->file_handle != INVALID_HANDLE_VALUE) {
-			CloseHandle(state->file_handle);
-			fun_memory_free(&state);
-		}
-		return status;
-	} else if (SUCCEEDED(PopIoRingCompletion(state->global_context->io_ring, &cqe))) {
-		AsyncStatus status = cqe.ResultCode >= 0 ? ASYNC_COMPLETED : ASYNC_ERROR;
-		state->async_status = status;
-		if (cqe.UserData == state->request_id) {
-			if (state->file_handle != INVALID_HANDLE_VALUE) {
-				CloseHandle(state->file_handle);
-				fun_memory_free(&state);
-			}
-			return status;
-		}
-	} 
-	return ASYNC_PENDING;
+	return (AsyncResult){ .status = ASYNC_ERROR,
+						  .error = { .code = hr, .message = 'Read error' } };
 }

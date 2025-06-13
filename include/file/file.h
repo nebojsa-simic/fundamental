@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct Read {
 	String file_path; // REQUIRED - Path to file
-	Memory *output; // REQUIRED - Pre-allocated buffer
+	Memory output; // REQUIRED - Pre-allocated buffer
 	uint64_t bytes_to_read; // REQUIRED - Exact bytes to read
 	uint64_t offset; // OPTIONAL - Default 0
 	FileMode mode; // OPTIONAL - Default AUTO

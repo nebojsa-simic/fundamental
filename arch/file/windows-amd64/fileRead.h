@@ -10,7 +10,6 @@ typedef struct {
 	HANDLE mapping_handle;
 	LPVOID mapped_view;
 	uint64_t adjusted_offset;
-	Memory output_buffer;
 } MMapState;
 
 AsyncStatus poll_mmap(AsyncResult *result);

@@ -159,7 +159,7 @@ static void test_fun_async_await_all_mixed(void)
 int main(void)
 {
 	printf("Running async module tests:\n");
-	
+
 	test_fun_async_await_success();
 	test_fun_async_await_immediate_error();
 	test_fun_async_await_error_after();
