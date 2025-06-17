@@ -1,5 +1,3 @@
-#pragma once
-
 #include "fileRead.h"
 
 static DWORD get_allocation_granularity()
