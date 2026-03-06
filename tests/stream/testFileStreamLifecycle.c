@@ -1,0 +1,152 @@
+#include <assert.h>
+#include <stdio.h>
+
+#include "stream/stream.h"
+#include "memory/memory.h"
+
+// Helper function to check if an error occurred
+#define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
+#define ASSERT_ERROR(result) assert(result.error.code != 0)
+
+bool test_stream_create_valid_file(void)
+{
+	// Allocate buffer (caller responsibility)
+	MemoryResult buffer_result = fun_memory_allocate(1024);
+	printf("Buffer alloc error.code: %d\n", buffer_result.error.code);
+	ASSERT_NO_ERROR(buffer_result);
+
+	// Create stream for existing test file
+	AsyncResult stream_result = fun_stream_create_file_read(
+		"testData/small.txt", buffer_result.value, 1024, FILE_MODE_STANDARD);
+	printf("Stream create error.code: %d\n", stream_result.error.code);
+	printf("Stream create status: %d\n", stream_result.status);
+	printf("Stream create poll: %p\n", stream_result.poll);
+	ASSERT_NO_ERROR(stream_result);
+	fun_async_await(&stream_result);
+	fprintf(stderr, "DEBUG: After await error.code: %d, status: %d\n",
+			stream_result.error.code, stream_result.status);
+
+	printf("After await error.code: %d\n", stream_result.error.code);
+	printf("After await status: %d\n", stream_result.status);
+	bool success = (stream_result.status == ASYNC_COMPLETED) &&
+				   (fun_error_is_ok(stream_result.error));
+	printf("Success: %d\n", success);
+	assert(success);
+
+	FileStream *stream = (FileStream *)stream_result.state;
+	printf("stream->mode = %d, expected STREAM_READ_ONLY = %d\n", stream->mode,
+		   STREAM_READ_ONLY);
+	printf("stream->buffer_size = %lu\n", stream->buffer_size);
+	printf("stream->current_position = %lu\n", stream->current_position);
+	printf("stream->end_of_stream = %d\n", stream->end_of_stream);
+	// Verify stream properties
+	success = (stream->mode == STREAM_READ_ONLY) &&
+			  (stream->buffer_size == 1024) &&
+			  (stream->current_position == 0) && (!stream->end_of_stream);
+	assert(success);
+
+	ASSERT_NO_ERROR(fun_stream_destroy(stream));
+	ASSERT_NO_ERROR(fun_memory_free(&buffer_result.value));
+
+	return success;
+}
+
+bool test_stream_create_invalid_file(void)
+{
+	MemoryResult buffer_result = fun_memory_allocate(512);
+	ASSERT_NO_ERROR(buffer_result);
+
+	// Try to create stream for non-existent file
+	AsyncResult stream_result = fun_stream_create_file_read(
+		"testData/nonexistent.txt", buffer_result.value, 512,
+		FILE_MODE_STANDARD);
+	fun_async_await(&stream_result);
+
+	FileStream *stream = (FileStream *)stream_result.state;
+	uint64_t bytes_read;
+
+	// First read should get exactly 1024 bytes
+	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
+	fun_async_await(&read_result);
+
+	bool success = (read_result.status == ASYNC_ERROR) &&
+				   (fun_error_is_error(read_result.error));
+	assert(success);
+
+	ASSERT_NO_ERROR(fun_memory_free(&buffer_result.value));
+	return success;
+}
+
+// tests/stream/testFileStreamLifecycle.c
+bool test_stream_memory_cleanup(void)
+{
+	// Step 1: Allocate buffer for streaming (caller responsibility)
+	MemoryResult buffer_result = fun_memory_allocate(512);
+	if (fun_error_is_error(buffer_result.error)) {
+		return false;
+	}
+
+	// Step 2: Create file stream
+	AsyncResult stream_result = fun_stream_create_file_read(
+		"testData/small.txt", buffer_result.value, 512, FILE_MODE_STANDARD);
+	fun_async_await(&stream_result);
+
+	if (stream_result.status != ASYNC_COMPLETED) {
+		fun_memory_free(&buffer_result.value);
+		return false;
+	}
+
+	FileStream *stream = (FileStream *)stream_result.state;
+
+	// Step 3: Verify stream is functional before cleanup
+	bool initial_can_read = fun_stream_can_read(stream);
+	uint64_t initial_position = fun_stream_current_position(stream);
+	bool initial_end_status = fun_stream_is_end_of_stream(stream);
+
+	// Verify stream was created correctly
+	if (!initial_can_read || initial_position != 0 || initial_end_status) {
+		fun_stream_destroy(stream);
+		fun_memory_free(&buffer_result.value);
+		return false;
+	}
+
+	// Step 4: Perform a read operation to ensure stream works
+	uint64_t bytes_read;
+	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
+	fun_async_await(&read_result);
+
+	if (read_result.status != ASYNC_COMPLETED) {
+		fun_stream_destroy(stream);
+		fun_memory_free(&buffer_result.value);
+		return false;
+	}
+
+	// Step 5: Store stream pointer for verification after destroy
+	void *original_stream_ptr = (void *)stream;
+
+	// Step 6: Destroy the stream
+	AsyncResult destroy_result = fun_stream_destroy(stream);
+	fun_async_await(&destroy_result);
+
+	// Step 7: Verify destruction was successful
+	bool destroy_success = (destroy_result.status == ASYNC_COMPLETED) &&
+						   (fun_error_is_ok(destroy_result.error));
+
+	if (!destroy_success) {
+		fun_memory_free(&buffer_result.value);
+		return false;
+	}
+
+	// Step 8: Stream pointer should now be invalid (implementation detail)
+	// Note: In a real implementation, you might want to set the pointer to NULL
+	// after destroy, but here we just verify the destroy operation succeeded
+
+	// Step 9: Clean up caller-allocated buffer
+	voidResult free_result = fun_memory_free(&buffer_result.value);
+	if (fun_error_is_error(free_result.error)) {
+		return false;
+	}
+
+	// Step 10: All cleanup operations successful
+	return true;
+}
