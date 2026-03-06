@@ -1,13 +1,13 @@
 # File Module Specification  
   
-## Scenarios  
+## Scenarios 
   
-### Read File  
+Scenario: Read file into memory  
+'  Given valid file path and output buffer'  
+'  When fun_read_file_in_memory is called'  
+'  Then file contents are read into buffer asynchronously' 
   
-When fun_read_file_in_memory is called with valid path  
-Then file contents are read into output buffer  
-  
-### Write File  
-  
-When fun_write_memory_to_file is called  
-Then data is written to file at specified path 
+Scenario: Write memory to file  
+'  Given input data and valid file path'  
+'  When fun_write_memory_to_file is called'  
+'  Then data is written to file asynchronously' 

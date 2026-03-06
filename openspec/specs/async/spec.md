@@ -1,9 +1,13 @@
 # Async Module Specification  
   
-## Scenarios  
+## Scenarios 
   
-### Async Await Success  
+Scenario: Wait for single async operation  
+'  Given pending AsyncResult with poll function'  
+'  When fun_async_await is called'  
+'  Then function blocks until operation completes' 
   
-Given pending operation with poll function  
-When fun_async_await is called  
-Then blocks until status completes 
+Scenario: Wait for multiple async operations  
+'  Given multiple pending AsyncResult objects'  
+'  When fun_async_await_all is called'  
+'  Then function waits for all operations to complete' 

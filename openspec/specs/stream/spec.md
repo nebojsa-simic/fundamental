@@ -1,13 +1,13 @@
 # Stream Module Specification  
   
-## Scenarios  
+## Scenarios 
   
-### Create File Read  
+Scenario: Open file read stream  
+'  Given a file path and buffer'  
+'  When fun_stream_create_file_read is called'  
+'  Then FileStream for reading is returned' 
   
-When fun_stream_create_file_read is called  
-Then returns FileStream for reading  
-  
-### Stream Read  
-  
-When fun_stream_read is called  
-Then returns bytes read and updates position 
+Scenario: Read from stream  
+'  Given valid FileStream'  
+'  When fun_stream_read is called'  
+'  Then available data is read into buffer' 
