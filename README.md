@@ -66,6 +66,8 @@ fundamental/
 ### **Architecture Support**
 - Linux AMD64 (primary)
 - Windows AMD64 (in development)
+- Darwin ARM64 (planned)
+- Linux ARM64 (planned)
 - Extensible architecture system
 
 ## Quick Start
@@ -154,7 +156,7 @@ if (result.status == ASYNC_COMPLETED) {
 
 ### Prerequisites
 
-- GCC or Clang compiler
+- GCC compiler
 - Linux kernel headers (for Linux builds)
 - Windows SDK (for Windows builds)
 
@@ -206,7 +208,6 @@ MIT License
 
 ## Roadmap
 
-- [ ] Complete Windows memory implementation
 - [ ] Add more architecture support (ARM64)
 - [ ] Implement network I/O module
 - [ ] Add comprehensive benchmarking suite
