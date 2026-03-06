@@ -1,18 +1,9 @@
 # Async Module Specification  
   
-Provides async operations with polling.  
+## Scenarios  
   
-## Core Types  
+### Async Await Success  
   
-- AsyncResult: poll function + state + status + error  
-- AsyncStatus: PENDING, COMPLETED, ERROR  
-  
-## Core Functions  
-  
-- fun_async_await: blocks until operation completes  
-- fun_async_await_all: waits for multiple operations  
-  
-## Design Pattern  
-  
-- Polling-based async operations  
-- State management for async operations 
+Given pending operation with poll function  
+When fun_async_await is called  
+Then blocks until status completes 

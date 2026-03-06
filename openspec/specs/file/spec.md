@@ -1,16 +1,13 @@
 # File Module Specification  
   
-Provides file I/O with multiple strategies.  
+## Scenarios  
   
-## I/O Strategies  
+### Read File  
   
-- STANDARD: Regular file I/O  
-- MMAP: Memory-mapped files  
-- RING_BASED: Ring buffer approach  
-- DIRECT: Direct I/O  
+When fun_read_file_in_memory is called with valid path  
+Then file contents are read into output buffer  
   
-## Core Functions  
+### Write File  
   
-- fun_read_file_in_memory  
-- fun_write_memory_to_file  
-- fun_append_memory_to_file  
+When fun_write_memory_to_file is called  
+Then data is written to file at specified path 

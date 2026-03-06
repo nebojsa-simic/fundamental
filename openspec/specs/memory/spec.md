@@ -1,15 +1,13 @@
 # Memory Module Specification  
   
-Provides platform-independent memory management.  
+## Scenarios  
   
-## Design Pattern  
+### Allocate Memory  
   
-Caller-allocated: functions don't allocate internally.  
+When fun_memory_allocate(1024) is called  
+Then returns MemoryResult with allocated buffer  
   
-## Core Functions  
+### Free Memory  
   
-- fun_memory_allocate: allocates memory  
-- fun_memory_reallocate: reallocates memory  
-- fun_memory_free: frees memory  
-- fun_memory_copy: copies memory  
-- fun_memory_fill: fills memory with value  
+When fun_memory_free is called with valid buffer  
+Then memory is deallocated 

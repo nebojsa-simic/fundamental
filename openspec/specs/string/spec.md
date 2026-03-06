@@ -1,20 +1,13 @@
 # String Module Specification  
   
-Provides string manipulation without C stdlib.  
+## Scenarios  
   
-## Categories  
+### String Copy  
   
-- Conversion: from_int, from_double, from_pointer  
-- Comparison: compare, index_of  
-- In-place: length, trim, reverse  
-- Out-of-place: copy, join  
+When fun_string_copy("hello", output) is called  
+Then output contains "hello"  
   
-## Type Definitions  
+### String Length  
   
-- String: const char*  
-- OutputString: char*  
-- StringLength: uint64_t  
-  
-## Design Principles  
-  
-- Type-safe string handling  
+When fun_string_length("test") is called  
+Then returns 4 
