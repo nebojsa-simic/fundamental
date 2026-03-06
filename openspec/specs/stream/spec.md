@@ -43,6 +43,15 @@ The stream module SHALL provide functions for asynchronous read operations.
 - **AND** bytes_read reports the amount actually read
 - **AND** AsyncResult.status remains ASYNC_PENDING during operation
 
+### Requirement: Write Operations
+The stream module SHALL provide functions for asynchronous write operations.
+
+#### Scenario: Write to stream
+- **WHEN** fun_stream_write(stream, data, data_size) is called with valid stream and data
+- **THEN** data is written asynchronously to the underlying file/device
+- **AND** data_size bytes are written from the data buffer
+- **AND** stream.position is updated to reflect the current location in file
+
 ### Requirement: Stream State Checks
 The stream module SHALL provide functions to check stream operational status.
 
@@ -50,6 +59,12 @@ The stream module SHALL provide functions to check stream operational status.
 - **WHEN** fun_stream_can_read(stream) is called with active stream
 - **THEN** function returns true if data is available and not end-of-stream
 - **WHEN** called with NULL or exhausted stream
+- **THEN** function returns false
+
+#### Scenario: Check write availability
+- **WHEN** fun_stream_can_write(stream, requested_size) is called with available space
+- **THEN** function returns true if stream can accommodate requested_size bytes
+- **WHEN** stream has insufficient space or access
 - **THEN** function returns false
 
 #### Scenario: Check end-of-stream status
