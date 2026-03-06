@@ -2,33 +2,43 @@
 
 ## Architecture Overview
 
-The Collections module follows the same kernel-inspired, platform-agnostic architecture as other modules in the library:
+The Collections module follows the same platform-agnostic architecture as other modules in the library, leveraging the cross-platform memory management layer instead of containing OS-specific code:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         Collections Architecture                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  Public Interface                    Platform-Specific Implementations │
+│  Public Interface                        Universal Implementation       │
 │  ┌─────────────────┐    ┌─────────────────────────────────────────────┐ │
-│  │ include/collection │    │ arch/collections/                         │ │
-│  │     array.h     │────│   ├── windows-amd64/                       │ │
-│  │     map.h       │    │   │   ├── array.c                          │ │
-│  │     tree.h      │    │   │   ├── map.c                            │ │
-│  │     set.h       │    │   │   └── tree.c                           │ │
-│  └─────────────────┘    │   └── linux-amd64/                         │ │
-│                          │       ├── array.c                          │ │
-│  Core Implementation     │       ├── map.c                            │ │
-│  ┌─────────────────┐    │       └── tree.c                           │ │
-│  │ src/collections │    └─────────────────────────────────────────────┘ │
-│  │     common.h    │                                                     │
-│  │     common.c    │                                                     │
-│  │   type_traits.h │                                                     │
-│  └─────────────────┘                                                     │
+│  │ include/collection │    │ src/collections/                         │ │
+│  │     array.h     │────│   ├── array.c                            │ │
+│  │     map.h       │    │   ├── map.c                              │ │
+│  │     tree.h      │    │   ├── tree.c                             │ │
+│  │     set.h       │    │   └── utils.c                            │ │
+│  └─────────────────┘    │                                            │ │
+│                          └─────────────────────────────────────────────┘ │
+│                                  │                                       │
+│                                  ▼                                       │
+│                  ┌─────────────────────────────────────────────┐         │
+│                  │     Core Memory Management Layer          │         │
+│                  │ (Cross-platform: arch/memory/*/memory.c)  │         │
+│                  └─────────────────────────────────────────────┘         │
+│                                  │                                       │
+│   (Uses only fun_memory_* functions - no OS-specific calls)              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Implementation Strategy
+
+### Platform Independence Principle
+
+The Collections module SHALL be completely platform-agnostic, interfacing only with the library's memory management functions:
+
+- **No OS-specific code** in collections implementations
+- **All memory operations** delegated to `fun_memory_` family functions  
+- **Identical behavior** across all supported platforms
+- **Same performance** and memory usage patterns on Windows, Linux, etc.
 
 ### Dynamic Array (Vector) Implementation
 
@@ -36,10 +46,10 @@ The Collections module follows the same kernel-inspired, platform-agnostic archi
 Array Internals:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ typedef struct {                                                        │
-│   void   *data;        ◄─── Allocated memory block                    │
-│   size_t  count;       ◄─── Current element count (used slots)        │
-│   size_t  capacity;    ◄─── Max capacity before realloc needed        │
-│   size_t  element_size;◄─── Size of each element in bytes             │
+│   void   *data;        ◄── Allocated memory block (via fun_memory)    │
+│   size_t  count;       ◄── Current element count (used slots)          │
+│   size_t  capacity;    ◄── Max capacity before realloc needed          │
+│   size_t  element_size;◄── Size of each element in bytes               │
 │ } Array;                                                                 │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -48,9 +58,10 @@ Memory layout: [elem0][elem1][elem2]...[elemN-1][unused...unused]
 ```
 
 #### Growth Strategy
-- Capacity doubles when full (2× growth factor)
-- Minimum capacity to prevent excessive allocation for small arrays
-- Memory copied using safe `fun_memory_copy` operations
+- **Cross-platform**: Uses `fun_memory_reallocate` for all resizing needs
+- **Capacity doubles** when full (2× growth factor) via memory abstraction  
+- **Minimum capacity** to prevent excessive allocation for small arrays
+- **Memory copied** using safe `fun_memory_copy` operations
 
 ### Hash Map Implementation
 
@@ -58,68 +69,61 @@ Memory layout: [elem0][elem1][elem2]...[elemN-1][unused...unused]
 HashMap Structure:
 ┌─────────────────────────────────────────────┐
 │ typedef struct {                            │
-│   void     *buckets;    ◄── Array of hash buckets   │
-│   size_t    bucket_count;   ◄── Number of buckets      │
-│   size_t    element_count;  ◄── Total stored pairs     │
-│   void     *hash_fn;    ◄── Hash function pointer    │
-│   void     *compare_fn; ◄── Element comparison function│
+│   void     *buckets;    ◄── (via fun_memory_)                    │
+│   size_t    bucket_count;   ◄── (managed via library memory)      │
+│   size_t    element_count;  ◄── (library memory management)       │
+│   void     *hash_fn;    (library-provided when platform-specific needed)  │
+│   void     *compare_fn; (library-provided when platform-specific needed) │
 │ } HashMap;                                   │
 └─────────────────────────────────────────────┘
-
-Bucket Layout:
-[ [kv1│→│kv1│→│overflow_list] [empty] [kv3│→│kv3] [kv2] ... ]
-│    \0x5F                  │      │ \0xA2        │ \0x7C     │
-│    hash→bucket_idx 5      │      │ hash→bucket_idx  7       │
-│                           │      └ bucket_idx 7 has single pair
-└ bucket_idx 5 collides, uses linked list
 ```
 
-For worst-case collision handling, we implement the kernel-inspired RB-tree approach within buckets where chain lengths exceed threshold (typically 8 elements).
+Hash maps shall rely entirely on the memory management layer for all allocations, making them platform-agnostic.
 
 ### Red-Black Tree Implementation
 
-Self-balancing binary search tree using kernel-style RED/BLACK coloring nodes:
+Self-balancing binary search tree using library-provided memory management:
 
 ```
 RB-Tree Node:
 ┌─────────────────────────────────────────────┐
 │ struct RBNode {                             │
-│   void      *key;        ◄── Key data          │
-│   void      *value;      ◄── Value data (for Map)│
-│   struct RBNode *parent;  ◄── Parent reference   │
-│   struct RBNode *left;    ◄── Left child         │
-│   struct RBNode *right;   ◄── Right child        │
-│   int        color;      ◄── RB_COLOR_RED/_BLACK │
+│   void      *key;        ◄── (via fun_memory_)                  │
+│   void      *value;      ◄── (via fun_memory_)                  │
+│   struct RBNode *parent;  ◄── (library-managed memory)          │
+│   struct RBNode *left;    ◄── (library-managed memory)          │
+│   struct RBNode *right;   ◄── (library-managed memory)          │
+│   int        color;      (pure logic - no platform difference)      │
 │ }                                              │
 └─────────────────────────────────────────────┘
 ```
 
 ## API Design 
 
-Follows existing `fun_` naming convention with macro-expanded type safety:
+Follows existing `fun_` naming convention with macro-expanded type safety, completely platform-agnostic:
 
 ```c
-// Creation functions
+// Creation functions - use library memory functions exclusively
 CanReturnError(IntArray) fun_array_int_create(size_t initial_capacity);
 CanReturnError(StringIntHashMap) fun_hmap_string_int_create(size_t initial_bucket_count);
 
-// Common operations 
+// Operations always use fun_memory_* functions internally
 CanReturnError(void) fun_array_int_push(IntArray *arr, int value);
 CanReturnError(int) fun_array_int_get(IntArray *arr, size_t index);
 bool fun_array_int_has_data(IntArray *arr);
 
-// Destruction
+// Destruction exclusively via fun_memory_free
 CanReturnError(void) fun_array_int_destroy(IntArray *arr);
 ```
 
 ## Type Safety Strategy
 
-Use the macro approach for type safety instead of void*:
+Use the macro approach for type safety with zero platform-specific code:
 
 ```c
 #define DEFINE_ARRAY_TYPE(T) \
     typedef struct { \
-        T *data;             /* Type-safe pointer */ \
+        T *data;             /* Type-safe pointer via library memory */ \
         size_t count;        \
         size_t capacity;     \
     } T##Array;              /* E.g.: IntArray, StringArray */ \
@@ -135,16 +139,17 @@ DEFINE_ARRAY_TYPE(void*)
 
 ## Error Handling
 
-All functions follow the standardized `CanReturnError(*)` pattern:
+All functions follow the standardized `CanReturnError(*)` pattern and remain completely platform-agnostic:
 
-- Memory allocation failures return error codes
-- Index out of bounds returns error rather than crashing
-- Hash collisions are resolved gracefully
-- Invalid parameters (NULL arrays, etc) return specific errors
+- Memory allocation failures handled uniformly across platforms
+- Index out of bounds returns error via standard error system
+- Invalid parameters (NULL arrays, etc) return specific errors through library error handling
+- No OS-specific error codes or logic in any collection code
 
 ## Memory Management
 
-- Caller-owned pattern for root structures themselves
-- Collection-owned for internal allocated elements
-- Proper cleanup ensures no memory leakages
-- Memory freed using `fun_memory_free` consistent with library principle
+- **Universal pattern**: All collections rely on library's memory management only
+- **Collection-owned**: Internal allocations use `fun_memory_allocate`/`fun_memory_free`
+- **Safe operations**: All memory interactions through `fun_memory_copy`, etc.
+- **No direct syscalls**: No direct calls to Windows VirtualAlloc, Linux mmap, etc.
+- **OS-abstraction**: Collections remain identical across all supported platforms

@@ -10,28 +10,22 @@
 
 #### Estimated Duration: 1 day
 
-### Task 1.2: Windows Array Implementation  
-- [ ] Create `arch/array/windows-amd64/array.c`
+### Task 1.2: Universal Array Implementation  
+- [ ] Create `src/array/array.c` as platform-agnostic implementation
 - [ ] Implement basic array operations with growth handling
-- [ ] Memory operations using `fun_memory_` functions
+- [ ] Memory operations using `fun_memory_` functions (no OS-specific code)
 - [ ] Bounds checking and error handling
-- [ ] Unit tests in `tests/array/` for Windows platform
+- [ ] Unit tests in `tests/array/` for cross-platform validation
 
 #### Estimated Duration: 2 days 
 
-### Task 1.3: Linux Array Implementation
-- [ ] Create `arch/array/linux-amd64/array.c`  
-- [ ] Implement using syscall-based allocation (if necessary) for consistency
-- [ ] Verify against Windows implementation for API compatibility
-- [ ] Platform-specific tests
+### Task 1.3: Integration and Testing
+- [ ] Create common utility functions in `src/array/utils.c` if needed
+- [ ] Integrate with build system
+- [ ] Run comprehensive test validation across supported platforms
+- [ ] Performance benchmark for small/large arrays (validation across targets)
 
 #### Estimated Duration: 1 day
-
-### Task 1.4: Core Implementation & Testing
-- [ ] Create common utility functions in `src/array/common.c`
-- [ ] Integrate with build system
-- [ ] Run cross-platform test validation
-- [ ] Performance benchmark for small/large arrays
 
 ## Phase 2: Hash Map Implementation (Week 2)
 
@@ -43,20 +37,20 @@
 
 #### Estimated Duration: 1 day
 
-### Task 2.2: Windows Implementation
-- [ ] Create `arch/map/windows-amd64/map.c`
+### Task 2.2: Universal Map Implementation
+- [ ] Create `src/map/map.c` as platform-agnostic implementation
 - [ ] Implement hash table with bucket array
 - [ ] Chained overflow structures
-- [ ] Optional RB-tree for highly-colliding buckets
-- [ ] Type-generic hash computation
+- [ ] RB-tree integration for high collision scenarios
+- [ ] Type-generic hash computation via library functions
 
 #### Estimated Duration: 3 days
 
 ### Task 2.3: Testing & Integration
 - [ ] Create comprehensive tests in `tests/map/`
-- [ ] Verify performance characteristics (O(1) average case)  
+- [ ] Verify performance characteristics (O(1) average case) across platforms
 - [ ] Validate collision handling
-- [ ] Memory leak detection
+- [ ] Memory leak detection on all target platforms
 
 #### Estimated Duration: 1 day
 
@@ -64,7 +58,7 @@
 
 ### Task 3.1: Red-Black Tree Implementation
 - [ ] Design tree interface `include/tree/tree.h`
-- [ ] Implement in `arch/tree/windows-amd64/tree.c`
+- [ ] Implement in `src/tree/tree.c` (universal, no platform-specific code)
 - [ ] Core operations: insert, search, delete with rebalancing
 - [ ] Iterator interface for ordered traversal
 
@@ -72,17 +66,17 @@
 
 ### Task 3.2: Set Implementation  
 - [ ] Create set header `include/set/set.h`
-- [ ] Implement using hash map foundation
+- [ ] Implement in `src/set/set.c` using hash map as foundation
 - [ ] Core methods: add, contains, remove, union, intersect
 - [ ] Memory-safe uniqueness enforcement
 
 #### Estimated Duration: 1 day
 
-### Task 3.3: Complete Testing
+### Task 3.3: Universal Testing
 - [ ] Create tests for tree operations
 - [ ] Create tests for set operations  
 - [ ] Cross-structure interaction tests
-- [ ] Edge case coverage (empty, max capacity, etc.)
+- [ ] Edge case coverage across all supported platforms (empty, max capacity, etc.)
 
 #### Estimated Duration: 1 day
 
@@ -91,30 +85,30 @@
 ### Task 4.1: Documentation Updates
 - [ ] Add usage examples to main README
 - [ ] API reference in each header file
-- [ ] Performance characteristics documentation
+- [ ] Performance characteristics documentation (cross-platform measurements)
 - [ ] Migration guide from manual structures
 
 #### Estimated Duration: 1 day
 
-### Task 4.2: System Integration
-- [ ] Update build scripts for new structures
-- [ ] Add to CI pipeline
+### Task 4.2: Cross-Platform System Integration
+- [ ] Update build scripts for universal structures (no platform-specific build)
+- [ ] Add to multi-platform CI pipeline
 - [ ] Cross-module compatibility tests
-- [ ] Memory management validation across all structures
+- [ ] Memory management validation across all structures and platforms
 
 #### Estimated Duration: 1 day
 
 ### Task 4.3: Validation & Optimization
-- [ ] Performance benchmark against manual implementations
-- [ ] Memory usage profiling
-- [ ] Address any issues discovered during integration
+- [ ] Performance benchmark across all target platforms against manual implementations
+- [ ] Cross-platform memory usage and efficiency profiling
+- [ ] Address any issues discovered during multi-platform integration
 - [ ] Final review and cleanup
 
 #### Estimated Duration: 1 day
 
-## Risk Mitigation
+## Cross-Platform Principles
 
-- **Day 1 Each Week**: API design and review to validate direction  
-- **Daily Progress**: Small incremental progress with regular checkpoints
-- **Testing Early**: Unit tests developed alongside implementation
-- **Performance Monitoring**: Benchmarks for key operations ongoing
+- **Universal Code Base**: All collections implementations use only library functions (no OS-specific code)
+- **Memory Abstraction**: Rely exclusively on `fun_memory_` family functions for all allocation needs
+- **Unified Testing**: Validate behavior consistency across Windows, Linux, and other platforms
+- **API Compatibility**: Identical behavior and performance characteristics on all supported targets
