@@ -50,11 +50,6 @@ static inline ErrorResult fun_error_result(uint8_t code, const char *message)
 }
 
 // Standard errors
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4505) // unreferenced local function
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -66,10 +61,6 @@ static ErrorResult ERROR_RESULT_NULL_POINTER = { ERROR_CODE_NULL_POINTER,
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
 #endif
 
 static inline bool fun_error_is_error(ErrorResult error)
