@@ -57,6 +57,12 @@ fundamental/
 - Platform-optimized implementations
 - Non-blocking operation support
 
+### **Collections Module (Planned)**
+- Dynamic arrays with type safety 
+- Hash map implementations with efficient collision resolution
+- Red-Black tree structure with automatic balancing
+- Set datastructures with guaranteed uniqueness
+
 ### **Architecture Support**
 - Linux AMD64 (primary)
 - Windows AMD64 (in development)
