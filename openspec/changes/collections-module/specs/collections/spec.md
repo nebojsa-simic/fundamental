@@ -1,15 +1,10 @@
-# Collections Module Specification
+# Collections Module Delta Changes
 
-## Purpose  
-The Collections module provides modern dynamic data structures including arrays, maps, trees, and sets with type-safe operations, memory-efficient growth algorithms, and comprehensive error handling. This module expands fundamental library capabilities beyond basic operations to provide container data structures that scale efficiently with use.
+## Why
 
-### Core Components
-- **Arrays** (Vectors): Homogeneous, dynamic arrays with automatic capacity management
-- **Hash Maps**: Associative key-value storage with configurable hash functions  
-- **Red-Black Trees**: Self-balancing ordered binary trees with guaranteed O(log n) operations
-- **Sets**: Unique-element containers with fast membership operations
+Add a modern set of collections to the fundamental library providing arrays, maps, trees and sets with consistent API patterns.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Array Core Operations
 The collections module SHALL provide dynamic arrays supporting common vector operations.
