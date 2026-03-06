@@ -26,6 +26,24 @@
   - Execute if compilation succeeds
   - Return exit code for failure
 
+## OpenSpec Workflow
+This project uses OpenSpec for specifications and change management:
+- Specifications stored as Markdown in `openspec/specs/`
+- Changes managed in `openspec/changes/` with corresponding artifacts:
+  - `proposal.md` - Change proposals and justification
+  - `design.md` - Technical design and architecture decisions  
+  - `spec.md` - Detailed functional specifications in Gherkin format
+  - `tasks.md` - Engineering tasks and implementation breakdown
+- Validate changes with: `openspec validate <change-name>`
+- Run validation across all specs: `openspec validate --specs`
+- Run validation across all changes: `openspec validate --changes`
+
+### OpenSpec Command Examples:
+- List all available changes: `openspec list` 
+- Validate specific module: `openspec validate memory` or `openspec validate async`
+- Validate entire architecture: `openspec validate --all`
+- Check change status: `openspec validate <change-id>`
+
 ## Code Style Guidelines
 
 ### Import Standards
