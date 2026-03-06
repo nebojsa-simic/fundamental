@@ -111,7 +111,8 @@ cleanup:
 				INVALID_HANDLE_VALUE) { // Check handle validity
 			CloseHandle(state->file_handle);
 		}
-		fun_memory_free(&state); // Free the state memory
+		// explicit cast to avoid incompatible-pointer-types
+		fun_memory_free((Memory *)&state); // Free the state memory
 	}
 	// Return the determined status
 	return final_status;

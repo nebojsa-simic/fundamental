@@ -60,60 +60,61 @@ int memoryCompare(const void *s1, const void *s2, size_t n)
 // Reads a file and returns its content in a newly allocated buffer
 bool read_file_content(const char *path, char **content, size_t *size)
 {
-    int fd = open(path, O_RDONLY | O_BINARY);
-    if (fd == -1) {
-        printf("Failed to open file for reading: %s\n", path);
-        return false;
-    }
+	int fd = open(path, O_RDONLY | O_BINARY);
+	if (fd == -1) {
+		printf("Failed to open file for reading: %s\n", path);
+		return false;
+	}
 
-    struct stat st;
-    if (fstat(fd, &st) == -1) {
-        close(fd);
-        printf("Failed to get file size: %s\n", path);
-        return false;
-    }
+	struct stat st;
+	if (fstat(fd, &st) == -1) {
+		close(fd);
+		printf("Failed to get file size: %s\n", path);
+		return false;
+	}
 
-    *size = st.st_size;
-    *content = malloc(*size);
-    if (!*content) {
-        close(fd);
-        printf("Failed to allocate memory for file content: %s\n", path);
-        return false;
-    }
+	*size = st.st_size;
+	*content = malloc(*size);
+	if (!*content) {
+		close(fd);
+		printf("Failed to allocate memory for file content: %s\n", path);
+		return false;
+	}
 
-    // Read file content in a loop until all bytes are read
-    size_t total_bytes_read = 0;
-    while (total_bytes_read < *size) {
-        ssize_t bytes_read = read(fd, (char*)*content + total_bytes_read, 
-                                 *size - total_bytes_read);
-        
-        if (bytes_read == -1) {
-            if (errno == EINTR) {
-                // Interrupted by signal - retry
-                continue;
-            }
-            // Real error occurred
-            close(fd);
-            free(*content);
-            printf("Failed to read file content: %s, error: %s\n", 
-                   path, strerror(errno));
-            return false;
-        }
-        
-        if (bytes_read == 0) {
-            // Unexpected EOF - file was truncated during read
-            close(fd);
-            free(*content);
-            printf("Unexpected EOF while reading file: %s, read %zu of %zu bytes\n", 
-                   path, total_bytes_read, *size);
-            return false;
-        }
-        
-        total_bytes_read += bytes_read;
-    }
+	// Read file content in a loop until all bytes are read
+	size_t total_bytes_read = 0;
+	while (total_bytes_read < *size) {
+		ssize_t bytes_read = read(fd, (char *)*content + total_bytes_read,
+								  *size - total_bytes_read);
 
-    close(fd);
-    return true;
+		if (bytes_read == -1) {
+			if (errno == EINTR) {
+				// Interrupted by signal - retry
+				continue;
+			}
+			// Real error occurred
+			close(fd);
+			free(*content);
+			printf("Failed to read file content: %s, error: %s\n", path,
+				   strerror(errno));
+			return false;
+		}
+
+		if (bytes_read == 0) {
+			// Unexpected EOF - file was truncated during read
+			close(fd);
+			free(*content);
+			printf(
+				"Unexpected EOF while reading file: %s, read %zu of %zu bytes\n",
+				path, total_bytes_read, *size);
+			return false;
+		}
+
+		total_bytes_read += bytes_read;
+	}
+
+	close(fd);
+	return true;
 }
 
 // Creates a test file with specified content
@@ -424,8 +425,6 @@ void test_fun_write_memory_to_file_large_data()
 	char *file_content;
 	size_t file_size;
 	assert(read_file_content(TEST_FILE_PATH, &file_content, &file_size));
-	printf("%d", file_size);
-	printf("%d", large_size);
 	assert(file_size == large_size);
 	assert(memoryCompare(file_content, input_buffer, large_size) == 0);
 
