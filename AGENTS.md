@@ -38,6 +38,13 @@ This project uses OpenSpec for specifications and change management:
 - Run validation across all specs: `openspec validate --specs`
 - Run validation across all changes: `openspec validate --changes`
 
+### OpenSpec Skill-Based Commands:
+AI agents can use specialized OpenSpec skills for guided workflow assistance:
+- `openspec-propose` - Propose a new change with all artifacts generated in one step. Use when describing what to build and get a complete proposal with design, specs, and implementation tasks.
+- `openspec-explore` - Enter exploration mode - a thinking partner for investigating problems, clarifying requirements, and exploring solutions before implementation.
+- `openspec-apply-change` - Implement tasks from an OpenSpec change. Use when implementing, continuing, or working through implementation tasks.
+- `openspec-archive-change` - Archive a completed change in the experimental workflow. Use when finalizing and archiving changes after implementation completion.
+
 ### OpenSpec Command Examples:
 - List all available changes: `openspec list` 
 - Validate specific module: `openspec validate memory` or `openspec validate async`
