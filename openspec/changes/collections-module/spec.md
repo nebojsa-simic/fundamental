@@ -121,6 +121,83 @@ Collections module SHALL provide standard container methods across all structure
 - **THEN** appropriate boundary behaviors occur (get() fails, size() returns 0)
 - **AND** no memory dereference errors occur
 
+### Requirement: Boundary Condition Handling
+Collections module SHALL handle extreme memory and size conditions gracefully.
+
+#### Scenario: Maximum memory stress in arrays
+- **WHEN** fun_array_int_push repeatedly called until system memory exhaustion
+- **THEN** all existing elements preserved in stable state
+- **AND** ErrorResult.code indicates OUT_OF_MEMORY condition
+- **AND** partial element additions prevent silent data loss
+
+#### Scenario: Zero capacity initial array
+- **WHEN** fun_array_int_create(0) called with zero initial capacity
+- **THEN** IntArray returned with initial growth-ready state
+- **AND** first push operation triggers minimal allocation
+- **IF** minimal growth allocation fails
+- **THEN** error propagated as EXPECTED_CAPACITY_ZERO condition
+
+#### Scenario: Empty array access
+- **WHEN** fun_array_int_get(array, 0) called on empty array (count=0)
+- **THEN** no memory dereference occurs for invalid index
+- **AND** ErrorResult.code indicates INDEX_OUT_OF_BOUNDS
+- **AND** array data structure state remains unchanged
+
+#### Scenario: Massive collision scenarios
+- **WHEN** fun_hmap_string_int_put called with multiple keys producing same hash
+- **THEN** collision handled via chained storage mechanism
+- **AND** retrieval performance degrades gracefully to O(n) for that specific bucket
+- **IF** bucket overflow exceeds tree-threshold (8 elements)
+- **THEN** bucket automatically converts to Red-Black tree structure
+
+#### Scenario: High growth rate handling
+- **WHEN** array repeatedly grows from 1 → 2 → 4 → 8 → ... → large sizes 
+- **THEN** memory utilization maintains 50% efficiency during growing phase
+- **AND** no intermediate memory allocations leaked during resize
+- **IF** system memory cannot accommodate requested growth
+- **THEN** previous array state preserved and error returned without corruption
+
+#### Scenario: Duplicate key handling in maps
+- **WHEN** fun_hmap_string_int_put called with existing key
+- **THEN** previous value is properly freed to prevent memory leak
+- **AND** new value replaces the old value in associative storage
+- **AND** map count remains stable (unchanged count)
+
+#### Scenario: Invalid parameter guard
+- **WHEN** fun_array_int_get called with NULL array pointer
+- **THEN** no segmentation fault occurs from null dereference
+- **AND** ErrorResult.code indicates INVALID_PARAMETER_NULL_PTR condition
+- **AND** function fails gracefully with error rather than crashing
+
+#### Scenario: Underflow handling in collections
+- **WHEN** fun_array_int_remove_last called on empty array
+- **THEN** count remains at 0 without decrementing past lower bound
+- **AND** ErrorResult indicates COLLECTION_EMPTY_CONDITION
+- **AND** array internal state remains consistent
+
+#### Scenario: Memory fragmentation mitigation
+- **WHEN** long-running collection operations create allocation/deallocation cycles
+- **THEN** internal memory management attempts consolidation during grow operations
+- **AND** memory efficiency maintained during sustained operation
+- **IF** defragmentation impossible without data copy
+- **THEN** data movement occurs via safe memory copy operations
+
+### Requirement: Resource Cleanup Completeness
+Collections module SHALL ensure complete release of all allocated memory during destruction.
+
+#### Scenario: Nested structure cleanup
+- **WHEN** collections contain elements that themselves require cleanup (arrays of strings)
+- **THEN** destructors properly clean up nested allocations recursively
+- **AND** no memory resource abandoned by final destructor call
+- **IF** nested cleanup encounters errors
+- **THEN** ErrorResult.propagate_nested_errors indicates cleanup issues
+
+#### Scenario: Interrupted destruction safety 
+- **WHEN** fun_array_int_destroy interrupted during multi-stage cleanup
+- **THEN** partial cleanup state prevents resource double-release
+- **AND** remaining resources properly tracked for external recovery
+- **OR** ErrorResult indicates PARTIAL_CLEANUP_OCCURRED status
+
 ## Constraints
 - All structures adhere to caller-allocated memory pattern for structures themselves
 - Collections internally managed memory uses fun_memory_* functions exclusively
@@ -128,3 +205,4 @@ Collections module SHALL provide standard container methods across all structure
 - Type safety prioritizes compile-time checking through macro systems
 - Hash functions should maintain uniform distribution for common key types
 - Memory growth algorithms should minimize fragmentation while maintaining performance
+- Error codes follow standardized library patterns with consistent naming across modules
