@@ -50,18 +50,14 @@ static inline ErrorResult fun_error_result(uint8_t code, const char *message)
 }
 
 // Standard errors
-#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
-#endif
 
 static ErrorResult ERROR_RESULT_NO_ERROR = { ERROR_CODE_NO_ERROR, NULL };
 static ErrorResult ERROR_RESULT_NULL_POINTER = { ERROR_CODE_NULL_POINTER,
 												 "Null pointer provided" };
 
-#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
-#endif
 
 static inline bool fun_error_is_error(ErrorResult error)
 {
