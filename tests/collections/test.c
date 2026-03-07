@@ -4,11 +4,13 @@
 
 #include "../../include/array/array.h"
 
-// Helper macros
-#define ASSERT_NO_ERROR(result) assert((result).error.code == 0)
-#define ASSERT_ERROR(result) assert((result).error.code != 0)
+// Helper macros - ErrorResult has .code directly
+// For functions returning ErrorResult directly (not wrapped)
+#define ASSERT_ERROR_OK(result) assert((result).code == 0)
+// For functions returning wrapped results like IntArrayResult
+#define ASSERT_RESULT_OK(result) assert((result).error.code == 0)
 
-// Test: Array creation - positive capacity
+// Test: Array creation with positive capacity
 bool test_fun_array_int_create_positive_initial_capacity()
 {
 	printf("Running fun_array_int_create positive capacity test: ");
@@ -48,7 +50,7 @@ bool test_fun_array_int_create_positive_initial_capacity()
 	}
 }
 
-// Test: Add elements - non-full array
+// Test: Add elements to non-full array
 bool test_fun_array_int_push_non_full_array()
 {
 	printf("Running fun_array_int_push on non-full array test: ");
@@ -88,7 +90,7 @@ bool test_fun_array_int_push_non_full_array()
 	}
 
 	ErrorResult destroy_result = fun_array_int_destroy(&array);
-	ASSERT_NO_ERROR(destroy_result);
+	ASSERT_ERROR_OK(destroy_result);
 
 	printf("PASSED\n");
 	return true;
@@ -106,10 +108,10 @@ int main()
 
 	printf("\n==============================\n");
 	if (all_passed) {
-		printf("✓ ALL TESTS PASSED!\n");
+		printf("ALL TESTS PASSED!\n");
 		return 0;
 	} else {
-		printf("✗ SOME TESTS FAILED!\n");
+		printf("SOME TESTS FAILED!\n");
 		return 1;
 	}
 }
