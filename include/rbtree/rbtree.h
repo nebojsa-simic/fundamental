@@ -4,13 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
 
 #include "../error/error.h"
 #include "../memory/memory.h"
-
-// Reuse hash/equality utilities from hashmap
-#include "../hashmap/hashmap.h"
+#include "../collections/utils.h" // Reuse hash/equality utilities
 
 // Red-Black Tree node colors
 typedef enum { RB_RED = 0, RB_BLACK = 1 } RBColor;
