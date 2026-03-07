@@ -167,7 +167,85 @@ ErrorResult fun_hashmap_contains(const HashMap *map, const void *key,
 size_t fun_hashmap_size(const HashMap *map);
 ErrorResult fun_hashmap_destroy(HashMap *map);
 
+// Macro to define type-safe HashMap with custom hash/equals functions
+// Usage: DEFINE_HASHMAP_TYPE_CUSTOM(Point, int, fun_hash_Point, fun_equals_Point)
+#define DEFINE_HASHMAP_TYPE_CUSTOM(K, V, HASH_FN, EQUALS_FN)                  \
+	typedef struct {                                                          \
+		HashMap map;                                                          \
+	} K##V##HashMap;                                                          \
+                                                                              \
+	typedef struct {                                                          \
+		K##V##HashMap value;                                                  \
+		ErrorResult error;                                                    \
+	} K##V##HashMapResult;                                                    \
+                                                                              \
+	static inline K##V##HashMapResult fun_hashmap_##K##_##V##_create(         \
+		size_t initial_bucket_count)                                          \
+	{                                                                         \
+		K##V##HashMapResult result;                                           \
+		HashMapResult map_result = fun_hashmap_create(                        \
+			sizeof(K), sizeof(V), initial_bucket_count, HASH_FN, EQUALS_FN);  \
+		result.error = map_result.error;                                      \
+		result.value.map = map_result.value;                                  \
+		return result;                                                        \
+	}                                                                         \
+                                                                              \
+	static inline ErrorResult fun_hashmap_##K##_##V##_put(K##V##HashMap *map, \
+														  K key, V value)     \
+	{                                                                         \
+		return fun_hashmap_put(&map->map, &key, &value);                      \
+	}                                                                         \
+                                                                              \
+	static inline V fun_hashmap_##K##_##V##_get(const K##V##HashMap *map,     \
+												K key)                        \
+	{                                                                         \
+		V value;                                                              \
+		ErrorResult result = fun_hashmap_get(&map->map, &key, &value);        \
+		(void)result;                                                         \
+		return value;                                                         \
+	}                                                                         \
+                                                                              \
+	static inline ErrorResult fun_hashmap_##K##_##V##_contains(               \
+		const K##V##HashMap *map, K key, bool *out)                           \
+	{                                                                         \
+		return fun_hashmap_contains(&map->map, &key, out);                    \
+	}                                                                         \
+                                                                              \
+	static inline ErrorResult fun_hashmap_##K##_##V##_remove(                 \
+		K##V##HashMap *map, K key)                                            \
+	{                                                                         \
+		return fun_hashmap_remove(&map->map, &key);                           \
+	}                                                                         \
+                                                                              \
+	static inline size_t fun_hashmap_##K##_##V##_size(                        \
+		const K##V##HashMap *map)                                             \
+	{                                                                         \
+		return fun_hashmap_size(&map->map);                                   \
+	}                                                                         \
+                                                                              \
+	static inline ErrorResult fun_hashmap_##K##_##V##_destroy(                \
+		K##V##HashMap *map)                                                   \
+	{                                                                         \
+		return fun_hashmap_destroy(&map->map);                                \
+	}
+
+// For simple POD structs, use byte-wise hash and memcmp equality
+// Usage: DEFINE_HASHMAP_TYPE_STRUCT(Point, int) for struct Point { int x; int y; }
+#define DEFINE_HASHMAP_TYPE_STRUCT(K, V)                                     \
+	DEFINE_HASHMAP_TYPE_CUSTOM(K, V, (const HashFunction)fun_hash_bytes_##K, \
+							   (const KeyEqualFunction)fun_equals_bytes_##K) \
+                                                                             \
+	static inline uint64_t fun_hash_bytes_##K(const void *key)               \
+	{                                                                        \
+		return fun_hash_bytes(key, sizeof(K));                               \
+	}                                                                        \
+	static inline bool fun_equals_bytes_##K(const void *k1, const void *k2)  \
+	{                                                                        \
+		return fun_equals_bytes(k1, k2, sizeof(K));                          \
+	}
+
 // Macro to define type-safe HashMap operations for any Key/Value type pair
+// Works for primitive types that have fun_hash_* and fun_equals_* defined
 // Usage: DEFINE_HASHMAP_TYPE(int, char) creates IntCharHashMap, fun_hashmap_IntChar_*, etc.
 #define DEFINE_HASHMAP_TYPE(K, V)                                             \
 	typedef struct {                                                          \
