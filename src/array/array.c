@@ -35,7 +35,7 @@ ErrorResult fun_array_push_common(Array *array, void *element)
 	// Check if we need to grow the array
 	if (array->count >= array->capacity) {
 		// Calculate new capacity (double the size for amortized efficiency)
-		size_t new_capacity = array->capacity * 2 ? array->capacity : 1;
+		size_t new_capacity = (array->capacity > 0) ? array->capacity * 2 : 1;
 
 		MemoryResult new_block_result = fun_memory_reallocate(
 			array->data, new_capacity * array->element_size);
