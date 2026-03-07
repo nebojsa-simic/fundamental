@@ -8,7 +8,7 @@
 #include "../error/error.h"
 #include "../memory/memory.h"
 
-// Forward declaration of the array structure
+// Core array structure - type-agnostic
 typedef struct {
 	void *data; // Dynamically allocated memory block
 	size_t count; // Number of elements currently in array
@@ -16,7 +16,7 @@ typedef struct {
 	size_t element_size; // Size of each element in bytes
 } Array;
 
-// Result type for array operations
+// Result type for generic array operations
 typedef struct {
 	Array value;
 	ErrorResult error;
@@ -27,113 +27,77 @@ typedef struct {
 #define ERROR_CODE_ARRAY_FULL 102
 #define ERROR_CODE_REALLOCATION_FAILED 103
 
-// Function pointers for element-specific operations needed by generic array
-typedef void (*ElementCopyFn)(void *dest, const void *src, size_t element_size);
-typedef void (*ElementDestroyFn)(void *element);
-
-// Core Array API for generic operations
+// Core Array API - type-agnostic operations
 ArrayResult fun_array_create(size_t element_size, size_t initial_capacity);
-ErrorResult fun_array_push_common(Array *array, void *element);
-ErrorResult fun_array_get_common(Array *array, size_t index, void *out_element);
-ErrorResult fun_array_set_common(Array *array, size_t index, void *element);
-size_t fun_array_size_common(Array *array);
-size_t fun_array_capacity_common(Array *array);
-ErrorResult fun_array_destroy_common(Array *array);
+ErrorResult fun_array_push(Array *array, const void *element);
+ErrorResult fun_array_get(const Array *array, size_t index, void *out_element);
+ErrorResult fun_array_set(Array *array, size_t index, const void *element);
+size_t fun_array_size(const Array *array);
+size_t fun_array_capacity(const Array *array);
+ErrorResult fun_array_destroy(Array *array);
 
-// Type-specific Array API - manually defined for each type
-// Int Array
-typedef struct {
-	Array array;
-} IntArray;
+// Macro to define type-safe array operations for any type T
+// Usage: DEFINE_ARRAY_TYPE(int) creates IntArray, fun_array_int_*, etc.
+#define DEFINE_ARRAY_TYPE(T)                                                 \
+	typedef struct {                                                         \
+		Array array;                                                         \
+	} T##Array;                                                              \
+                                                                             \
+	typedef struct {                                                         \
+		T##Array value;                                                      \
+		ErrorResult error;                                                   \
+	} T##ArrayResult;                                                        \
+                                                                             \
+	static inline T##ArrayResult fun_array_##T##_create(                     \
+		size_t initial_capacity)                                             \
+	{                                                                        \
+		T##ArrayResult result;                                               \
+		ArrayResult array_result =                                           \
+			fun_array_create(sizeof(T), initial_capacity);                   \
+		result.error = array_result.error;                                   \
+		result.value.array = array_result.value;                             \
+		return result;                                                       \
+	}                                                                        \
+                                                                             \
+	static inline ErrorResult fun_array_##T##_push(T##Array *array, T value) \
+	{                                                                        \
+		return fun_array_push(&array->array, &value);                        \
+	}                                                                        \
+                                                                             \
+	static inline T fun_array_##T##_get(const T##Array *array, size_t index) \
+	{                                                                        \
+		T value;                                                             \
+		ErrorResult result = fun_array_get(&array->array, index, &value);    \
+		(void)result;                                                        \
+		return value;                                                        \
+	}                                                                        \
+                                                                             \
+	static inline ErrorResult fun_array_##T##_set(T##Array *array,           \
+												  size_t index, T value)     \
+	{                                                                        \
+		return fun_array_set(&array->array, index, &value);                  \
+	}                                                                        \
+                                                                             \
+	static inline size_t fun_array_##T##_size(const T##Array *array)         \
+	{                                                                        \
+		return fun_array_size(&array->array);                                \
+	}                                                                        \
+                                                                             \
+	static inline ErrorResult fun_array_##T##_destroy(T##Array *array)       \
+	{                                                                        \
+		return fun_array_destroy(&array->array);                             \
+	}
 
-typedef struct {
-	IntArray value;
-	ErrorResult error;
-} IntArrayResult;
+// Convenience macros for common usage
+#define ARRAY_FOREACH(T, array_ptr, item_var)                                 \
+	for (size_t _i = 0; _i < fun_array_##T##_size(array_ptr) &&               \
+						((item_var) = fun_array_##T##_get(array_ptr, _i), 1); \
+		 _i++)
 
-IntArrayResult fun_array_int_create(size_t initial_capacity);
-ErrorResult fun_array_int_push(IntArray *array, int value);
-int fun_array_int_get(IntArray *array, size_t index);
-size_t fun_array_int_size(IntArray *array);
-ErrorResult fun_array_int_destroy(IntArray *array);
-
-// Char Array
-typedef struct {
-	Array array;
-} CharArray;
-
-typedef struct {
-	CharArray value;
-	ErrorResult error;
-} CharArrayResult;
-
-CharArrayResult fun_array_char_create(size_t initial_capacity);
-ErrorResult fun_array_char_push(CharArray *array, char value);
-char fun_array_char_get(CharArray *array, size_t index);
-size_t fun_array_char_size(CharArray *array);
-ErrorResult fun_array_char_destroy(CharArray *array);
-
-// Double Array
-typedef struct {
-	Array array;
-} DoubleArray;
-
-typedef struct {
-	DoubleArray value;
-	ErrorResult error;
-} DoubleArrayResult;
-
-DoubleArrayResult fun_array_double_create(size_t initial_capacity);
-ErrorResult fun_array_double_push(DoubleArray *array, double value);
-double fun_array_double_get(DoubleArray *array, size_t index);
-size_t fun_array_double_size(DoubleArray *array);
-ErrorResult fun_array_double_destroy(DoubleArray *array);
-
-// Pointer Array
-typedef struct {
-	Array array;
-} PointerArray;
-
-typedef struct {
-	PointerArray value;
-	ErrorResult error;
-} PointerArrayResult;
-
-PointerArrayResult fun_array_pointer_create(size_t initial_capacity);
-ErrorResult fun_array_pointer_push(PointerArray *array, void *value);
-void *fun_array_pointer_get(PointerArray *array, size_t index);
-size_t fun_array_pointer_size(PointerArray *array);
-ErrorResult fun_array_pointer_destroy(PointerArray *array);
-
-// Additional utility functions
-static inline bool fun_array_is_empty(const Array *array)
-{
-	return array && array->count == 0;
-}
-
-static inline bool fun_array_is_full(const Array *array)
-{
-	return array && array->count >= array->capacity;
-}
-
-static inline bool fun_array_int_is_empty(const IntArray *array)
-{
-	return array && array->array.count == 0;
-}
-
-static inline bool fun_array_char_is_empty(const CharArray *array)
-{
-	return array && array->array.count == 0;
-}
-
-static inline bool fun_array_double_is_empty(const DoubleArray *array)
-{
-	return array && array->array.count == 0;
-}
-
-static inline bool fun_array_pointer_is_empty(const PointerArray *array)
-{
-	return array && array->array.count == 0;
-}
+#define ARRAY_FOREACH_IDX(T, array_ptr, item_var, idx_var)          \
+	for (size_t idx_var = 0;                                        \
+		 idx_var < fun_array_##T##_size(array_ptr) &&               \
+		 ((item_var) = fun_array_##T##_get(array_ptr, idx_var), 1); \
+		 idx_var++)
 
 #endif // LIBRARY_ARRAY_H
