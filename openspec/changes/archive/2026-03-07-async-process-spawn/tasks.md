@@ -8,14 +8,14 @@
 
 ## 2. Core Implementation
 
-- [ ] 2.1 Implement fun_async_process_spawn in src/async/process.c
-- [ ] 2.2 Initialize embedded Process struct within AsyncResult
-- [ ] 2.3 Implement circular buffer allocation for stdout/stderr capture
-- [ ] 2.4 Implement fun_async_result_get_process accessor
-- [ ] 2.5 Implement fun_process_get_stdout and fun_process_get_stderr accessors
-- [ ] 2.6 Implement fun_process_get_exit_code for exit code retrieval
-- [ ] 2.7 Implement fun_process_terminate for forceful termination
-- [ ] 2.8 Implement fun_process_free for resource cleanup
+- [x] 2.1 Implement fun_async_process_spawn in src/async/process.c
+- [x] 2.2 Initialize embedded Process struct within AsyncResult
+- [x] 2.3 Implement circular buffer allocation for stdout/stderr capture
+- [x] 2.4 Implement fun_async_result_get_process accessor
+- [x] 2.5 Implement fun_process_get_stdout and fun_process_get_stderr accessors
+- [x] 2.6 Implement fun_process_get_exit_code for exit code retrieval
+- [x] 2.7 Implement fun_process_terminate for forceful termination
+- [x] 2.8 Implement fun_process_free for resource cleanup
 
 ## 3. Windows Platform Layer
 
