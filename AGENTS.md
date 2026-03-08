@@ -4,7 +4,7 @@
 
 ### Full Test Suite
 - **Windows**: `run-tests-windows-amd64.bat` - Run all tests by iterating through `tests\*` directories
-- **Linux**: Navigate to each `tests/*/` directory and run `./build-linux-amd64.sh` followed by `./test`
+- **Linux**: `./run-tests-linux-amd64.sh` - Run all tests by iterating through `tests/*/` directories
 
 ### Individual Component Builds
 - **Windows**: Navigate to specific test directory and run: `.\build-windows-amd64.bat`
@@ -21,8 +21,9 @@
 - Code formatter uses `.clang-format` configuration (based on Linux kernel style)
 
 ## Test Commands
-- Individual tests: Run specific `test.exe` in each component's test directory
+- Individual tests: Run specific `test.exe` (Windows) or `test` (Linux) in each component's test directory
 - Batch testing (Windows): Execute `run-tests-windows-amd64.bat` to run all test suites sequentially
+- Batch testing (Linux): Execute `./run-tests-linux-amd64.sh` to run all test suites sequentially
 - Each test follows the same pattern:
   - Compile with build script  
   - Execute if compilation succeeds
@@ -123,7 +124,9 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
 
 ### Test Organization
 - Test directories follow: `tests/component_name/` structure
-- Each directory should have `build-windows-amd64.bat` script to compile tests
+- Each directory should have platform-specific build scripts:
+  - Windows: `build-windows-amd64.bat`
+  - Linux: `build-linux-amd64.sh`
 - Tests should include validation for success and error conditions
 - Test names start with `test_` and follow function-under-test naming
 - Include negative tests (expected failures) to verify error handling
