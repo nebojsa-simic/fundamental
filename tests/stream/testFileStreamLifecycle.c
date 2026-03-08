@@ -18,13 +18,8 @@ bool test_stream_create_valid_file(void)
 	// Create stream for existing test file
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 1024, FILE_MODE_STANDARD);
-	printf("Stream create error.code: %d\n", stream_result.error.code);
-	printf("Stream create status: %d\n", stream_result.status);
-	printf("Stream create poll: %p\n", stream_result.poll);
 	ASSERT_NO_ERROR(stream_result);
 	fun_async_await(&stream_result);
-	fprintf(stderr, "DEBUG: After await error.code: %d, status: %d\n",
-			stream_result.error.code, stream_result.status);
 
 	printf("After await error.code: %d\n", stream_result.error.code);
 	printf("After await status: %d\n", stream_result.status);

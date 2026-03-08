@@ -4,7 +4,9 @@ gcc \
     -I ../../include \
     test.c \
     ../../arch/memory/linux-amd64/memory.c \
-    ../../src/async/async.c \
-    -o test 
+    ../../src/string/stringOperations.c \
+    ../../src/string/stringConversion.c \
+    ../../src/string/stringTemplate.c \
+    -o test
 
 strip --strip-unneeded test

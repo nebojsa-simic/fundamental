@@ -54,15 +54,22 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 			LARGE_INTEGER new_pos;
 			new_pos.QuadPart = required_size;
 
-			if (!SetFilePointerEx(state->file_handle, new_pos, NULL,
-								  FILE_BEGIN) ||
-				!SetEndOfFile(state->file_handle)) {
-				result->error =
-					(ErrorResult){ .code = GetLastError(),
-								   .message = "Failed to extend file" };
-				final_status = ASYNC_ERROR;
-				goto cleanup;
-			}
+if (!SetFilePointerEx(state->file_handle, new_pos, NULL,
+								  FILE_BEGIN)) {
+		result->error =
+			(ErrorResult){ .code = GetLastError(),
+						   .message = "Failed to set file pointer" };
+		final_status = ASYNC_ERROR;
+		goto cleanup;
+	}
+	
+	if (!SetEndOfFile(state->file_handle)) {
+		result->error =
+			(ErrorResult){ .code = GetLastError(),
+						   .message = "Failed to set end of file" };
+		final_status = ASYNC_ERROR;
+		goto cleanup;
+	}
 		}
 
 		state->file_extended = true;
@@ -158,7 +165,7 @@ cleanup:
 	}
 
 	// Free state memory
-	fun_memory_free((void **)&state);
+	fun_memory_free(&state);
 
 	return final_status;
 }
