@@ -3,28 +3,45 @@
 ## Build Commands
 
 ### Full Test Suite
-- `run-tests-windows-amd64.bat` - Run all tests by iterating through `tests\*` directories
+- **Windows**: `run-tests-windows-amd64.bat` - Run all tests by iterating through `tests\*` directories
+- **Linux**: Navigate to each `tests/*/` directory and run `./build-linux-amd64.sh` followed by `./test`
 
 ### Individual Component Builds
-- Navigate to specific test directory and run: `.\build-windows-amd64.bat`
-- Individual test executables are named `test.exe`
+- **Windows**: Navigate to specific test directory and run: `.\build-windows-amd64.bat`
+- **Linux**: Navigate to specific test directory and run: `./build-linux-amd64.sh`
+- Individual test executables are named `test.exe` (Windows) or `test` (Linux)
 
 ### Running Individual Tests
-- Each test directory contains its own build script: `build-windows-amd64.bat`
-- Execute `test.exe` after successful build: `.\test.exe`
+- Each test directory contains its own build script
+- Execute test after successful build: `.\test.exe` (Windows) or `./test` (Linux)
 
 ## Lint Commands
-- `code-format.bat` - Runs `clang-format -i -style=file` on all `.c` and `.h` files in directory tree
-- `code-format.sh` - Unix equivalent using bash script
+- **Windows**: `code-format.bat` - Runs `clang-format -i -style=file` on all `.c` and `.h` files
+- **Linux**: `./code-format.sh` - Unix equivalent using bash script
 - Code formatter uses `.clang-format` configuration (based on Linux kernel style)
 
 ## Test Commands
 - Individual tests: Run specific `test.exe` in each component's test directory
-- Batch testing: Execute `run-tests-windows-amd64.bat` to run all test suites sequentially
+- Batch testing (Windows): Execute `run-tests-windows-amd64.bat` to run all test suites sequentially
 - Each test follows the same pattern:
   - Compile with build script  
   - Execute if compilation succeeds
   - Return exit code for failure
+
+### Test Modules
+Current test directories:
+- `async/` - Async operations and process spawn
+- `collections/` - Dynamic arrays
+- `console/` - Console I/O
+- `filesystem/` - Directory and path operations
+- `hashmap/` - Hash map operations
+- `memory/` - Memory allocation
+- `process_spawn/` - Process execution
+- `rbtree/` - Red-black trees
+- `set/` - Set operations
+- `stream/` - Stream I/O
+- `string*/` - String operations (conversion, operations, template)
+- `file*/` - File I/O (read, write, append, lock)
 
 ## OpenSpec Workflow
 This project uses OpenSpec for specifications and change management:
