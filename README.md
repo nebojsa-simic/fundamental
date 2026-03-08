@@ -185,7 +185,9 @@ voidResult free_result = fun_memory_free(&buffer);
 #include "string/string.h"
 
 char output[512];
-String template = "Hello #{name}, you have #{age} messages";
+
+// Template prefixes: ${string} #{int} %{double} *{pointer}
+String template = "Hello ${name}, you have #{age} messages";
 
 StringTemplateParam params[] = {
     { "name", { .stringValue = "Alice" } },
