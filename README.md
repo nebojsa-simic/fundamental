@@ -224,33 +224,36 @@ if (result.status == ASYNC_COMPLETED) {
 ```c
 #include "stream/stream.h"
 
-char buffer[4096];
-Memory stream_buffer = { .ptr = buffer, .size = sizeof(buffer) };
-
-// Open file for reading
-AsyncResult open_result = fun_stream_create_file_read(
-    "/path/to/file.txt",
-    stream_buffer,
-    sizeof(buffer),
-    FILE_MODE_AUTO
-);
-fun_async_await(&open_result);
-
-FileStream *stream = open_result.state;
-
-// Read from stream
-uint64_t bytes_read;
-AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-fun_async_await(&read_result);
-
-// Check if more data available
-if (fun_stream_can_read(stream)) {
-    // Continue reading...
+// Allocate buffer for stream
+MemoryResult mem_result = fun_memory_allocate(4096);
+if (fun_error_is_ok(mem_result.error)) {
+    // Open file for reading
+    AsyncResult open_result = fun_stream_create_file_read(
+        "/path/to/file.txt",
+        mem_result.value,
+        4096,
+        FILE_MODE_STANDARD
+    );
+    fun_async_await(&open_result);
+    
+    FileStream *stream = (FileStream *)open_result.state;
+    
+    // Read from stream
+    uint64_t bytes_read;
+    AsyncResult read_result = fun_stream_read(stream, &bytes_read);
+    fun_async_await(&read_result);
+    
+    // Check if more data available
+    while (fun_stream_can_read(stream)) {
+        read_result = fun_stream_read(stream, &bytes_read);
+        fun_async_await(&read_result);
+        // Process buffer contents...
+    }
+    
+    // Close and destroy
+    fun_stream_destroy(stream);
+    fun_memory_free(&mem_result.value);
 }
-
-// Close and destroy
-fun_stream_close(stream);
-fun_stream_destroy(stream);
 ```
 
 ### Console Output
@@ -294,10 +297,13 @@ fun_path_get_filename("/home/user/file.txt", path);
 ```c
 #include "array/array.h"
 
+// Define type-safe array operations for int
+DEFINE_ARRAY_TYPE(int)
+
 // Create array with initial capacity
-ErrorResult create_result = fun_array_int_create(16);
+intArrayResult create_result = fun_array_int_create(16);
 if (fun_error_is_ok(create_result.error)) {
-    IntArray array = create_result.value;
+    intArray array = create_result.value;
     
     // Push elements
     fun_array_int_push(&array, 42);
@@ -319,21 +325,29 @@ if (fun_error_is_ok(create_result.error)) {
 ```c
 #include "hashmap/hashmap.h"
 
-// Create hash map with string keys and int values
-HashMapStringInt map = fun_hmap_string_int_create(16);
+// Define type-safe hashmap for int keys and int values
+// For other types, use DEFINE_HASHMAP_TYPE(KeyType, ValueType)
+DEFINE_HASHMAP_TYPE(int, int)
 
-// Insert key-value pairs
-fun_hmap_string_int_put(&map, "age", 42);
-fun_hmap_string_int_put(&map, "count", 100);
-
-// Retrieve values
-IntResult result = fun_hmap_string_int_get(&map, "age");
-if (fun_error_is_ok(result.error)) {
-    int value = result.value;  // value = 42
+// Create hashmap
+intintHashMapResult create_result = fun_hashmap_int_int_create(16);
+if (fun_error_is_ok(create_result.error)) {
+    intintHashMap map = create_result.value;
+    
+    // Insert key-value pairs
+    fun_hashmap_int_int_put(&map, 1, 42);
+    fun_hashmap_int_int_put(&map, 2, 100);
+    
+    // Retrieve value
+    int value = fun_hashmap_int_int_get(&map, 1);  // value = 42
+    
+    // Check if key exists
+    bool contains;
+    fun_hashmap_int_int_contains(&map, 1, &contains);
+    
+    // Destroy when done
+    fun_hashmap_int_int_destroy(&map);
 }
-
-// Destroy when done
-fun_hmap_string_int_destroy(&map);
 ```
 
 ### Async Process Spawn
