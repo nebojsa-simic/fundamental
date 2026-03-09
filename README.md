@@ -137,6 +137,25 @@ fundamental/
 - Linux ARM64 (planned)
 - Extensible architecture system with platform abstractions in `arch/*/`
 
+### **Configuration Management** (In Development)
+- Cascading configuration from CLI arguments, environment variables, and INI files
+- Type-safe accessors for string, integer, and boolean values
+- Priority cascade: `--config:key=value` → `APPNAME_KEY` → `{app}.ini`
+- Ergonomic `get_or_default()` for optional configuration values
+- Explicit error handling for required configuration
+
+### **Future Work** (Planned Modules)
+
+| Module | Capabilities | Status |
+|--------|-------------|--------|
+| **Time/Date** | `fun_time_now()`, `fun_time_sleep()`, timestamp formatting | Proposed |
+| **Random Numbers** | PRNG with seeding, `fun_random_u32/u64()`, bounded ranges | Proposed |
+| **Sorting** | Generic array sorting, binary search, comparison functions | Proposed |
+| **Networking** | Socket API, TCP/UDP, HTTP client | Proposed |
+| **Threading** | Thread creation, mutex/locks, atomic operations | Proposed |
+
+These modules will follow the same design principles: zero stdlib dependencies, explicit error handling, caller-allocated memory, and cross-platform support.
+
 ## Quick Start
 
 ### Basic String Operations
