@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compile main test suite
+# Compile main test suite - includes all stream tests (read, write, lifecycle, etc.)
 gcc \
     --std=c17 -Os \
     -I ../../include \
@@ -7,6 +7,8 @@ gcc \
     testFileStreamError.c \
     testFileStreamLifecycle.c \
     testFileStreamRead.c \
+    testFileStreamWrite.c \
+    testStreamCanWrite.c \
     testFileStreamAdvanced.c \
     ../../src/stream/streamFile.c \
     ../../src/stream/streamLifecycle_linux.c \
@@ -25,7 +27,5 @@ gcc \
 
 strip --strip-unneeded test
 
-echo "Main test suite built successfully"
-echo ""
-echo "Note: Stream write tests are included in main test suite"
-echo "testFileStreamWrite.c can be built separately if needed"
+echo "Stream module tests built successfully!"
+echo "All tests including write functionality are now included."

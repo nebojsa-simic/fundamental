@@ -181,26 +181,3 @@ bool test_fun_stream_write_null_parameters(void)
 	printf("✓ fun_stream_write_null_parameters passed\n");
 	return true;
 }
-
-int main()
-{
-	printf("Running stream write module tests:\n");
-
-	if (!test_fun_stream_write_basic()) {
-		printf("Basic write test failed\n");
-		return 1;
-	}
-
-	if (!test_fun_stream_write_large_data()) {
-		printf("Large data write test failed\n");
-		return 1;
-	}
-
-	if (!test_fun_stream_write_null_parameters()) {
-		printf("Null parameters test failed\n");
-		return 1;
-	}
-
-	printf("All stream write tests passed!\n");
-	return 0;
-}

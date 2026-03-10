@@ -91,26 +91,3 @@ bool test_fun_stream_can_write_edge_cases(void)
 	printf("✓ fun_stream_can_write_edge_cases passed\n");
 	return true;
 }
-
-int main()
-{
-	printf("Running stream can_write tests:\n");
-
-	if (!test_fun_stream_can_write_basic()) {
-		printf("Basic can_write test failed\n");
-		return 1;
-	}
-
-	if (!test_fun_stream_can_write_with_null_stream()) {
-		printf("Null stream test failed\n");
-		return 1;
-	}
-
-	if (!test_fun_stream_can_write_edge_cases()) {
-		printf("Edge cases test failed\n");
-		return 1;
-	}
-
-	printf("All stream can_write tests passed!\n");
-	return 0;
-}
