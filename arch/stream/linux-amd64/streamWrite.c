@@ -6,8 +6,6 @@
 #define NULL ((void *)0)
 
 typedef long ssize_t;
-typedef unsigned long size_t;
-typedef long off_t;
 
 #define SYS_write 1
 #define SYS_lseek 8
@@ -34,12 +32,12 @@ static inline long syscall3(long n, long a1, long a2, long a3)
 
 static ssize_t sys_write(int fd, const void *buf, size_t count)
 {
-	return (ssize_t)syscall3(SYS_write, fd, (long)buf, (long)count);
+	return syscall3(SYS_write, fd, (long)buf, (long)count);
 }
 
-static off_t sys_lseek(int fd, off_t offset, int whence)
+static long sys_lseek(int fd, long offset, int whence)
 {
-	return (off_t)syscall3(SYS_lseek, fd, (long)offset, whence);
+	return syscall3(SYS_lseek, fd, offset, whence);
 }
 
 static AsyncStatus poll_stream_write(AsyncResult *result)
@@ -66,9 +64,10 @@ static AsyncStatus poll_stream_write(AsyncResult *result)
 		return ASYNC_ERROR;
 	}
 
-	off_t seek_result = sys_lseek(stream_state->file_descriptor,
-								  (off_t)state->stream->current_position,
-								  SEEK_SET);
+	// Set file position
+	long seek_result = sys_lseek(stream_state->file_descriptor,
+								 (long)state->stream->current_position,
+								 SEEK_SET);
 	if (seek_result < 0) {
 		result->error =
 			fun_error_result(1, "Failed to set file write position");
@@ -77,6 +76,7 @@ static AsyncStatus poll_stream_write(AsyncResult *result)
 		return ASYNC_ERROR;
 	}
 
+	// Write data
 	ssize_t bytes_written_sys = sys_write(
 		stream_state->file_descriptor, state->data, (size_t)state->data_size);
 	if (bytes_written_sys < 0) {
@@ -86,10 +86,12 @@ static AsyncStatus poll_stream_write(AsyncResult *result)
 		return ASYNC_ERROR;
 	}
 
+	// Update stream state
 	state->bytes_written = (uint64_t)bytes_written_sys;
 	state->stream->current_position += (uint64_t)bytes_written_sys;
 	state->stream->bytes_processed += (uint64_t)bytes_written_sys;
 
+	// Check if all data was written
 	if ((uint64_t)bytes_written_sys < state->data_size) {
 		result->error = fun_error_result(1, "Unable to write all data");
 		result->status = ASYNC_ERROR;
@@ -111,6 +113,7 @@ AsyncResult fun_stream_write(FileStream *stream, Memory data,
 							  .error = ERROR_RESULT_NULL_POINTER };
 	}
 
+	// Allocate async state
 	MemoryResult state_result =
 		fun_memory_allocate(sizeof(StreamWriteAsyncState));
 	if (fun_error_is_error(state_result.error)) {
@@ -125,15 +128,19 @@ AsyncResult fun_stream_write(FileStream *stream, Memory data,
 									  .bytes_written = 0,
 									  .write_complete = false };
 
+	// Return pending result with poll function
 	AsyncResult result = { .poll = poll_stream_write,
 						   .state = state,
 						   .status = ASYNC_PENDING,
 						   .error = ERROR_RESULT_NO_ERROR };
 
+	// Immediately poll to do the actual write
 	result.status = poll_stream_write(&result);
 
+	// If completed, free the state
 	if (result.status == ASYNC_COMPLETED || result.status == ASYNC_ERROR) {
-		fun_memory_free((Memory *)&state);
+		void *state_memory = state;
+		fun_memory_free(&state_memory);
 	}
 
 	return result;
