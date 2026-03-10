@@ -1,5 +1,4 @@
 #include "fileWrite.h"
-#include "../../memory_utils.h"
 
 AsyncStatus poll_mmap_write(AsyncResult *result)
 {
@@ -128,8 +127,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		uint64_t actual_offset =
 			state->parameters.offset - state->adjusted_offset;
 		void *write_location = (char *)state->mapped_view + actual_offset;
-		arch_memcpy(write_location, state->parameters.input,
-					state->parameters.bytes_to_write);
+		fun_memcpy_bytes(write_location, state->parameters.input,
+						 state->parameters.bytes_to_write);
 
 		// Force synchronization to disk
 		if (!FlushViewOfFile(state->mapped_view, view_size)) {
