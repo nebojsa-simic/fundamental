@@ -1,21 +1,5 @@
 #include "fileWrite.h"
-
-// ============================================================================
-// Memory Operations (no stdlib dependencies)
-// ============================================================================
-
-static void fun_memcpy(void *dest, const void *src, size_t n)
-{
-	unsigned char *d = (unsigned char *)dest;
-	const unsigned char *s = (const unsigned char *)src;
-	for (size_t i = 0; i < n; i++) {
-		d[i] = s[i];
-	}
-}
-
-// ============================================================================
-// File Write Implementation
-// ============================================================================
+#include "../../memory_utils.h"
 
 AsyncStatus poll_mmap_write(AsyncResult *result)
 {
@@ -144,8 +128,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		uint64_t actual_offset =
 			state->parameters.offset - state->adjusted_offset;
 		void *write_location = (char *)state->mapped_view + actual_offset;
-		fun_memcpy(write_location, state->parameters.input,
-				   state->parameters.bytes_to_write);
+		arch_memcpy(write_location, state->parameters.input,
+					state->parameters.bytes_to_write);
 
 		// Force synchronization to disk
 		if (!FlushViewOfFile(state->mapped_view, view_size)) {
