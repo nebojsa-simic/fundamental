@@ -123,7 +123,7 @@ static void get_filename(const char *path, const char **filename)
 {
 	size_t len;
 	strlen_local(path, &len);
-	
+
 	*filename = path;
 	for (size_t i = 0; i < len; i++) {
 		if (path[i] == '/') {
@@ -155,26 +155,25 @@ AsyncResult fun_register_file_change_notification(String filePath,
 	int inotify_fd = (int)syscall1(SYS_inotify_init, 0);
 	if (inotify_fd < 0) {
 		fun_memory_free((Memory *)&state);
-		return (AsyncResult){
-			.status = ASYNC_ERROR,
-			.error = fun_error_result(-inotify_fd, "Failed to init inotify")
-		};
+		return (AsyncResult){ .status = ASYNC_ERROR,
+							  .error = fun_error_result(
+								  -inotify_fd, "Failed to init inotify") };
 	}
 	state->inotify_fd = inotify_fd;
 
 	char dir_path[512];
 	get_parent_dir(filePath, dir_path);
 
-	uint32_t mask = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
-	int watch_fd = (int)syscall3(SYS_inotify_add_watch, inotify_fd,
-								 (long)dir_path, mask);
+	uint32_t mask = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_FROM |
+					IN_MOVED_TO;
+	int watch_fd =
+		(int)syscall3(SYS_inotify_add_watch, inotify_fd, (long)dir_path, mask);
 	if (watch_fd < 0) {
 		syscall1(SYS_close, inotify_fd);
 		fun_memory_free((Memory *)&state);
-		return (AsyncResult){
-			.status = ASYNC_ERROR,
-			.error = fun_error_result(-watch_fd, "Failed to add inotify watch")
-		};
+		return (AsyncResult){ .status = ASYNC_ERROR,
+							  .error = fun_error_result(
+								  -watch_fd, "Failed to add inotify watch") };
 	}
 	state->watch_fd = watch_fd;
 

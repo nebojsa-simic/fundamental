@@ -154,7 +154,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 			state->parameters.offset + state->parameters.bytes_to_write;
 
 		if (required_size > state->original_file_size) {
-			if (sys_ftruncate(state->file_descriptor, (off_t)required_size) < 0) {
+			if (sys_ftruncate(state->file_descriptor, (off_t)required_size) <
+				0) {
 				result->error = fun_error_result(1, "Failed to extend file");
 				final_status = ASYNC_ERROR;
 				goto cleanup;
@@ -178,7 +179,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 								MAP_SHARED, state->file_descriptor,
 								(off_t)state->adjusted_offset);
 		if (mapped == (void *)-1) {
-			result->error = fun_error_result(1, "Failed to mmap file for write");
+			result->error =
+				fun_error_result(1, "Failed to mmap file for write");
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
@@ -187,13 +189,13 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
-	uint64_t actual_offset =
-		state->parameters.offset - state->adjusted_offset;
+	uint64_t actual_offset = state->parameters.offset - state->adjusted_offset;
 	void *write_location = (char *)state->mapped_address + actual_offset;
 	memcpy_local(write_location, state->parameters.input,
 				 state->parameters.bytes_to_write);
 
-	if (syscall2(SYS_fstat, state->file_descriptor, (long)&state->original_file_size) < 0) {
+	if (syscall2(SYS_fstat, state->file_descriptor,
+				 (long)&state->original_file_size) < 0) {
 	}
 
 cleanup:

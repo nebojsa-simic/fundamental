@@ -132,22 +132,24 @@ static AsyncStatus poll_io_ring(AsyncResult *result)
 		uint64_t sq_size = params.sq_entries * sizeof(struct io_uring_sqe);
 		uint64_t cq_size = params.cq_entries * sizeof(struct io_uring_cqe);
 
-		void *sq_mmap = (void *)syscall6(
-			SYS_mmap, 0, sq_size, 0x3, 0x11, ring_fd, 0);
+		void *sq_mmap =
+			(void *)syscall6(SYS_mmap, 0, sq_size, 0x3, 0x11, ring_fd, 0);
 		if ((long)sq_mmap < 0) {
 			syscall1(SYS_close, ring_fd);
-			result->error = fun_error_result(1, "Failed to mmap submission queue");
+			result->error =
+				fun_error_result(1, "Failed to mmap submission queue");
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
 		state->sq_ring = sq_mmap;
 
-		void *cq_mmap = (void *)syscall6(
-			SYS_mmap, 0, cq_size, 0x3, 0x11, ring_fd, cq_size);
+		void *cq_mmap =
+			(void *)syscall6(SYS_mmap, 0, cq_size, 0x3, 0x11, ring_fd, cq_size);
 		if ((long)cq_mmap < 0) {
 			syscall2(SYS_munmap, (long)sq_mmap, sq_size);
 			syscall1(SYS_close, ring_fd);
-			result->error = fun_error_result(1, "Failed to mmap completion queue");
+			result->error =
+				fun_error_result(1, "Failed to mmap completion queue");
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
@@ -172,8 +174,7 @@ static AsyncStatus poll_io_ring(AsyncResult *result)
 	}
 
 	if (!state->io_submitted) {
-		struct io_uring_sqe *sqe =
-			(struct io_uring_sqe *)state->sq_ring;
+		struct io_uring_sqe *sqe = (struct io_uring_sqe *)state->sq_ring;
 		sqe->opcode = IORING_OP_READV;
 		sqe->fd = state->file_fd;
 		sqe->off = state->parameters.offset;
@@ -196,8 +197,7 @@ static AsyncStatus poll_io_ring(AsyncResult *result)
 	struct io_uring_cqe *cqe = (struct io_uring_cqe *)state->cq_ring;
 	if (cqe->user_data == 1) {
 		if (cqe->res < 0) {
-			result->error =
-				fun_error_result(-cqe->res, "io_uring read failed");
+			result->error = fun_error_result(-cqe->res, "io_uring read failed");
 			final_status = ASYNC_ERROR;
 		} else {
 			result->error = ERROR_RESULT_NO_ERROR;

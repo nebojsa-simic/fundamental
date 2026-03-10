@@ -70,15 +70,15 @@ static AsyncStatus poll_stream_write(AsyncResult *result)
 								  (off_t)state->stream->current_position,
 								  SEEK_SET);
 	if (seek_result < 0) {
-		result->error = fun_error_result(1, "Failed to set file write position");
+		result->error =
+			fun_error_result(1, "Failed to set file write position");
 		result->status = ASYNC_ERROR;
 		state->write_complete = true;
 		return ASYNC_ERROR;
 	}
 
-	ssize_t bytes_written_sys =
-		sys_write(stream_state->file_descriptor, state->data,
-				  (size_t)state->data_size);
+	ssize_t bytes_written_sys = sys_write(
+		stream_state->file_descriptor, state->data, (size_t)state->data_size);
 	if (bytes_written_sys < 0) {
 		result->error = fun_error_result(1, "Failed to write file");
 		result->status = ASYNC_ERROR;

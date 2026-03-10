@@ -120,8 +120,9 @@ AsyncStatus poll_mmap(AsyncResult *result)
 		state->adjusted_offset =
 			(state->parameters.offset / granularity) * granularity;
 
-		uint64_t view_size = state->parameters.bytes_to_read +
-							 (state->parameters.offset - state->adjusted_offset);
+		uint64_t view_size =
+			state->parameters.bytes_to_read +
+			(state->parameters.offset - state->adjusted_offset);
 
 		void *mapped = sys_mmap(NULL, view_size, PROT_READ, MAP_PRIVATE,
 								state->file_descriptor,
@@ -136,12 +137,10 @@ AsyncStatus poll_mmap(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
-	uint8_t *data_ptr =
-		(uint8_t *)state->mapped_address +
-		(state->parameters.offset - state->adjusted_offset);
-	voidResult copy_result =
-		fun_memory_copy(data_ptr, state->parameters.output,
-						state->parameters.bytes_to_read);
+	uint8_t *data_ptr = (uint8_t *)state->mapped_address +
+						(state->parameters.offset - state->adjusted_offset);
+	voidResult copy_result = fun_memory_copy(data_ptr, state->parameters.output,
+											 state->parameters.bytes_to_read);
 	if (fun_error_is_error(copy_result.error)) {
 		result->error = copy_result.error;
 		final_status = ASYNC_ERROR;

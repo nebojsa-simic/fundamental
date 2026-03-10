@@ -67,7 +67,8 @@ static AsyncStatus poll_standard_append(AsyncResult *result)
 		int fd = (int)syscall3(SYS_open, (long)state->parameters.file_path,
 							   O_WRONLY | O_CREAT | O_APPEND, 0644);
 		if (fd < 0) {
-			result->error = fun_error_result(-fd, "Failed to open file for append");
+			result->error =
+				fun_error_result(-fd, "Failed to open file for append");
 			return ASYNC_ERROR;
 		}
 
@@ -76,10 +77,9 @@ static AsyncStatus poll_standard_append(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
-	ssize_t bytes_written =
-		(ssize_t)syscall3(SYS_write, state->file_descriptor,
-						  (long)state->parameters.input,
-						  (long)state->parameters.bytes_to_append);
+	ssize_t bytes_written = (ssize_t)syscall3(
+		SYS_write, state->file_descriptor, (long)state->parameters.input,
+		(long)state->parameters.bytes_to_append);
 	if (bytes_written < 0) {
 		result->error = fun_error_result(1, "Failed to append to file");
 		syscall1(SYS_close, state->file_descriptor);
@@ -101,8 +101,7 @@ static AsyncStatus poll_standard_append(AsyncResult *result)
 
 static AsyncResult create_standard_append(Append parameters)
 {
-	MemoryResult mem_result =
-		fun_memory_allocate(sizeof(StandardAppendState));
+	MemoryResult mem_result = fun_memory_allocate(sizeof(StandardAppendState));
 	if (fun_error_is_error(mem_result.error)) {
 		return (AsyncResult){ .status = ASYNC_ERROR,
 							  .error = mem_result.error };

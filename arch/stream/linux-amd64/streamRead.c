@@ -114,9 +114,8 @@ AsyncStatus poll_stream_read(AsyncResult *result)
 		return ASYNC_ERROR;
 	}
 
-	ssize_t bytes_read_sys =
-		sys_read(stream_state->file_descriptor, state->stream->buffer,
-				 (size_t)to_read);
+	ssize_t bytes_read_sys = sys_read(stream_state->file_descriptor,
+									  state->stream->buffer, (size_t)to_read);
 	if (bytes_read_sys < 0) {
 		result->error = fun_error_result(1, "Failed to read file");
 		result->status = ASYNC_ERROR;

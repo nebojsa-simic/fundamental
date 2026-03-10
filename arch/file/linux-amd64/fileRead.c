@@ -90,18 +90,17 @@ static AsyncStatus poll_standard_read(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
-	off_t seek_result =
-		(off_t)syscall3(SYS_lseek, state->file_descriptor,
-						(long)state->parameters.offset, SEEK_SET);
+	off_t seek_result = (off_t)syscall3(SYS_lseek, state->file_descriptor,
+										(long)state->parameters.offset,
+										SEEK_SET);
 	if ((long)seek_result < 0) {
 		result->error = fun_error_result(1, "Failed to seek in file");
 		goto cleanup;
 	}
 
-	ssize_t bytes_read =
-		(ssize_t)syscall3(SYS_read, state->file_descriptor,
-						  (long)state->parameters.output,
-						  (long)state->parameters.bytes_to_read);
+	ssize_t bytes_read = (ssize_t)syscall3(
+		SYS_read, state->file_descriptor, (long)state->parameters.output,
+		(long)state->parameters.bytes_to_read);
 	if (bytes_read < 0) {
 		result->error = fun_error_result(1, "Failed to read file");
 		goto cleanup;
@@ -133,8 +132,7 @@ static AsyncResult create_standard_read(Read parameters)
 							  .error = ERROR_RESULT_NULL_POINTER };
 	}
 
-	MemoryResult mem_result =
-		fun_memory_allocate(sizeof(StandardReadState));
+	MemoryResult mem_result = fun_memory_allocate(sizeof(StandardReadState));
 	if (fun_error_is_error(mem_result.error)) {
 		return (AsyncResult){ .status = ASYNC_ERROR,
 							  .error = mem_result.error };
@@ -158,8 +156,7 @@ AsyncResult fun_read_file_in_memory(Read parameters)
 	case FILE_MODE_MMAP:
 	case FILE_MODE_AUTO:
 	default: {
-		MemoryResult mem_result =
-			fun_memory_allocate(sizeof(MMapState));
+		MemoryResult mem_result = fun_memory_allocate(sizeof(MMapState));
 		if (fun_error_is_error(mem_result.error)) {
 			return (AsyncResult){ .status = ASYNC_ERROR,
 								  .error = mem_result.error };
