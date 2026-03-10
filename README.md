@@ -506,3 +506,29 @@ All planned modules will follow the same design principles: zero stdlib dependen
 - [ ] Thread safety extensions for collections
 - [ ] Advanced stream features (seeking, buffering strategies)
 - [ ] Additional collection types (linked lists, queues, stacks)
+
+## Building Without Stdlib (Zero-Stdlib Mode)
+
+To compile with `-nostdlib` flag for true zero-stdlib binaries:
+
+### Windows (MinGW)
+```batch
+gcc -nostdlib -fno-builtin -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    your_code.c ^
+    -lkernel32 -lntdll
+```
+
+**Important flags:**
+- `-mno-stack-arg-probe` - Disables ___chkstk_ms calls (stack probing)
+- `-lntdll` - Provides low-level Windows runtime (NtCreateFile, etc.)
+- `-lkernel32` - Windows API (CreateFile, etc.)
+
+### Linux
+```bash
+gcc -nostdlib -fno-builtin -static \
+    your_code.c \
+    -lc
+```
+
+**Note:** All stdlib functions (memcpy, memset, etc.) are implemented in `arch/*/` using custom implementations.
