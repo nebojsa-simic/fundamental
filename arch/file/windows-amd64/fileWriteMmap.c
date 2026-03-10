@@ -164,8 +164,9 @@ cleanup:
 		CloseHandle(state->file_handle);
 	}
 
-	// Free state memory
-	fun_memory_free(&state);
+	// Free state memory - cast state pointer to Memory for proper free
+	void *state_memory = state;
+	fun_memory_free(&state_memory);
 
 	return final_status;
 }
