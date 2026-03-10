@@ -1,4 +1,5 @@
 #include "fileWrite.h"
+#include "memory/memory.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -116,15 +117,6 @@ static inline int sys_ftruncate(int fd, off_t length)
 	return (int)syscall2(SYS_ftruncate, fd, (long)length);
 }
 
-static void memcpy_local(void *dest, const void *src, size_t n)
-{
-	unsigned char *d = (unsigned char *)dest;
-	const unsigned char *s = (const unsigned char *)src;
-	for (size_t i = 0; i < n; i++) {
-		d[i] = s[i];
-	}
-}
-
 AsyncStatus poll_mmap_write(AsyncResult *result)
 {
 	MMapWriteState *state = (MMapWriteState *)result->state;
@@ -191,8 +183,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 
 	uint64_t actual_offset = state->parameters.offset - state->adjusted_offset;
 	void *write_location = (char *)state->mapped_address + actual_offset;
-	memcpy_local(write_location, state->parameters.input,
-				 state->parameters.bytes_to_write);
+	fun_memory_copy(state->parameters.input, write_location,
+					state->parameters.bytes_to_write);
 
 	if (syscall2(SYS_fstat, state->file_descriptor,
 				 (long)&state->original_file_size) < 0) {
