@@ -144,18 +144,6 @@ fundamental/
 - Ergonomic `get_or_default()` for optional configuration values
 - Explicit error handling for required configuration
 
-### **Future Work** (Planned Modules)
-
-| Module | Capabilities | Status |
-|--------|-------------|--------|
-| **Time/Date** | `fun_time_now()`, `fun_time_sleep()`, timestamp formatting | Proposed |
-| **Random Numbers** | PRNG with seeding, `fun_random_u32/u64()`, bounded ranges | Proposed |
-| **Sorting** | Generic array sorting, binary search, comparison functions | Proposed |
-| **Networking** | Socket API, TCP/UDP, HTTP client | Proposed |
-| **Threading** | Thread creation, mutex/locks, atomic operations | Proposed |
-
-These modules will follow the same design principles: zero stdlib dependencies, explicit error handling, caller-allocated memory, and cross-platform support.
-
 ## Quick Start
 
 ### Basic String Operations
@@ -497,8 +485,22 @@ MIT License
 
 ## Roadmap
 
+### Planned Modules
+
+| Module | Capabilities | Status |
+|--------|-------------|--------|
+| **Configuration** | Cascading config from CLI, env, INI files | In Development |
+| **Time/Date** | `fun_time_now()`, `fun_time_sleep()`, timestamp formatting | Proposed |
+| **Random Numbers** | PRNG with seeding, `fun_random_u32/u64()`, bounded ranges | Proposed |
+| **Sorting** | Generic array sorting, binary search, comparison functions | Proposed |
+| **Networking** | Socket API, TCP/UDP, HTTP client | Proposed |
+| **Threading** | Thread creation, mutex/locks, atomic operations | Proposed |
+
+All planned modules will follow the same design principles: zero stdlib dependencies, explicit error handling, caller-allocated memory, and cross-platform support.
+
+### Infrastructure
+
 - [ ] ARM64 architecture support (Linux and Darwin)
-- [ ] Network I/O module with async sockets
 - [ ] Comprehensive benchmarking suite
 - [ ] Integration examples and documentation
 - [ ] Thread safety extensions for collections
