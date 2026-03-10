@@ -1,6 +1,76 @@
 #include <windows.h>
 #include <stdbool.h>
 
+// ============================================================================
+// Wide String Helpers (no stdlib dependencies)
+// ============================================================================
+
+// Get length of wide string
+static int fun_wcslen(const wchar_t *s)
+{
+	if (s == NULL) {
+		return 0;
+	}
+	int len = 0;
+	while (s[len] != L'\0') {
+		len++;
+	}
+	return len;
+}
+
+// Copy wide string
+static wchar_t *fun_wcscpy(wchar_t *dest, const wchar_t *src)
+{
+	if (dest == NULL || src == NULL) {
+		return dest;
+	}
+
+	wchar_t *orig_dest = dest;
+	while (*src != L'\0') {
+		*dest++ = *src++;
+	}
+	*dest = L'\0';
+	return orig_dest;
+}
+
+// Concatenate wide strings
+static wchar_t *fun_wcscat(wchar_t *dest, const wchar_t *src)
+{
+	if (dest == NULL || src == NULL) {
+		return dest;
+	}
+
+	wchar_t *ptr = dest;
+	// Find end of dest string
+	while (*ptr != L'\0') {
+		ptr++;
+	}
+	// Copy src to end of dest
+	while (*src != L'\0') {
+		*ptr++ = *src++;
+	}
+	*ptr = L'\0';
+	return dest;
+}
+
+// Compare wide strings
+static int fun_wcscmp(const wchar_t *s1, const wchar_t *s2)
+{
+	if (s1 == NULL || s2 == NULL) {
+		return s1 == s2 ? 0 : (s1 == NULL ? -1 : 1);
+	}
+
+	while (*s1 != L'\0' && *s1 == *s2) {
+		s1++;
+		s2++;
+	}
+	return *(const unsigned short *)s1 - *(const unsigned short *)s2;
+}
+
+// ============================================================================
+// UTF-8/UTF-16 Conversion
+// ============================================================================
+
 // Convert UTF-8 string to UTF-16 wide string
 static int utf8_to_utf16(const char *utf8, wchar_t *utf16, int utf16_size)
 {
@@ -33,16 +103,16 @@ static bool directory_is_empty_wide(const wchar_t *path_wide)
 	wchar_t search_path[MAX_PATH];
 
 	// Build search pattern: path\*
-	int len = wcslen(path_wide);
+	int len = fun_wcslen(path_wide);
 	if (len >= MAX_PATH - 2) {
 		return false;
 	}
 
-	wcscpy(search_path, path_wide);
+	fun_wcscpy(search_path, path_wide);
 	if (len > 0 && path_wide[len - 1] != L'\\' && path_wide[len - 1] != L'/') {
-		wcscat(search_path, L"\\");
+		fun_wcscat(search_path, L"\\");
 	}
-	wcscat(search_path, L"*");
+	fun_wcscat(search_path, L"*");
 
 	HANDLE hFind = FindFirstFileW(search_path, &find_data);
 	if (hFind == INVALID_HANDLE_VALUE) {
@@ -52,8 +122,8 @@ static bool directory_is_empty_wide(const wchar_t *path_wide)
 	bool empty = true;
 	do {
 		// Skip . and ..
-		if (wcscmp(find_data.cFileName, L".") == 0 ||
-			wcscmp(find_data.cFileName, L"..") == 0) {
+		if (fun_wcscmp(find_data.cFileName, L".") == 0 ||
+			fun_wcscmp(find_data.cFileName, L"..") == 0) {
 			continue;
 		}
 		empty = false;
@@ -164,16 +234,16 @@ int fun_platform_directory_list(const char *path, char *buffer,
 
 	// Build search pattern: path\*
 	wchar_t search_path[MAX_PATH + 2];
-	int len = wcslen(path_wide);
+	int len = fun_wcslen(path_wide);
 	if (len >= MAX_PATH - 2) {
 		return -2; // Path too long
 	}
 
-	wcscpy(search_path, path_wide);
+	fun_wcscpy(search_path, path_wide);
 	if (len > 0 && path_wide[len - 1] != L'\\' && path_wide[len - 1] != L'/') {
-		wcscat(search_path, L"\\");
+		fun_wcscat(search_path, L"\\");
 	}
-	wcscat(search_path, L"*");
+	fun_wcscat(search_path, L"*");
 
 	WIN32_FIND_DATAW find_data;
 	HANDLE hFind = FindFirstFileW(search_path, &find_data);
@@ -186,8 +256,8 @@ int fun_platform_directory_list(const char *path, char *buffer,
 
 	do {
 		// Skip . and ..
-		if (wcscmp(find_data.cFileName, L".") == 0 ||
-			wcscmp(find_data.cFileName, L"..") == 0) {
+		if (fun_wcscmp(find_data.cFileName, L".") == 0 ||
+			fun_wcscmp(find_data.cFileName, L"..") == 0) {
 			continue;
 		}
 

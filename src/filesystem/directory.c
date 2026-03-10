@@ -1,6 +1,5 @@
 #include "filesystem/filesystem.h"
 #include <stdbool.h>
-#include <string.h>
 
 // Platform-specific functions (implemented in arch/filesystem/*/directory.c)
 int fun_platform_directory_create(const char *path);
