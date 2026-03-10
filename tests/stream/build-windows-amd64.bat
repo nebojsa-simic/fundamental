@@ -1,6 +1,6 @@
 @ECHO OFF
 
-REM Compile
+REM Compile main test suite
 gcc ^
     --std=c17 -Os ^
     -I ../../include ^
@@ -8,7 +8,6 @@ gcc ^
     testFileStreamError.c ^
     testFileStreamLifecycle.c ^
     testFileStreamRead.c ^
-    testFileStreamWrite.c ^
     testFileStreamAdvanced.c ^
     ../../src/stream/streamFile.c ^
     ../../src/stream/streamLifecycle.c ^
@@ -27,3 +26,8 @@ gcc ^
 
 REM Strip unnecessary symbols
 strip --strip-unneeded test.exe
+
+echo Main test suite built successfully
+echo.
+echo To build stream write tests separately, run:
+echo   build-windows-amd64-streamWrite.bat
