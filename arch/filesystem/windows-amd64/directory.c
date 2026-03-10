@@ -6,7 +6,7 @@
 // ============================================================================
 
 // Get length of wide string
-static int fun_wcslen(const wchar_t *s)
+static int fun_wide_string_length(const wchar_t *s)
 {
 	if (s == NULL) {
 		return 0;
@@ -19,7 +19,7 @@ static int fun_wcslen(const wchar_t *s)
 }
 
 // Copy wide string
-static wchar_t *fun_wcscpy(wchar_t *dest, const wchar_t *src)
+static wchar_t *fun_wide_string_copy(wchar_t *dest, const wchar_t *src)
 {
 	if (dest == NULL || src == NULL) {
 		return dest;
@@ -34,7 +34,7 @@ static wchar_t *fun_wcscpy(wchar_t *dest, const wchar_t *src)
 }
 
 // Concatenate wide strings
-static wchar_t *fun_wcscat(wchar_t *dest, const wchar_t *src)
+static wchar_t *fun_wide_string_concatenate(wchar_t *dest, const wchar_t *src)
 {
 	if (dest == NULL || src == NULL) {
 		return dest;
@@ -54,7 +54,7 @@ static wchar_t *fun_wcscat(wchar_t *dest, const wchar_t *src)
 }
 
 // Compare wide strings
-static int fun_wcscmp(const wchar_t *s1, const wchar_t *s2)
+static int fun_wide_string_compare(const wchar_t *s1, const wchar_t *s2)
 {
 	if (s1 == NULL || s2 == NULL) {
 		return s1 == s2 ? 0 : (s1 == NULL ? -1 : 1);
@@ -103,16 +103,16 @@ static bool directory_is_empty_wide(const wchar_t *path_wide)
 	wchar_t search_path[MAX_PATH];
 
 	// Build search pattern: path\*
-	int len = fun_wcslen(path_wide);
+	int len = fun_wide_string_length(path_wide);
 	if (len >= MAX_PATH - 2) {
 		return false;
 	}
 
-	fun_wcscpy(search_path, path_wide);
+	fun_wide_string_copy(search_path, path_wide);
 	if (len > 0 && path_wide[len - 1] != L'\\' && path_wide[len - 1] != L'/') {
-		fun_wcscat(search_path, L"\\");
+		fun_wide_string_concatenate(search_path, L"\\");
 	}
-	fun_wcscat(search_path, L"*");
+	fun_wide_string_concatenate(search_path, L"*");
 
 	HANDLE hFind = FindFirstFileW(search_path, &find_data);
 	if (hFind == INVALID_HANDLE_VALUE) {
@@ -122,8 +122,8 @@ static bool directory_is_empty_wide(const wchar_t *path_wide)
 	bool empty = true;
 	do {
 		// Skip . and ..
-		if (fun_wcscmp(find_data.cFileName, L".") == 0 ||
-			fun_wcscmp(find_data.cFileName, L"..") == 0) {
+		if (fun_wide_string_compare(find_data.cFileName, L".") == 0 ||
+			fun_wide_string_compare(find_data.cFileName, L"..") == 0) {
 			continue;
 		}
 		empty = false;
@@ -234,16 +234,16 @@ int fun_platform_directory_list(const char *path, char *buffer,
 
 	// Build search pattern: path\*
 	wchar_t search_path[MAX_PATH + 2];
-	int len = fun_wcslen(path_wide);
+	int len = fun_wide_string_length(path_wide);
 	if (len >= MAX_PATH - 2) {
 		return -2; // Path too long
 	}
 
-	fun_wcscpy(search_path, path_wide);
+	fun_wide_string_copy(search_path, path_wide);
 	if (len > 0 && path_wide[len - 1] != L'\\' && path_wide[len - 1] != L'/') {
-		fun_wcscat(search_path, L"\\");
+		fun_wide_string_concatenate(search_path, L"\\");
 	}
-	fun_wcscat(search_path, L"*");
+	fun_wide_string_concatenate(search_path, L"*");
 
 	WIN32_FIND_DATAW find_data;
 	HANDLE hFind = FindFirstFileW(search_path, &find_data);
@@ -256,8 +256,8 @@ int fun_platform_directory_list(const char *path, char *buffer,
 
 	do {
 		// Skip . and ..
-		if (fun_wcscmp(find_data.cFileName, L".") == 0 ||
-			fun_wcscmp(find_data.cFileName, L"..") == 0) {
+		if (fun_wide_string_compare(find_data.cFileName, L".") == 0 ||
+			fun_wide_string_compare(find_data.cFileName, L"..") == 0) {
 			continue;
 		}
 
