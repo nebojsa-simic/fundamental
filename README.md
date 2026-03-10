@@ -506,6 +506,7 @@ All planned modules will follow the same design principles: zero stdlib dependen
 - [ ] Thread safety extensions for collections
 - [ ] Advanced stream features (seeking, buffering strategies)
 - [ ] Additional collection types (linked lists, queues, stacks)
+- [ ] `fun_memory_compare()` - Memory comparison function to replace memcmp (needed for collections)
 
 ## Building Without Stdlib (Zero-Stdlib Mode)
 
