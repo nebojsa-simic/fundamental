@@ -4,6 +4,27 @@
 #include "error/error.h"
 #include "async/async.h"
 
+// ============================================================================
+// Memory Operations (no stdlib dependencies)
+// ============================================================================
+
+static void fun_memset(void *s, int c, size_t n)
+{
+	unsigned char *p = (unsigned char *)s;
+	for (size_t i = 0; i < n; i++) {
+		p[i] = (unsigned char)c;
+	}
+}
+
+static void fun_memcpy(void *dest, const void *src, size_t n)
+{
+	unsigned char *d = (unsigned char *)dest;
+	const unsigned char *s = (const unsigned char *)src;
+	for (size_t i = 0; i < n; i++) {
+		d[i] = s[i];
+	}
+}
+
 // Structure to hold state for file change monitoring
 typedef struct {
 	String file_path;
@@ -28,7 +49,7 @@ DWORD WINAPI file_monitor_thread(LPVOID param)
 
 	while (!monitoring_should_stop) {
 		// Reset overlapped structure
-		memset(&(state->overlapped), 0, sizeof(OVERLAPPED));
+		fun_memset(&(state->overlapped), 0, sizeof(OVERLAPPED));
 
 		// Watch for changes to the file
 		result = ReadDirectoryChangesW(
@@ -58,7 +79,7 @@ DWORD WINAPI file_monitor_thread(LPVOID param)
 				int len = notifyInfo->FileNameLength / sizeof(WCHAR);
 				if (len >= 256)
 					len = 255;
-				memcpy(fileName, notifyInfo->FileName, len * sizeof(WCHAR));
+				fun_memcpy(fileName, notifyInfo->FileName, len * sizeof(WCHAR));
 				fileName[len] = L'\0';
 
 				// Convert back to UTF-8 if needed and call the callback
@@ -95,7 +116,7 @@ AsyncResult fun_register_file_change_notification(String filePath,
 	}
 
 	FileNotificationState *state = (FileNotificationState *)stateResult.value;
-	memset(state, 0, sizeof(FileNotificationState));
+	fun_memset(state, 0, sizeof(FileNotificationState));
 
 	// Initialize event for overlapped operations
 	state->overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
