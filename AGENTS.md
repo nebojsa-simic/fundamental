@@ -69,6 +69,71 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
 - Validate entire architecture: `openspec validate --all`
 - Check change status: `openspec validate <change-id>`
 
+---
+
+## AI Agent Skills
+
+This project includes specialized skills for AI coding agents (Opencode, Claude Code) that provide copy-paste examples for common Fundamental Library operations.
+
+### Available Skills
+
+Skills are located in `.opencode/skills/` and cover these domains:
+
+| Skill | File | Description |
+|-------|------|-------------|
+| **File I/O** | `fundamental-file-io.md` | Read, write, append files, stream-based I/O |
+| **Memory** | `fundamental-memory.md` | Allocate, free, copy, fill, compare memory |
+| **Console** | `fundamental-console.md` | Output text, progress bars, error messages |
+| **Directory** | `fundamental-directory.md` | Create, list, remove directories, iterate files |
+| **String** | `fundamental-string.md` | Copy, join, template, convert, compare strings |
+| **Collections** | `fundamental-collections.md` | Arrays, hashmaps, sets, red-black trees |
+| **Async** | `fundamental-async.md` | Await results, poll status, spawn processes |
+| **Config** | `fundamental-config.md` | Load configuration, cascade sources, get values |
+| **Index** | `fundamental-skills-index.md` | Central index with cross-references |
+
+### Using Skills
+
+**For AI Agents:** When implementing Fundamental Library code:
+
+1. **Identify the task**: "I need to read a file"
+2. **Find the skill**: See table above or check `fundamental-skills-index.md`
+3. **Copy the pattern**: Use the example as a template
+4. **Adapt to context**: Modify paths, sizes, error handling as needed
+
+**Example Workflow:**
+```
+User: "Read a config file and parse it"
+
+Agent workflow:
+1. Load fundamental-file-io.md for file reading pattern
+2. Load fundamental-memory.md for buffer allocation
+3. Load fundamental-string.md for string parsing or templating
+4. Combine patterns into working code
+```
+
+### Skill Format
+
+All skills follow this structure:
+- **Quick Reference** - Table of common tasks and functions
+- **Task Examples** - Copy-paste code with full error handling
+- **Key Points** - Important notes and gotchas
+- **See Also** - Links to related skills and headers
+
+### Design Principles
+
+Skills reinforce Fundamental Library patterns:
+- **Allocate → Operate → Check Error → Use → Cleanup** - Consistent flow in all examples
+- **Error handling mandatory** - Every example shows error checking
+- **Memory safety** - Every allocation has corresponding free
+- **Cross-references** - Skills link to related skills for discovery
+
+### For Users
+
+Skills can serve as:
+- **Usage examples** - See how to use library functions correctly
+- **Learning resource** - Understand library patterns and conventions
+- **Quick reference** - Look up common operations without reading headers
+
 ## Code Style Guidelines
 
 ### Import Standards

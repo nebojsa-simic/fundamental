@@ -382,6 +382,56 @@ int exit_code = fun_process_get_exit_code(&result);
 fun_process_free(&result);
 ```
 
+---
+
+## AI Agent Skills
+
+This project includes specialized skills for AI coding agents (Opencode, Claude Code) that provide copy-paste examples for common Fundamental Library operations.
+
+### Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| **[File I/O]**(.opencode/skills/fundamental-file-io.md) | Read, write, append files, stream-based I/O |
+| **[Memory]**(.opencode/skills/fundamental-memory.md) | Allocate, free, copy, fill, compare memory |
+| **[Console]**(.opencode/skills/fundamental-console.md) | Output text, progress bars, error messages |
+| **[Directory]**(.opencode/skills/fundamental-directory.md) | Create, list, remove directories, iterate files |
+| **[String]**(.opencode/skills/fundamental-string.md) | Copy, join, template, convert, compare strings |
+| **[Collections]**(.opencode/skills/fundamental-collections.md) | Arrays, hashmaps, sets, red-black trees |
+| **[Async]**(.opencode/skills/fundamental-async.md) | Await results, poll status, spawn processes |
+| **[Config]**(.opencode/skills/fundamental-config.md) | Load configuration, cascade sources, get values |
+| **[Index]**(.opencode/skills/fundamental-skills-index.md) | Central index with cross-references |
+
+### Using Skills
+
+**For AI Agents:** When implementing Fundamental Library code:
+
+1. **Identify the task**: "I need to read a file"
+2. **Find the skill**: See table above or check the index
+3. **Copy the pattern**: Use the example as a template
+4. **Adapt to context**: Modify paths, sizes, error handling as needed
+
+**Example Workflow:**
+```
+User: "Read a config file and parse it"
+
+Agent workflow:
+1. Load fundamental-file-io.md for file reading pattern
+2. Load fundamental-memory.md for buffer allocation
+3. Load fundamental-string.md for string parsing or templating
+4. Combine patterns into working code
+```
+
+### Skill Design Principles
+
+All skills follow these patterns:
+- **Allocate → Operate → Check Error → Use → Cleanup** - Consistent flow
+- **Error handling mandatory** - Every example shows error checking
+- **Memory safety** - Every allocation has corresponding free
+- **Cross-references** - Skills link to related skills for discovery
+
+For more details, see the [Skills Index](.opencode/skills/fundamental-skills-index.md).
+
 ## Building
 
 ### Prerequisites

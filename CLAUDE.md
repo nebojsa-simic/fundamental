@@ -1,0 +1,113 @@
+# Fundamental Library - Claude Code Instructions
+
+## Overview
+
+Zero-stdlib C library for cross-platform CLI applications. Complete reimplementation of C standard library functionality with no stdlib dependencies.
+
+## Build Commands
+
+### Full Test Suite
+- **Windows**: `run-tests-windows-amd64.bat`
+- **Linux**: `./run-tests-linux-amd64.sh`
+
+### Individual Component
+- Navigate to `tests/<component>/` and run `build-windows-amd64.bat` (or `build-linux-amd64.sh`)
+- Test executables: `test.exe` (Windows) or `test` (Linux)
+
+### Code Formatting
+- **Windows**: `code-format.bat` (runs `clang-format -i -style=file` on all `.c` and `.h` files)
+- **Linux**: `./code-format.sh`
+- Config: `.clang-format` (Linux kernel style, 4-space indent, 80-col limit)
+
+## Architecture
+
+```
+arch/       Platform-specific code (linux-amd64, windows-amd64)
+include/    Public API headers
+src/        Core implementations
+tests/      Unit tests (one directory per module)
+openspec/   Specifications and change management
+```
+
+Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src/` or `include/`.
+
+## Design Principles (NEVER violate)
+
+1. **No C stdlib** - No `#include <stdio.h>`, no `malloc()`, no `printf()`. Use `fun_` functions.
+2. **Caller-allocated memory** - Functions don't allocate for the caller. Pass pre-allocated buffers.
+3. **Explicit error handling** - All fallible functions return `Result` types. Always check with `fun_error_is_error()`.
+4. **Descriptive naming** - `fun_` prefix, full names: `fun_string_from_int()` not `fun_itoa()`.
+5. **Cross-platform** - No OS logic outside `arch/`. Use file/async modules, not direct syscalls.
+
+## Code Style
+
+- Include: `#include "..."` (no angle brackets except system headers), local first
+- Header guards: `#ifndef LIBRARY_*_H`
+- Types uppercase: `Memory`, `String`, `FileStream`
+- Functions: `fun_*` prefix, fully descriptive
+- Error types: `CanReturnError(ActualType)` macro, `DEFINE_RESULT_TYPE(TypeName)`
+- Constants: `ERROR_CODE_*` uppercase with underscores
+- Formatting: K&R braces, pointer alignment `Type *variable`
+- Memory: `fun_memory_allocate()` / `fun_memory_free()`, caller always frees
+
+## Modules
+
+| Module | Status | Key Functions |
+|--------|--------|---------------|
+| Memory | Complete | `fun_memory_allocate()`, `fun_memory_free()` |
+| String | Complete | `fun_string_copy()`, `fun_string_template()`, conversions |
+| Error | Complete | `DEFINE_RESULT_TYPE()`, `fun_error_is_error()` |
+| Async | Complete | `fun_async_await()`, process spawn |
+| Console | Complete | `fun_console_write()`, `fun_console_write_line()` |
+| File | Complete | `fun_read_file_in_memory()`, `fun_write_memory_to_file()` |
+| Stream | Complete | `fun_stream_create_file_read()`, `fun_stream_read()` |
+| Filesystem | Complete | `fun_filesystem_create_directory()`, path utils |
+| Collections | Complete | Arrays, HashMaps, RB-Trees, Sets |
+| Config | In Dev | `fun_config_load()`, cascading CLI > env > INI |
+
+## Test Organization
+
+Each test directory under `tests/` has:
+- Platform build scripts (`build-windows-amd64.bat`, `build-linux-amd64.sh`)
+- Test binary (`test.exe` / `test`)
+- Tests validate both success and error conditions
+- Test names follow `test_<function_under_test>` pattern
+
+Test modules: async, collections, console, filesystem, hashmap, memory, process_spawn, rbtree, set, stream, string_*, file_*
+
+## OpenSpec Workflow
+
+This project uses OpenSpec for change management:
+- `openspec/specs/` - Capability specifications (Gherkin)
+- `openspec/changes/` - Active changes with artifacts (proposal, design, tasks, specs)
+- Skills: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-archive`
+
+## Common Patterns
+
+### Error Handling
+```c
+MemoryResult result = fun_memory_allocate(1024);
+if (fun_error_is_error(result.error)) {
+    return 1;
+}
+Memory buffer = result.value;
+// ... use buffer ...
+voidResult free_result = fun_memory_free(&buffer);
+```
+
+### Async I/O
+```c
+AsyncResult result = fun_read_file_in_memory(params);
+fun_async_await(&result);
+if (result.status == ASYNC_COMPLETED) { /* success */ }
+```
+
+### String Templates
+```c
+// Prefixes: ${string} #{int} %{double} *{pointer}
+StringTemplateParam params[] = {
+    { "name", { .stringValue = "Alice" } },
+    { "count", { .intValue = 42 } }
+};
+fun_string_template("Hello ${name}, #{count} items", params, 2, output);
+```
