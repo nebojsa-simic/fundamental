@@ -32,9 +32,8 @@ AsyncStatus poll_mmap(AsyncResult *result)
 										 FILE_SHARE_READ, NULL, OPEN_EXISTING,
 										 FILE_ATTRIBUTE_NORMAL, NULL);
 		if (state->file_handle == INVALID_HANDLE_VALUE) {
-			result->error =
-				(ErrorResult){ .code = GetLastError(),
-							   .message = "CreateFileW error" };
+			result->error = (ErrorResult){ .code = GetLastError(),
+										   .message = "CreateFileW error" };
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
@@ -45,10 +44,9 @@ AsyncStatus poll_mmap(AsyncResult *result)
 		state->mapping_handle = CreateFileMappingW(state->file_handle, NULL,
 												   PAGE_READONLY, 0, 0, NULL);
 		if (!state->mapping_handle) {
-			result->error = (ErrorResult){
-				.code = GetLastError(),
-				.message = "CreateFileMappingW error"
-			};
+			result->error =
+				(ErrorResult){ .code = GetLastError(),
+							   .message = "CreateFileMappingW error" };
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
@@ -67,9 +65,8 @@ AsyncStatus poll_mmap(AsyncResult *result)
 		state->mapped_view = MapViewOfFile(state->mapping_handle, FILE_MAP_READ,
 										   offset_high, offset_low, view_size);
 		if (!state->mapped_view) {
-			result->error =
-				(ErrorResult){ .code = GetLastError(),
-							   .message = "MapViewOfFile error" };
+			result->error = (ErrorResult){ .code = GetLastError(),
+										   .message = "MapViewOfFile error" };
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}

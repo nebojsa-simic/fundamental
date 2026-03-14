@@ -89,8 +89,9 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		DWORD offset_high = (DWORD)(state->adjusted_offset >> 32);
 		DWORD offset_low = (DWORD)(state->adjusted_offset & 0xFFFFFFFF);
 
-		state->mapped_view = MapViewOfFile(state->mapping_handle, FILE_MAP_WRITE,
-										   offset_high, offset_low, view_size);
+		state->mapped_view = MapViewOfFile(state->mapping_handle,
+										   FILE_MAP_WRITE, offset_high,
+										   offset_low, view_size);
 		if (!state->mapped_view) {
 			result->error =
 				(ErrorResult){ .code = GetLastError(),
@@ -110,9 +111,8 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 			(state->parameters.offset - state->adjusted_offset);
 		if (!FlushViewOfFile(state->mapped_view, view_size_flush) ||
 			!FlushFileBuffers(state->file_handle)) {
-			result->error =
-				(ErrorResult){ .code = GetLastError(),
-							   .message = "Failed to flush data" };
+			result->error = (ErrorResult){ .code = GetLastError(),
+										   .message = "Failed to flush data" };
 			final_status = ASYNC_ERROR;
 		}
 	}

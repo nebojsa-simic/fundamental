@@ -5,8 +5,8 @@
 
 // EMA time constant: 15-second window.
 // Threshold: ops/sec above this → ring (database-like), below → mmap (web-like).
-#define FILE_EMA_TAU            15.0f
-#define FILE_IOPS_DB_THRESHOLD  50.0f
+#define FILE_EMA_TAU 15.0f
+#define FILE_IOPS_DB_THRESHOLD 50.0f
 
 static inline uint64_t file_get_monotonic_ns(void)
 {
@@ -21,11 +21,12 @@ static inline FileMode file_adaptive_choose(FileAdaptiveState *state)
 	if (!state || state->last_op_ns == 0)
 		return FILE_MODE_MMAP;
 	return (state->iops_ema >= FILE_IOPS_DB_THRESHOLD) ? FILE_MODE_RING_BASED :
-														  FILE_MODE_MMAP;
+														 FILE_MODE_MMAP;
 }
 
 // alpha = dt / (dt + tau): Pade approximant of 1-exp(-dt/tau), no math.h needed.
-static inline void file_adaptive_update(FileAdaptiveState *state, uint64_t bytes)
+static inline void file_adaptive_update(FileAdaptiveState *state,
+										uint64_t bytes)
 {
 	if (!state)
 		return;

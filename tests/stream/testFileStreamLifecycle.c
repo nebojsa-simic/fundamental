@@ -53,8 +53,7 @@ bool test_stream_create_invalid_file(void)
 
 	// Try to create stream for non-existent file
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/nonexistent.txt", buffer_result.value, 512,
-		FILE_MODE_AUTO);
+		"testData/nonexistent.txt", buffer_result.value, 512, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	FileStream *stream = (FileStream *)stream_result.state;

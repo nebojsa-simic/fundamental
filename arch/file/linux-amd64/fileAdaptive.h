@@ -2,11 +2,11 @@
 #include "file/file.h"
 #include <stdint.h>
 
-#define FILE_EMA_TAU            15.0f
-#define FILE_IOPS_DB_THRESHOLD  50.0f
+#define FILE_EMA_TAU 15.0f
+#define FILE_IOPS_DB_THRESHOLD 50.0f
 
-#define FILE_SYS_clock_gettime  228
-#define FILE_CLOCK_MONOTONIC    1
+#define FILE_SYS_clock_gettime 228
+#define FILE_CLOCK_MONOTONIC 1
 
 struct file_timespec {
 	long tv_sec;
@@ -35,10 +35,11 @@ static inline FileMode file_adaptive_choose(FileAdaptiveState *state)
 	if (!state || state->last_op_ns == 0)
 		return FILE_MODE_MMAP;
 	return (state->iops_ema >= FILE_IOPS_DB_THRESHOLD) ? FILE_MODE_RING_BASED :
-														  FILE_MODE_MMAP;
+														 FILE_MODE_MMAP;
 }
 
-static inline void file_adaptive_update(FileAdaptiveState *state, uint64_t bytes)
+static inline void file_adaptive_update(FileAdaptiveState *state,
+										uint64_t bytes)
 {
 	if (!state)
 		return;

@@ -18,34 +18,34 @@ typedef enum {
 // Per-handle EMA state for adaptive mode switching.
 // Zero-initialise before first use; pass NULL to disable tracking.
 typedef struct {
-	float iops_ema;       // exponential moving average of ops/sec
-	float bytes_ema;      // exponential moving average of bytes/sec
-	uint64_t last_op_ns;  // monotonic timestamp of last completed op (ns)
+	float iops_ema; // exponential moving average of ops/sec
+	float bytes_ema; // exponential moving average of bytes/sec
+	uint64_t last_op_ns; // monotonic timestamp of last completed op (ns)
 } FileAdaptiveState;
 
 typedef struct Read {
-	String file_path;            // REQUIRED - Path to file
-	Memory output;               // REQUIRED - Pre-allocated buffer
-	uint64_t bytes_to_read;      // REQUIRED - Exact bytes to read
-	uint64_t offset;             // OPTIONAL - Default 0
-	FileMode mode;               // OPTIONAL - Default AUTO
+	String file_path; // REQUIRED - Path to file
+	Memory output; // REQUIRED - Pre-allocated buffer
+	uint64_t bytes_to_read; // REQUIRED - Exact bytes to read
+	uint64_t offset; // OPTIONAL - Default 0
+	FileMode mode; // OPTIONAL - Default AUTO
 	FileAdaptiveState *adaptive; // OPTIONAL - Pass to enable adaptive switching
 } Read;
 
 typedef struct Write {
-	String file_path;            // REQUIRED - Path to file
-	Memory input;                // REQUIRED - Data to write
-	uint64_t bytes_to_write;     // REQUIRED - Exact bytes to write
-	uint64_t offset;             // OPTIONAL - Default 0
-	FileMode mode;               // OPTIONAL - Default AUTO
+	String file_path; // REQUIRED - Path to file
+	Memory input; // REQUIRED - Data to write
+	uint64_t bytes_to_write; // REQUIRED - Exact bytes to write
+	uint64_t offset; // OPTIONAL - Default 0
+	FileMode mode; // OPTIONAL - Default AUTO
 	FileAdaptiveState *adaptive; // OPTIONAL - Pass to enable adaptive switching
 } Write;
 
 typedef struct Append {
-	String file_path;            // REQUIRED - Path to file
-	Memory input;                // REQUIRED - Data to append
-	uint64_t bytes_to_append;    // REQUIRED - Exact bytes to append
-	FileMode mode;               // OPTIONAL - Default AUTO
+	String file_path; // REQUIRED - Path to file
+	Memory input; // REQUIRED - Data to append
+	uint64_t bytes_to_append; // REQUIRED - Exact bytes to append
+	FileMode mode; // OPTIONAL - Default AUTO
 	FileAdaptiveState *adaptive; // OPTIONAL - Pass to enable adaptive switching
 } Append;
 

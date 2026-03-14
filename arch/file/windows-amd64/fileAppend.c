@@ -40,15 +40,17 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 		wchar_t wide_path[MAX_PATH];
 		if (MultiByteToWideChar(CP_UTF8, 0, state->parameters.file_path, -1,
 								wide_path, MAX_PATH) == 0) {
-			result->error = (ErrorResult){ .code = GetLastError(),
-										   .message = "Path conversion failed" };
+			result->error =
+				(ErrorResult){ .code = GetLastError(),
+							   .message = "Path conversion failed" };
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
 
-		state->file_handle =
-			CreateFileW(wide_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ,
-						NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		state->file_handle = CreateFileW(wide_path,
+										 GENERIC_READ | GENERIC_WRITE,
+										 FILE_SHARE_READ, NULL, OPEN_ALWAYS,
+										 FILE_ATTRIBUTE_NORMAL, NULL);
 		if (state->file_handle == INVALID_HANDLE_VALUE) {
 			result->error = (ErrorResult){ .code = GetLastError(),
 										   .message = "Failed to open file" };
@@ -58,8 +60,9 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 
 		LARGE_INTEGER size;
 		if (!GetFileSizeEx(state->file_handle, &size)) {
-			result->error = (ErrorResult){ .code = GetLastError(),
-										   .message = "Failed to get file size" };
+			result->error =
+				(ErrorResult){ .code = GetLastError(),
+							   .message = "Failed to get file size" };
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
@@ -69,7 +72,8 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 	}
 
 	if (state->step == MMAP_APPEND_EXTEND) {
-		uint64_t new_size = state->file_size + state->parameters.bytes_to_append;
+		uint64_t new_size =
+			state->file_size + state->parameters.bytes_to_append;
 		LARGE_INTEGER new_pos;
 		new_pos.QuadPart = new_size;
 		if (!SetFilePointerEx(state->file_handle, new_pos, NULL, FILE_BEGIN) ||
@@ -179,8 +183,8 @@ static AsyncStatus poll_ring_append(AsyncResult *result)
 	}
 
 	if (SUCCEEDED(PopIoRingCompletion(state->global_context->io_ring, &cqe))) {
-		AsyncStatus status =
-			cqe.ResultCode >= 0 ? ASYNC_COMPLETED : ASYNC_ERROR;
+		AsyncStatus status = cqe.ResultCode >= 0 ? ASYNC_COMPLETED :
+												   ASYNC_ERROR;
 		state->async_status = status;
 		if (cqe.UserData == state->request_id) {
 			FileAdaptiveState *adaptive = state->parameters.adaptive;
@@ -211,7 +215,8 @@ static AsyncResult create_ring_append(Append parameters)
 				.status = ASYNC_ERROR,
 				.error = { .code = hr, .message = "CreateIoRing failed" }
 			};
-		GetIoRingInfo(global_append_context.io_ring, &global_append_context.info);
+		GetIoRingInfo(global_append_context.io_ring,
+					  &global_append_context.info);
 	}
 
 	MemoryResult mem_result = fun_memory_allocate(sizeof(RingAppendState));
@@ -235,14 +240,13 @@ static AsyncResult create_ring_append(Append parameters)
 	state->file_handle = file;
 
 	IORING_HANDLE_REF file_ref = IoRingHandleRefFromHandle(file);
-	IORING_BUFFER_REF buffer_ref =
-		IoRingBufferRefFromPointer(parameters.input);
+	IORING_BUFFER_REF buffer_ref = IoRingBufferRefFromPointer(parameters.input);
 
 	// offset = -1 means append (FILE_USE_FILE_POINTER_POSITION)
-	HRESULT hr = BuildIoRingWriteFile(
-		state->global_context->io_ring, file_ref, buffer_ref,
-		parameters.bytes_to_append, (UINT64)-1, FILE_WRITE_FLAGS_NONE,
-		state->request_id, IOSQE_FLAGS_NONE);
+	HRESULT hr = BuildIoRingWriteFile(state->global_context->io_ring, file_ref,
+									  buffer_ref, parameters.bytes_to_append,
+									  (UINT64)-1, FILE_WRITE_FLAGS_NONE,
+									  state->request_id, IOSQE_FLAGS_NONE);
 	if (FAILED(hr))
 		goto cleanup;
 

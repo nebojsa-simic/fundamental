@@ -9,9 +9,9 @@ bool test_stream_position_tracking(void)
 		return false;
 	}
 
-	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/medium.txt", // 1KB file
-		buffer_result.value, 256, FILE_MODE_AUTO);
+	AsyncResult stream_result =
+		fun_stream_create_file_read("testData/medium.txt", // 1KB file
+									buffer_result.value, 256, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {

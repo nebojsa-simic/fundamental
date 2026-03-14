@@ -7,27 +7,27 @@
 
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
-#define SYS_open   2
-#define SYS_close  3
-#define SYS_mmap   9
+#define SYS_open 2
+#define SYS_close 3
+#define SYS_mmap 9
 #define SYS_munmap 11
 
-#define IORING_OP_WRITEV        2
-#define IORING_ENTER_GETEVENTS  0x01
+#define IORING_OP_WRITEV 2
+#define IORING_ENTER_GETEVENTS 0x01
 
 #define O_WRONLY 1
-#define O_CREAT  0100
-#define O_TRUNC  01000
+#define O_CREAT 0100
+#define O_TRUNC 01000
 
 struct io_uring_sqe {
-	uint8_t  opcode;
-	uint8_t  flags;
+	uint8_t opcode;
+	uint8_t flags;
 	uint16_t ioprio;
-	int32_t  fd;
+	int32_t fd;
 	uint64_t off;
 	uint64_t addr;
 	uint32_t len;
-	int      rw_flags;
+	int rw_flags;
 	uint64_t user_data;
 	uint16_t buf_index;
 	uint16_t __pad2[3];
@@ -35,7 +35,7 @@ struct io_uring_sqe {
 
 struct io_uring_cqe {
 	uint64_t user_data;
-	int32_t  res;
+	int32_t res;
 	uint32_t flags;
 };
 
@@ -91,17 +91,17 @@ static inline long syscall4(long n, long a1, long a2, long a3, long a4)
 	return ret;
 }
 
-static inline long syscall6(long n, long a1, long a2, long a3, long a4,
-							long a5, long a6)
+static inline long syscall6(long n, long a1, long a2, long a3, long a4, long a5,
+							long a6)
 {
 	long ret;
 	register long r10 __asm__("r10") = a4;
-	register long r8  __asm__("r8")  = a5;
-	register long r9  __asm__("r9")  = a6;
+	register long r8 __asm__("r8") = a5;
+	register long r9 __asm__("r9") = a6;
 	__asm__ __volatile__("syscall"
 						 : "=a"(ret)
-						 : "a"(n), "D"(a1), "S"(a2), "d"(a3), "r"(r10),
-						   "r"(r8), "r"(r9)
+						 : "a"(n), "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8),
+						   "r"(r9)
 						 : "rcx", "r11", "memory");
 	return ret;
 }
@@ -128,8 +128,8 @@ static AsyncStatus poll_ring_write(AsyncResult *result)
 		uint64_t sq_size = params.sq_entries * sizeof(struct io_uring_sqe);
 		uint64_t cq_size = params.cq_entries * sizeof(struct io_uring_cqe);
 
-		void *sq_mmap = (void *)syscall6(SYS_mmap, 0, sq_size, 0x3, 0x11,
-										 ring_fd, 0);
+		void *sq_mmap =
+			(void *)syscall6(SYS_mmap, 0, sq_size, 0x3, 0x11, ring_fd, 0);
 		if ((long)sq_mmap < 0) {
 			syscall1(SYS_close, ring_fd);
 			result->error = fun_error_result(1, "Failed to mmap SQ");
@@ -138,8 +138,8 @@ static AsyncStatus poll_ring_write(AsyncResult *result)
 		}
 		state->sq_ring = sq_mmap;
 
-		void *cq_mmap = (void *)syscall6(SYS_mmap, 0, cq_size, 0x3, 0x11,
-										 ring_fd, cq_size);
+		void *cq_mmap =
+			(void *)syscall6(SYS_mmap, 0, cq_size, 0x3, 0x11, ring_fd, cq_size);
 		if ((long)cq_mmap < 0) {
 			syscall2(SYS_munmap, (long)sq_mmap, sq_size);
 			syscall1(SYS_close, ring_fd);

@@ -59,8 +59,8 @@ static inline AsyncStatus poll_ring_read(AsyncResult *result)
 	}
 
 	if (SUCCEEDED(PopIoRingCompletion(state->global_context->io_ring, &cqe))) {
-		AsyncStatus status =
-			cqe.ResultCode >= 0 ? ASYNC_COMPLETED : ASYNC_ERROR;
+		AsyncStatus status = cqe.ResultCode >= 0 ? ASYNC_COMPLETED :
+												   ASYNC_ERROR;
 		state->async_status = status;
 		if (cqe.UserData == state->request_id) {
 			FileAdaptiveState *adaptive = state->parameters.adaptive;
@@ -97,20 +97,21 @@ AsyncResult create_ring_read(Read parameters)
 			goto cleanup;
 	}
 
-	file = CreateFile(parameters.file_path, GENERIC_READ, FILE_SHARE_READ,
-					  NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	file = CreateFile(parameters.file_path, GENERIC_READ, FILE_SHARE_READ, NULL,
+					  OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 	if (file == INVALID_HANDLE_VALUE)
 		goto cleanup;
 
 	state->file_handle = file;
 
 	IORING_HANDLE_REF file_ref = IoRingHandleRefFromHandle(file);
-	IORING_BUFFER_REF buffer_ref = IoRingBufferRefFromPointer(parameters.output);
+	IORING_BUFFER_REF buffer_ref =
+		IoRingBufferRefFromPointer(parameters.output);
 
-	HRESULT hr =
-		BuildIoRingReadFile(state->global_context->io_ring, file_ref, buffer_ref,
-							parameters.bytes_to_read, parameters.offset,
-							state->request_id, IOSQE_FLAGS_NONE);
+	HRESULT hr = BuildIoRingReadFile(state->global_context->io_ring, file_ref,
+									 buffer_ref, parameters.bytes_to_read,
+									 parameters.offset, state->request_id,
+									 IOSQE_FLAGS_NONE);
 	if (FAILED(hr))
 		goto cleanup;
 
@@ -131,5 +132,6 @@ cleanup:
 	if (file != INVALID_HANDLE_VALUE)
 		CloseHandle(file);
 	return (AsyncResult){ .status = ASYNC_ERROR,
-						  .error = { .code = 1, .message = "Ring read setup failed" } };
+						  .error = { .code = 1,
+									 .message = "Ring read setup failed" } };
 }
