@@ -97,6 +97,7 @@ Specialized skills in `.opencode/skills/` provide copy-paste examples for common
 | Collections | `fundamental-collections.md` | Arrays, hashmaps, sets, RB-trees |
 | Async | `fundamental-async.md` | Await, poll, spawn processes |
 | Config | `fundamental-config.md` | Load config, cascade sources |
+| Platform | `fundamental-platform.md` | Detect OS/arch, convert to string |
 | Index | `fundamental-skills-index.md` | Central cross-reference |
 
 **Usage**: Identify task, find matching skill, copy the pattern, adapt to context. All examples follow the `Allocate -> Operate -> Check Error -> Use -> Cleanup` flow.
