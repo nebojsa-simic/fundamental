@@ -80,7 +80,26 @@ Test modules: async, collections, console, filesystem, hashmap, memory, process_
 This project uses OpenSpec for change management:
 - `openspec/specs/` - Capability specifications (Gherkin)
 - `openspec/changes/` - Active changes with artifacts (proposal, design, tasks, specs)
-- Skills: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-archive`
+- Commands: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-archive`
+- CLI: `openspec list`, `openspec status`, `openspec validate`, `openspec new change`
+
+## AI Agent Skills
+
+Specialized skills in `.opencode/skills/` provide copy-paste examples for common operations:
+
+| Skill | File | Domain |
+|-------|------|--------|
+| File I/O | `fundamental-file-io.md` | Read, write, append, stream I/O |
+| Memory | `fundamental-memory.md` | Allocate, free, copy, fill, compare |
+| Console | `fundamental-console.md` | Output, progress bars, errors |
+| Directory | `fundamental-directory.md` | Create, list, remove, iterate |
+| String | `fundamental-string.md` | Copy, join, template, convert |
+| Collections | `fundamental-collections.md` | Arrays, hashmaps, sets, RB-trees |
+| Async | `fundamental-async.md` | Await, poll, spawn processes |
+| Config | `fundamental-config.md` | Load config, cascade sources |
+| Index | `fundamental-skills-index.md` | Central cross-reference |
+
+**Usage**: Identify task, find matching skill, copy the pattern, adapt to context. All examples follow the `Allocate -> Operate -> Check Error -> Use -> Cleanup` flow.
 
 ## Common Patterns
 
