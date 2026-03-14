@@ -30,14 +30,14 @@ Every new module requires all of the following. Do not consider a module done un
 - [ ] `arch/<module>/linux-amd64/<module>.c` — Linux AMD64 arch implementation
 - [ ] `tests/<module>/test_<module>.c` — unit tests covering success and error paths
 - [ ] `tests/<module>/build-windows-amd64.bat` — Windows test build script
-- [ ] `tests/<module>/build-linux-amd64.sh` — Linux test build script
+- [ ] `tests/<module>/build-linux-amd64.sh` — Linux test build script (`git update-index --chmod=+x` to set execute bit)
 - [ ] `openspec/specs/<module>/spec.md` — OpenSpec specification
 - [ ] `.opencode/skills/fundamental-<module>.md` — agent skill file with Quick Reference and copy-paste examples
 - [ ] `.opencode/skills/fundamental-skills-index.md` — add entry to skills index and cross-reference map
 - [ ] `CLAUDE.md` — add row to Modules table and Skills table
 
 **In `fundamental-cli/` (after vendoring):**
-- [ ] Run `vendor-fundamental.bat` to copy latest sources into `vendor/fundamental/`
+- [ ] Run `vendor-fundamental.bat` to copy latest sources into `vendor/fundamental/` (xcopy does not delete removed files — manually remove any stale files from `vendor/fundamental/` after vendoring)
 - [ ] `build-windows-amd64.bat` — add `src/<module>/<module>.c` and `arch/<module>/windows-amd64/<module>.c`
 - [ ] `build-linux-amd64.sh` — add `src/<module>/<module>.c` and `arch/<module>/linux-amd64/<module>.c`
 
