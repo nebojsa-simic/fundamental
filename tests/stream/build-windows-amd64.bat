@@ -18,7 +18,9 @@ gcc ^
     ../../arch/stream/windows-amd64/streamRead.c ^
     ../../arch/stream/windows-amd64/streamWrite.c ^
     ../../arch/file/windows-amd64/fileReadMmap.c ^
+    ../../arch/file/windows-amd64/fileReadRing.c ^
     ../../arch/file/windows-amd64/fileRead.c ^
+    -lkernel32 ^
     ../../arch/memory/windows-amd64/memory.c ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringConversion.c ^

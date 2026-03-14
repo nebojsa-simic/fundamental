@@ -17,7 +17,7 @@ bool test_stream_create_valid_file(void)
 
 	// Create stream for existing test file
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/small.txt", buffer_result.value, 1024, FILE_MODE_STANDARD);
+		"testData/small.txt", buffer_result.value, 1024, FILE_MODE_AUTO);
 	ASSERT_NO_ERROR(stream_result);
 	fun_async_await(&stream_result);
 
@@ -54,7 +54,7 @@ bool test_stream_create_invalid_file(void)
 	// Try to create stream for non-existent file
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/nonexistent.txt", buffer_result.value, 512,
-		FILE_MODE_STANDARD);
+		FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	FileStream *stream = (FileStream *)stream_result.state;
@@ -83,7 +83,7 @@ bool test_stream_memory_cleanup(void)
 
 	// Step 2: Create file stream
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/small.txt", buffer_result.value, 512, FILE_MODE_STANDARD);
+		"testData/small.txt", buffer_result.value, 512, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {

@@ -5,7 +5,7 @@ set INCLUDES=-I../../include
 set SOURCES=test.c
 set ARCH_FILES=../../arch/file/windows-amd64/fileLock.c 
 set DEPENDENCIES=../../arch/memory/windows-amd64/memory.c ../../src/async/async.c
-set OTHER_DEPS=../../arch/file/windows-amd64/fileRead.c ../../arch/file/windows-amd64/fileReadMmap.c
+set OTHER_DEPS=../../arch/file/windows-amd64/fileRead.c ../../arch/file/windows-amd64/fileReadMmap.c ../../arch/file/windows-amd64/fileReadRing.c
 set OUTPUT=test.exe
 set LIBS=-lkernel32 -ladvapi32
 

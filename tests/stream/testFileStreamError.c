@@ -20,7 +20,7 @@ bool test_stream_read_null_parameters(void)
 	}
 
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/small.txt", buffer_result.value, 256, FILE_MODE_STANDARD);
+		"testData/small.txt", buffer_result.value, 256, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
@@ -48,7 +48,7 @@ bool test_stream_read_after_end_of_stream(void)
 	}
 
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/small.txt", buffer_result.value, 128, FILE_MODE_STANDARD);
+		"testData/small.txt", buffer_result.value, 128, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {

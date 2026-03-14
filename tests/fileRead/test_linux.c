@@ -48,7 +48,7 @@ static bool test_fun_read_file_in_memory_basic(void)
 					.output = buf.value,
 					.bytes_to_read = len,
 					.offset = 0,
-					.mode = FILE_MODE_STANDARD };
+					.mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_read_file_in_memory(params);
 	fun_async_await(&result);
@@ -90,7 +90,7 @@ static bool test_fun_read_file_in_memory_offset(void)
 					.output = buf.value,
 					.bytes_to_read = 5,
 					.offset = 2,
-					.mode = FILE_MODE_STANDARD };
+					.mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_read_file_in_memory(params);
 	fun_async_await(&result);
@@ -117,7 +117,7 @@ static bool test_fun_read_file_in_memory_null_pointer(void)
 					.output = NULL,
 					.bytes_to_read = 0,
 					.offset = 0,
-					.mode = FILE_MODE_STANDARD };
+					.mode = FILE_MODE_AUTO };
 	AsyncResult result = fun_read_file_in_memory(params);
 
 	bool success = (result.status == ASYNC_ERROR) &&

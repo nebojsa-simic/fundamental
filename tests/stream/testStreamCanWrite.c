@@ -18,7 +18,7 @@ bool test_fun_stream_can_write_basic(void)
 	// Open a writable stream (create output file)
 	AsyncResult stream_result =
 		fun_stream_open("testData/can_write_test.txt", STREAM_MODE_WRITE,
-						buffer_result.value, 1024, FILE_MODE_STANDARD);
+						buffer_result.value, 1024, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 	ASSERT_NO_ERROR(stream_result);
 
@@ -67,7 +67,7 @@ bool test_fun_stream_can_write_edge_cases(void)
 	// Open stream
 	AsyncResult stream_result =
 		fun_stream_open("testData/can_write_edge_test.txt", STREAM_MODE_WRITE,
-						buffer_result.value, 1024, FILE_MODE_STANDARD);
+						buffer_result.value, 1024, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 	if (fun_error_is_error(stream_result.error)) {
 		fun_memory_free(&buffer_result.value);

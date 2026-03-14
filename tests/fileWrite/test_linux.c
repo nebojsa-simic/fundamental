@@ -43,7 +43,7 @@ static bool test_fun_write_memory_to_file_basic(void)
 					 .input = buf.value,
 					 .bytes_to_write = len,
 					 .offset = 0,
-					 .mode = FILE_MODE_STANDARD };
+					 .mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result);
@@ -92,7 +92,7 @@ static bool test_fun_write_memory_to_file_offset(void)
 					 .input = buf.value,
 					 .bytes_to_write = len,
 					 .offset = 2,
-					 .mode = FILE_MODE_STANDARD };
+					 .mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result);

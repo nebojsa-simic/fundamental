@@ -15,7 +15,7 @@ bool test_stream_read_small_file(void)
 	ASSERT_NO_ERROR(buffer_result);
 
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/small.txt", buffer_result.value, 64, FILE_MODE_STANDARD);
+		"testData/small.txt", buffer_result.value, 64, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 	ASSERT_NO_ERROR(stream_result);
 
@@ -55,7 +55,7 @@ bool test_stream_read_empty_file(void)
 	}
 
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/empty.txt", buffer_result.value, 256, FILE_MODE_STANDARD);
+		"testData/empty.txt", buffer_result.value, 256, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
@@ -87,7 +87,7 @@ bool test_stream_read_large_file_multiple_chunks(void)
 	}
 
 	AsyncResult stream_result = fun_stream_create_file_read(
-		"testData/large.txt", buffer_result.value, 512, FILE_MODE_STANDARD);
+		"testData/large.txt", buffer_result.value, 512, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
@@ -140,7 +140,7 @@ bool test_stream_read_exact_buffer_size(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/exact_buffer.txt", // Exactly 1024 bytes
-		buffer_result.value, 1024, FILE_MODE_STANDARD);
+		buffer_result.value, 1024, FILE_MODE_AUTO);
 	fun_async_await(&stream_result);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
