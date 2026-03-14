@@ -19,6 +19,30 @@ Zero-stdlib C library for cross-platform CLI applications. Complete reimplementa
 - **Linux**: `./code-format.sh`
 - Config: `.clang-format` (Linux kernel style, 4-space indent, 80-col limit)
 
+## Adding a New Module — Checklist
+
+Every new module requires all of the following. Do not consider a module done until every item is complete.
+
+**In this repo (`fundamental/`):**
+- [ ] `include/<module>/<module>.h` — public API header (types, `DEFINE_RESULT_TYPE`, function declarations)
+- [ ] `src/<module>/<module>.c` — core implementation, no `#ifdef`, calls arch-layer functions for anything platform-specific
+- [ ] `arch/<module>/windows-amd64/<module>.c` — Windows AMD64 arch implementation
+- [ ] `arch/<module>/linux-amd64/<module>.c` — Linux AMD64 arch implementation
+- [ ] `arch/<module>/linux-arm64/<module>.c` — Linux ARM64 arch implementation
+- [ ] `arch/<module>/darwin-arm64/<module>.c` — Darwin ARM64 arch implementation
+- [ ] `tests/<module>/test_<module>.c` — unit tests covering success and error paths
+- [ ] `tests/<module>/build-windows-amd64.bat` — Windows test build script
+- [ ] `tests/<module>/build-linux-amd64.sh` — Linux test build script
+- [ ] `openspec/specs/<module>/spec.md` — OpenSpec specification
+- [ ] `.opencode/skills/fundamental-<module>.md` — agent skill file with Quick Reference and copy-paste examples
+- [ ] `.opencode/skills/fundamental-skills-index.md` — add entry to skills index and cross-reference map
+- [ ] `CLAUDE.md` — add row to Modules table and Skills table
+
+**In `fundamental-cli/` (after vendoring):**
+- [ ] Run `vendor-fundamental.bat` to copy latest sources into `vendor/fundamental/`
+- [ ] `build-windows-amd64.bat` — add `src/<module>/<module>.c` and `arch/<module>/windows-amd64/<module>.c`
+- [ ] `build-linux-amd64.sh` — add `src/<module>/<module>.c` and `arch/<module>/linux-amd64/<module>.c`
+
 ## Architecture
 
 ```
