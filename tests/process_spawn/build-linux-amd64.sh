@@ -8,6 +8,7 @@ gcc \
     ../../src/async/async.c \
     ../../src/async/process.c \
     ../../arch/async/linux-amd64/process.c \
+    ../../src/string/stringOperations.c \
     -o test
 
 strip --strip-unneeded test

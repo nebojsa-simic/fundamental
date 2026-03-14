@@ -9,6 +9,7 @@ gcc ^
     ../../src/async/async.c ^
     ../../src/async/process.c ^
     ../../arch/async/windows-amd64/process.c ^
+    ../../src/string/stringOperations.c ^
     -o test.exe
 
 REM Strip unnecessary symbols
