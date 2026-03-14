@@ -31,6 +31,7 @@ Every new module requires all of the following. Do not consider a module done un
 - [ ] `tests/<module>/test_<module>.c` — unit tests covering success and error paths
 - [ ] `tests/<module>/build-windows-amd64.bat` — Windows test build script
 - [ ] `tests/<module>/build-linux-amd64.sh` — Linux test build script (`git update-index --chmod=+x` to set execute bit)
+- [ ] Run `code-format.bat` (Windows) / `./code-format.sh` (Linux) after writing all files
 - [ ] `openspec/specs/<module>/spec.md` — OpenSpec specification
 - [ ] `.opencode/skills/fundamental-<module>.md` — agent skill file with Quick Reference and copy-paste examples
 - [ ] `.opencode/skills/fundamental-skills-index.md` — add entry to skills index and cross-reference map
