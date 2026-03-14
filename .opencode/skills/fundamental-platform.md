@@ -1,11 +1,11 @@
 ---
 name: fundamental-platform
-description: Platform detection with Fundamental Library - OS and architecture at compile time
+description: Platform detection with Fundamental Library - OS and architecture via arch layer
 license: MIT
 compatibility: Complements fundamental-expert skill
 metadata:
   author: fundamental-library
-  version: "1.0"
+  version: "1.1"
   category: platform-detection
   related: fundamental-async, fundamental-console
 ---
@@ -18,12 +18,12 @@ I provide copy-paste examples for platform detection using the Fundamental Libra
 
 ## Quick Reference
 
-| Task | Function | Example |
-|------|----------|---------|
-| Get OS + arch | `fun_platform_get()` | See below |
-| OS to string | `fun_platform_os_to_string()` | `"windows"`, `"linux"`, `"darwin"` |
-| Arch to string | `fun_platform_arch_to_string()` | `"amd64"`, `"arm64"` |
-| Full string | `fun_platform_to_string()` | `"windows-amd64"` |
+| Task | Function | Signature |
+|------|----------|-----------|
+| Get OS + arch | `fun_platform_get()` | `void fun_platform_get(OutputPlatform platform)` |
+| OS to string | `fun_platform_os_to_string()` | `ErrorResult fun_platform_os_to_string(PlatformOS os, OutputString platformOsResult)` |
+| Arch to string | `fun_platform_arch_to_string()` | `ErrorResult fun_platform_arch_to_string(PlatformArch arch, OutputString platformArchResult)` |
+| Full string | `fun_platform_to_string()` | `CanReturnError(void) fun_platform_to_string(Platform platform, OutputString output)` |
 
 **OS Values:**
 - `PLATFORM_OS_WINDOWS`
@@ -40,15 +40,15 @@ I provide copy-paste examples for platform detection using the Fundamental Libra
 
 ## Task: Get Current Platform
 
-Detect OS and architecture at runtime (resolved at compile time via preprocessor macros).
+Detect OS and architecture. Values are constant — provided by the arch layer at link time.
 
 ```c
 #include "platform/platform.h"
 
 void platform_detect_example(void)
 {
-    PlatformResult r = fun_platform_get(NULL);
-    Platform p = r.value;  // error is always NO_ERROR
+    Platform p;
+    fun_platform_get(&p);
 
     if (p.os == PLATFORM_OS_WINDOWS) {
         // Windows-specific code
@@ -67,33 +67,14 @@ void platform_detect_example(void)
 ```
 
 **Key Points:**
-- Detection is compile-time via preprocessor — no runtime cost
-- `fun_platform_get(NULL)` — pass NULL if you don't need an output pointer
-- Error is always `NO_ERROR`; no need to check it
-
----
-
-## Task: Get Platform Into Output Pointer
-
-Fill a caller-allocated `Platform` struct.
-
-```c
-#include "platform/platform.h"
-
-void platform_output_example(void)
-{
-    Platform platform;
-    fun_platform_get(&platform);  // fills platform in place
-
-    // use platform.os, platform.arch
-}
-```
+- Cannot fail — simple constant lookup, no error to check
+- Always pass a valid `OutputPlatform` pointer; NULL is not accepted
 
 ---
 
 ## Task: Convert OS/Arch to String
 
-Get human-readable names for logging or build script selection.
+Write human-readable names into caller-provided buffers.
 
 ```c
 #include "platform/platform.h"
@@ -101,17 +82,25 @@ Get human-readable names for logging or build script selection.
 
 void platform_names_example(void)
 {
-    PlatformResult r = fun_platform_get(NULL);
-    Platform p = r.value;
+    Platform p;
+    fun_platform_get(&p);
 
-    String os_name   = fun_platform_os_to_string(p.os);    // "windows", "linux", "darwin"
-    String arch_name = fun_platform_arch_to_string(p.arch); // "amd64", "arm64"
+    char os_buf[16];
+    char arch_buf[16];
 
-    fun_console_write(os_name);
+    fun_platform_os_to_string(p.os, os_buf);     // "windows", "linux", "darwin"
+    fun_platform_arch_to_string(p.arch, arch_buf); // "amd64", "arm64"
+
+    fun_console_write((String)os_buf);
     fun_console_write("-");
-    fun_console_write_line(arch_name);
+    fun_console_write_line((String)arch_buf);
 }
 ```
+
+**Key Points:**
+- OS buffer must be at least 16 bytes
+- Arch buffer must be at least 16 bytes
+- Only fails if buffer is NULL
 
 ---
 
@@ -125,8 +114,8 @@ Write the combined `"os-arch"` string into a caller-provided buffer.
 
 void platform_to_string_example(void)
 {
-    PlatformResult r = fun_platform_get(NULL);
-    Platform p = r.value;
+    Platform p;
+    fun_platform_get(&p);
 
     char buf[32];  // must be at least 32 bytes
     voidResult res = fun_platform_to_string(p, buf);
@@ -151,8 +140,8 @@ void platform_to_string_example(void)
 
 ### Select Script by Platform
 ```c
-PlatformResult r = fun_platform_get(NULL);
-Platform p = r.value;
+Platform p;
+fun_platform_get(&p);
 
 const char *script = (p.os == PLATFORM_OS_WINDOWS)
     ? "build-windows-amd64.bat"
@@ -161,7 +150,8 @@ const char *script = (p.os == PLATFORM_OS_WINDOWS)
 
 ### Branch on Both OS and Arch
 ```c
-Platform p = fun_platform_get(NULL).value;
+Platform p;
+fun_platform_get(&p);
 
 if (p.os == PLATFORM_OS_WINDOWS && p.arch == PLATFORM_ARCH_AMD64) {
     // windows/amd64 path
@@ -174,8 +164,11 @@ if (p.os == PLATFORM_OS_WINDOWS && p.arch == PLATFORM_ARCH_AMD64) {
 
 ### Log Platform at Startup
 ```c
+Platform p;
+fun_platform_get(&p);
+
 char buf[32];
-fun_platform_to_string(fun_platform_get(NULL).value, buf);
+fun_platform_to_string(p, buf);
 fun_console_write("Platform: ");
 fun_console_write_line((String)buf);
 ```
