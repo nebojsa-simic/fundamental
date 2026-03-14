@@ -28,8 +28,6 @@ Every new module requires all of the following. Do not consider a module done un
 - [ ] `src/<module>/<module>.c` — core implementation, no `#ifdef`, calls arch-layer functions for anything platform-specific
 - [ ] `arch/<module>/windows-amd64/<module>.c` — Windows AMD64 arch implementation
 - [ ] `arch/<module>/linux-amd64/<module>.c` — Linux AMD64 arch implementation
-- [ ] `arch/<module>/linux-arm64/<module>.c` — Linux ARM64 arch implementation
-- [ ] `arch/<module>/darwin-arm64/<module>.c` — Darwin ARM64 arch implementation
 - [ ] `tests/<module>/test_<module>.c` — unit tests covering success and error paths
 - [ ] `tests/<module>/build-windows-amd64.bat` — Windows test build script
 - [ ] `tests/<module>/build-linux-amd64.sh` — Linux test build script
