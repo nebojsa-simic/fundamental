@@ -24,11 +24,11 @@ static void test_fun_platform_get_fills_struct(void)
 	Platform p;
 	fun_platform_get(&p);
 
-	int passed = (p.os != PLATFORM_OS_UNKNOWN &&
-		      p.arch != PLATFORM_ARCH_UNKNOWN);
+	int passed =
+		(p.os != PLATFORM_OS_UNKNOWN && p.arch != PLATFORM_ARCH_UNKNOWN);
 
 	print_test_result("fun_platform_get: fills struct with known values",
-			  passed);
+					  passed);
 }
 
 // ============================================================================
@@ -40,11 +40,9 @@ static void test_fun_platform_os_to_string_windows(void)
 	char buf[16];
 	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_WINDOWS, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "windows") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "windows") == 0;
 
-	print_test_result("fun_platform_os_to_string: PLATFORM_OS_WINDOWS",
-			  passed);
+	print_test_result("fun_platform_os_to_string: PLATFORM_OS_WINDOWS", passed);
 }
 
 static void test_fun_platform_os_to_string_linux(void)
@@ -52,11 +50,9 @@ static void test_fun_platform_os_to_string_linux(void)
 	char buf[16];
 	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_LINUX, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "linux") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "linux") == 0;
 
-	print_test_result("fun_platform_os_to_string: PLATFORM_OS_LINUX",
-			  passed);
+	print_test_result("fun_platform_os_to_string: PLATFORM_OS_LINUX", passed);
 }
 
 static void test_fun_platform_os_to_string_darwin(void)
@@ -64,11 +60,9 @@ static void test_fun_platform_os_to_string_darwin(void)
 	char buf[16];
 	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_DARWIN, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "darwin") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "darwin") == 0;
 
-	print_test_result("fun_platform_os_to_string: PLATFORM_OS_DARWIN",
-			  passed);
+	print_test_result("fun_platform_os_to_string: PLATFORM_OS_DARWIN", passed);
 }
 
 static void test_fun_platform_os_to_string_unknown(void)
@@ -76,11 +70,9 @@ static void test_fun_platform_os_to_string_unknown(void)
 	char buf[16];
 	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_UNKNOWN, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "unknown") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "unknown") == 0;
 
-	print_test_result("fun_platform_os_to_string: PLATFORM_OS_UNKNOWN",
-			  passed);
+	print_test_result("fun_platform_os_to_string: PLATFORM_OS_UNKNOWN", passed);
 }
 
 static void test_fun_platform_os_to_string_null(void)
@@ -101,11 +93,10 @@ static void test_fun_platform_arch_to_string_amd64(void)
 	char buf[16];
 	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_AMD64, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "amd64") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "amd64") == 0;
 
 	print_test_result("fun_platform_arch_to_string: PLATFORM_ARCH_AMD64",
-			  passed);
+					  passed);
 }
 
 static void test_fun_platform_arch_to_string_arm64(void)
@@ -113,24 +104,21 @@ static void test_fun_platform_arch_to_string_arm64(void)
 	char buf[16];
 	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_ARM64, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "arm64") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "arm64") == 0;
 
 	print_test_result("fun_platform_arch_to_string: PLATFORM_ARCH_ARM64",
-			  passed);
+					  passed);
 }
 
 static void test_fun_platform_arch_to_string_unknown(void)
 {
 	char buf[16];
-	ErrorResult r =
-		fun_platform_arch_to_string(PLATFORM_ARCH_UNKNOWN, buf);
+	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_UNKNOWN, buf);
 
-	int passed = !fun_error_is_error(r) &&
-		     strcmp(buf, "unknown") == 0;
+	int passed = !fun_error_is_error(r) && strcmp(buf, "unknown") == 0;
 
 	print_test_result("fun_platform_arch_to_string: PLATFORM_ARCH_UNKNOWN",
-			  passed);
+					  passed);
 }
 
 static void test_fun_platform_arch_to_string_null(void)
@@ -162,11 +150,9 @@ static void test_fun_platform_to_string_format(void)
 	char expected[32];
 	snprintf(expected, sizeof(expected), "%s-%s", os_buf, arch_buf);
 
-	int passed = !fun_error_is_error(r.error) &&
-		     strcmp(buf, expected) == 0;
+	int passed = !fun_error_is_error(r.error) && strcmp(buf, expected) == 0;
 
-	print_test_result("fun_platform_to_string: correct os-arch format",
-			  passed);
+	print_test_result("fun_platform_to_string: correct os-arch format", passed);
 }
 
 static void test_fun_platform_to_string_null(void)
