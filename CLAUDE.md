@@ -62,6 +62,7 @@ Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src
 | File | Complete | `fun_read_file_in_memory()`, `fun_write_memory_to_file()` |
 | Stream | Complete | `fun_stream_create_file_read()`, `fun_stream_read()` |
 | Filesystem | Complete | `fun_filesystem_create_directory()`, path utils |
+| Platform | Complete | `fun_platform_get()`, OS/arch detection via arch layer |
 | Collections | Complete | Arrays, HashMaps, RB-Trees, Sets |
 | Config | In Dev | `fun_config_load()`, cascading CLI > env > INI |
 
