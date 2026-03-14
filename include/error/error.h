@@ -17,6 +17,9 @@
 #define ERROR_CODE_PATH_INVALID 9
 #define ERROR_CODE_PERMISSION_DENIED 10
 #define ERROR_CODE_BUFFER_TOO_SMALL 11
+#define ERROR_CODE_CONFIG_KEY_NOT_FOUND 220
+#define ERROR_CODE_CONFIG_PARSE_ERROR 221
+#define ERROR_CODE_CONFIG_INVALID_APP_NAME 222
 
 typedef struct {
 	uint8_t code;
@@ -84,6 +87,15 @@ static ErrorResult ERROR_RESULT_PERMISSION_DENIED = {
 };
 static ErrorResult ERROR_RESULT_BUFFER_TOO_SMALL = {
 	ERROR_CODE_BUFFER_TOO_SMALL, "Buffer too small"
+};
+static ErrorResult ERROR_RESULT_CONFIG_KEY_NOT_FOUND = {
+	ERROR_CODE_CONFIG_KEY_NOT_FOUND, "Configuration key not found"
+};
+static ErrorResult ERROR_RESULT_CONFIG_PARSE_ERROR = {
+	ERROR_CODE_CONFIG_PARSE_ERROR, "Failed to parse configuration value"
+};
+static ErrorResult ERROR_RESULT_CONFIG_INVALID_APP_NAME = {
+	ERROR_CODE_CONFIG_INVALID_APP_NAME, "Invalid app name (null or empty)"
 };
 
 #pragma GCC diagnostic pop

@@ -21,6 +21,7 @@ The Fundamental Library is a complete reimplementation of standard C library fun
 fundamental/
 ├── arch/                       # Platform-specific implementations
 │   ├── async/                 # Async operations (linux-amd64, windows-amd64)
+│   ├── config/                # Config env var access per platform
 │   ├── console/               # Console I/O per platform
 │   ├── file/                  # File I/O implementations per platform
 │   ├── filesystem/            # Filesystem operations per platform
@@ -31,6 +32,7 @@ fundamental/
 │   ├── array/                 # Dynamic array interface
 │   ├── async/                 # Async operation primitives
 │   ├── collections/           # Collections utilities (hash, equality)
+│   ├── config/                # Configuration management interface
 │   ├── console/               # Console I/O interface
 │   ├── error/                 # Error handling system
 │   ├── file/                  # File I/O interface
@@ -44,6 +46,7 @@ fundamental/
 ├── src/                       # Core implementations
 │   ├── array/                 # Dynamic array implementation
 │   ├── async/                 # Async scheduler and process spawn
+│   ├── config/                # Config core, INI parser, CLI parser
 │   ├── console/               # Console output implementation
 │   ├── filesystem/            # Path and directory operations
 │   ├── hashmap/               # Hash map implementation
@@ -55,6 +58,7 @@ fundamental/
 └── tests/                     # Unit tests for all modules
     ├── async/                 # Async and process spawn tests
     ├── collections/           # Array tests
+    ├── config/                # Configuration module tests
     ├── console/               # Console output tests
     ├── filesystem/            # Directory and path tests
     ├── hashmap/               # Hash map tests
@@ -137,12 +141,15 @@ fundamental/
 - Linux ARM64 (planned)
 - Extensible architecture system with platform abstractions in `arch/*/`
 
-### **Configuration Management** (In Development)
+### **Configuration Management**
 - Cascading configuration from CLI arguments, environment variables, and INI files
-- Type-safe accessors for string, integer, and boolean values
-- Priority cascade: `--config:key=value` → `APPNAME_KEY` → `{app}.ini`
-- Ergonomic `get_or_default()` for optional configuration values
-- Explicit error handling for required configuration
+- Priority cascade: `--config:key=value` → `APPNAME_KEY` env vars → `{app}.ini` file
+- Type-safe accessors: `fun_config_get_string()`, `fun_config_get_int()`, `fun_config_get_bool()`
+- Ergonomic `get_or_default()` variants for optional configuration values
+- `fun_config_has()` for existence checks without type conversion
+- INI file auto-located at `{executable_dir}/{app_name}.ini`
+- Environment variables transformed: `"database.host"` → `MYAPP_DATABASE_HOST`
+- Cross-platform: Linux (`getenv`/`readlink`) and Windows (`GetEnvironmentVariableA`/`GetModuleFileNameA`)
 
 ## Quick Start
 
@@ -382,6 +389,58 @@ int exit_code = fun_process_get_exit_code(&result);
 fun_process_free(&result);
 ```
 
+### Configuration Management
+
+```c
+#include "config/config.h"
+
+// Load config (cascades: CLI args → env vars → myapp.ini)
+ConfigResult cfg_result = fun_config_load("myapp", argc, argv);
+if (fun_error_is_error(cfg_result.error)) {
+    fun_console_error_line("Failed to load config");
+    return 1;
+}
+Config config = cfg_result.value;
+
+// Get a required string value
+StringResult host_result = fun_config_get_string(&config, "database.host");
+if (fun_error_is_error(host_result.error)) {
+    fun_console_error_line("database.host is required");
+    fun_config_destroy(&config);
+    return 1;
+}
+// host_result.value is a char* pointing into config's internal buffers
+
+// Get an optional integer with a default
+int64_tResult port_result = fun_config_get_int_or_default(&config, "database.port", 5432);
+int64_t port = port_result.value;
+
+// Get an optional boolean with a default
+boolResult debug_result = fun_config_get_bool_or_default(&config, "debug", false);
+bool debug = debug_result.value;
+
+// Check existence without type conversion
+boolResult has_result = fun_config_has(&config, "some.key");
+if (has_result.value) {
+    // key exists in any source
+}
+
+// Cleanup (frees all internal memory)
+fun_config_destroy(&config);
+```
+
+**INI file format** (`myapp.ini` in same directory as executable):
+```ini
+; comment lines start with ; or #
+database.host = localhost
+database.port = 5432
+debug = false
+app.name = "My Application"
+```
+
+**Environment variable** `MYAPP_DATABASE_HOST` overrides INI `database.host`.
+**CLI argument** `--config:database.host=prod.db.example.com` overrides all.
+
 ---
 
 ## AI Agent Skills
@@ -539,7 +598,7 @@ MIT License
 
 | Module | Capabilities | Status |
 |--------|-------------|--------|
-| **Configuration** | Cascading config from CLI, env, INI files | In Development |
+| **Configuration** | Cascading config from CLI, env, INI files | Complete |
 | **Time/Date** | `fun_time_now()`, `fun_time_sleep()`, timestamp formatting | Proposed |
 | **Random Numbers** | PRNG with seeding, `fun_random_u32/u64()`, bounded ranges | Proposed |
 | **Sorting** | Generic array sorting, binary search, comparison functions | Proposed |
