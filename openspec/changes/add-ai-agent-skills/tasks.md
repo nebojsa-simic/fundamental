@@ -94,9 +94,9 @@
 ## 11. Agent Integration
 
 - [x] 11.1 Test skill discovery with Opencode queries
-- [ ] 11.2 Test skill discovery with Claude Code queries
+- [x] 11.2 Test skill discovery with Claude Code queries
 - [x] 11.3 Update agent system prompts if needed to reference skills
-- [ ] 11.4 Gather feedback on skill usefulness and clarity
+- [x] 11.4 Gather feedback on skill usefulness and clarity
 
 ## 12. Documentation
 
