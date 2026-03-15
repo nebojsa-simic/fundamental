@@ -12,7 +12,7 @@ bool test_stream_position_tracking(void)
 	AsyncResult stream_result =
 		fun_stream_create_file_read("testData/medium.txt", // 1KB file
 									buffer_result.value, 256, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -31,7 +31,7 @@ bool test_stream_position_tracking(void)
 
 	// Read first chunk
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	if (read_result.status != ASYNC_COMPLETED ||
 		fun_stream_current_position(stream) != bytes_read) {
@@ -44,7 +44,7 @@ bool test_stream_position_tracking(void)
 
 	// Read second chunk
 	read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	bool success =
 		(read_result.status == ASYNC_COMPLETED) &&
@@ -65,7 +65,7 @@ bool test_stream_async_behavior(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/medium.txt", buffer_result.value, 512, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -76,7 +76,7 @@ bool test_stream_async_behavior(void)
 	uint64_t bytes_read;
 
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	// fun_stream_read is synchronous, so it returns ASYNC_COMPLETED
 	// The async mechanism is used for consistency with the API design

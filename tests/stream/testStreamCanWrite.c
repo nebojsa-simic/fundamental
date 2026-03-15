@@ -19,7 +19,7 @@ bool test_fun_stream_can_write_basic(void)
 	AsyncResult stream_result =
 		fun_stream_open("testData/can_write_test.txt", STREAM_MODE_WRITE,
 						buffer_result.value, 1024, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	ASSERT_NO_ERROR(stream_result);
 
 	FileStream *stream = (FileStream *)stream_result.state;
@@ -36,7 +36,7 @@ bool test_fun_stream_can_write_basic(void)
 
 	// Close and cleanup
 	AsyncResult close_result = fun_stream_close(stream);
-	fun_async_await(&close_result);
+	fun_async_await(&close_result, -1);
 
 	fun_memory_free(&buffer_result.value);
 
@@ -68,7 +68,7 @@ bool test_fun_stream_can_write_edge_cases(void)
 	AsyncResult stream_result =
 		fun_stream_open("testData/can_write_edge_test.txt", STREAM_MODE_WRITE,
 						buffer_result.value, 1024, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	if (fun_error_is_error(stream_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -82,7 +82,7 @@ bool test_fun_stream_can_write_edge_cases(void)
 
 	// Close and cleanup
 	AsyncResult close_result = fun_stream_close(stream);
-	fun_async_await(&close_result);
+	fun_async_await(&close_result, -1);
 
 	fun_memory_free(&buffer_result.value);
 

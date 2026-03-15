@@ -32,7 +32,7 @@ bool test_fun_append_memory_to_file_basic(void)
 					  .mode = FILE_MODE_AUTO };
 
 	AsyncResult append_result = fun_append_memory_to_file(params);
-	fun_async_await(&append_result);
+	fun_async_await(&append_result, -1);
 
 	bool success = (append_result.status == ASYNC_COMPLETED) &&
 				   (fun_error_is_ok(append_result.error));
@@ -91,7 +91,7 @@ bool test_fun_append_memory_to_file_to_existing(void)
 					  .mode = FILE_MODE_AUTO };
 
 	AsyncResult append_result = fun_append_memory_to_file(params);
-	fun_async_await(&append_result);
+	fun_async_await(&append_result, -1);
 
 	bool success = (fun_error_is_ok(append_result.error));
 
@@ -149,7 +149,7 @@ bool test_fun_append_memory_to_file_large_data(void)
 					  .mode = FILE_MODE_AUTO };
 
 	AsyncResult append_result = fun_append_memory_to_file(params);
-	fun_async_await(&append_result);
+	fun_async_await(&append_result, -1);
 
 	bool success = (append_result.status == ASYNC_COMPLETED) &&
 				   (fun_error_is_ok(append_result.error));

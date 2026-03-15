@@ -174,7 +174,7 @@ void test_fun_write_memory_to_file_success()
 					 .mode = FILE_MODE_AUTO };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file was written correctly
@@ -214,7 +214,7 @@ void test_fun_write_memory_to_file_with_offset()
 					 .offset = offset };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file content
@@ -261,7 +261,7 @@ void test_fun_write_memory_to_file_extend_file()
 					 .offset = offset };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file was extended
@@ -303,7 +303,7 @@ void test_fun_write_memory_to_file_new_file()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file was created and written
@@ -339,7 +339,7 @@ void test_fun_write_memory_to_file_zero_bytes()
 					 .offset = 5 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res); // Writing zero bytes should succeed
 
 	// Verify file content is unchanged
@@ -378,7 +378,7 @@ void test_fun_write_memory_to_file_overwrite_complete()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file content
@@ -418,7 +418,7 @@ void test_fun_write_memory_to_file_large_data()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_NO_ERROR(write_res);
 
 	// Verify file content
@@ -447,7 +447,7 @@ void test_fun_write_memory_to_file_null_input_buffer()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_ERROR(write_res);
 
 	print_test_result("fun_write_memory_to_file_null_input_buffer");
@@ -471,7 +471,7 @@ void test_fun_write_memory_to_file_null_file_path()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_ERROR(write_res);
 
 	// Cleanup
@@ -498,7 +498,7 @@ void test_fun_write_memory_to_file_invalid_path()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_ERROR(write_res);
 
 	// Cleanup
@@ -528,7 +528,7 @@ void test_fun_write_memory_to_file_readonly_file()
 					 .offset = 0 };
 
 	AsyncResult write_res = fun_write_memory_to_file(params);
-	fun_async_await(&write_res);
+	fun_async_await(&write_res, -1);
 	ASSERT_ERROR(write_res); // Should fail due to read-only permissions
 
 	// Verify original content is unchanged

@@ -46,7 +46,7 @@ static bool test_fun_write_memory_to_file_basic(void)
 					 .mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_write_memory_to_file(params);
-	fun_async_await(&result);
+	fun_async_await(&result, -1);
 
 	bool success = (result.status == ASYNC_COMPLETED) &&
 				   fun_error_is_ok(result.error);
@@ -95,7 +95,7 @@ static bool test_fun_write_memory_to_file_offset(void)
 					 .mode = FILE_MODE_AUTO };
 
 	AsyncResult result = fun_write_memory_to_file(params);
-	fun_async_await(&result);
+	fun_async_await(&result, -1);
 
 	bool success = (result.status == ASYNC_COMPLETED) &&
 				   fun_error_is_ok(result.error);

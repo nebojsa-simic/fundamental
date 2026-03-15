@@ -124,7 +124,7 @@ void test_fun_read_file_in_memory_success()
 	};
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	ASSERT_NO_ERROR(read_res);
 	assert(memoryCompare(buffer, content, content_size) == 0);
 	// Cleanup
@@ -150,7 +150,7 @@ void test_fun_read_file_in_memory_partial_start()
 					.offset = 0 };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	ASSERT_NO_ERROR(read_res);
 	assert(memoryCompare(buffer, content, bytes_to_read) == 0);
 
@@ -178,7 +178,7 @@ void test_fun_read_file_in_memory_partial_offset()
 					.offset = offset };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	ASSERT_NO_ERROR(read_res);
 	assert(memoryCompare(buffer, content + offset, bytes_to_read) == 0);
 
@@ -205,7 +205,7 @@ void test_fun_read_file_in_memory_empty_file()
 					.offset = 0 };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Reading past EOF is not necessarily an error, but should read 0 bytes.
 	// The function API (.bytes_to_read REQUIRED - Exact bytes to read) implies
 	// it might be an error if fewer bytes than requested are read.
@@ -240,7 +240,7 @@ void test_fun_read_file_in_memory_read_zero_bytes()
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
 	// Reading zero bytes should succeed and do nothing.
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	ASSERT_NO_ERROR(read_res);
 	assert(((char *)buffer)[0] == 'X'); // Buffer should be untouched
 
@@ -269,7 +269,7 @@ void test_fun_read_file_in_memory_offset_beyond_eof()
 					.offset = offset };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Attempting to read starting past EOF. Should likely fail as exact bytes are required.
 	ASSERT_ERROR(read_res);
 	// Or, if reading 0 bytes is expected:
@@ -302,7 +302,7 @@ void test_fun_read_file_in_memory_read_beyond_eof()
 					.offset = offset };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Since the API requires reading the *exact* number of bytes,
 	// reading fewer bytes than requested should be an error.
 	ASSERT_ERROR(read_res);
@@ -333,7 +333,7 @@ void test_fun_read_file_in_memory_non_existent_file()
 					.offset = 0 };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Should fail because the file doesn't exist.
 	ASSERT_ERROR(read_res);
 
@@ -358,7 +358,7 @@ void test_fun_read_file_in_memory_null_output_buffer()
 					.offset = 0 };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Should fail due to NULL buffer.
 	ASSERT_ERROR(read_res);
 	assert(null_buffer_ptr ==
@@ -404,7 +404,7 @@ void test_fun_read_file_in_memory_null_file_path()
 					.offset = 0 };
 
 	AsyncResult read_res = fun_read_file_in_memory(params);
-	fun_async_await(&read_res);
+	fun_async_await(&read_res, -1);
 	// Should fail due to null/invalid file path.
 	ASSERT_ERROR(read_res);
 

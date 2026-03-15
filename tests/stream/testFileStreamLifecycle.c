@@ -19,7 +19,7 @@ bool test_stream_create_valid_file(void)
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 1024, FILE_MODE_AUTO);
 	ASSERT_NO_ERROR(stream_result);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	printf("After await error.code: %d\n", stream_result.error.code);
 	printf("After await status: %d\n", stream_result.status);
@@ -54,14 +54,14 @@ bool test_stream_create_invalid_file(void)
 	// Try to create stream for non-existent file
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/nonexistent.txt", buffer_result.value, 512, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	FileStream *stream = (FileStream *)stream_result.state;
 	uint64_t bytes_read;
 
 	// First read should get exactly 1024 bytes
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	bool success = (read_result.status == ASYNC_ERROR) &&
 				   (fun_error_is_error(read_result.error));
@@ -83,7 +83,7 @@ bool test_stream_memory_cleanup(void)
 	// Step 2: Create file stream
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 512, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -107,7 +107,7 @@ bool test_stream_memory_cleanup(void)
 	// Step 4: Perform a read operation to ensure stream works
 	uint64_t bytes_read;
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	if (read_result.status != ASYNC_COMPLETED) {
 		fun_stream_destroy(stream);
@@ -120,7 +120,7 @@ bool test_stream_memory_cleanup(void)
 
 	// Step 6: Destroy the stream
 	AsyncResult destroy_result = fun_stream_destroy(stream);
-	fun_async_await(&destroy_result);
+	fun_async_await(&destroy_result, -1);
 
 	// Step 7: Verify destruction was successful
 	bool destroy_success = (destroy_result.status == ASYNC_COMPLETED) &&

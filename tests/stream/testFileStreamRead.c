@@ -16,7 +16,7 @@ bool test_stream_read_small_file(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 64, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	ASSERT_NO_ERROR(stream_result);
 
 	FileStream *stream = (FileStream *)stream_result.state;
@@ -24,7 +24,7 @@ bool test_stream_read_small_file(void)
 
 	// Read the file
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 	printf("Bytes read: %lu\n", bytes_read);
 	printf("error code: %d\n", read_result.error.code);
 	printf("error: %s\n", read_result.error.message);
@@ -56,7 +56,7 @@ bool test_stream_read_empty_file(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/empty.txt", buffer_result.value, 256, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -67,7 +67,7 @@ bool test_stream_read_empty_file(void)
 	uint64_t bytes_read;
 
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	bool success = (read_result.status == ASYNC_COMPLETED) &&
 				   (bytes_read == 0) && (stream->end_of_stream) &&
@@ -88,7 +88,7 @@ bool test_stream_read_large_file_multiple_chunks(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/large.txt", buffer_result.value, 512, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -103,7 +103,7 @@ bool test_stream_read_large_file_multiple_chunks(void)
 	while (fun_stream_can_read(stream)) {
 		uint64_t bytes_read;
 		AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-		fun_async_await(&read_result);
+		fun_async_await(&read_result, -1);
 
 		if (read_result.status != ASYNC_COMPLETED) {
 			fun_stream_destroy(stream);
@@ -141,7 +141,7 @@ bool test_stream_read_exact_buffer_size(void)
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/exact_buffer.txt", // Exactly 1024 bytes
 		buffer_result.value, 1024, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -153,7 +153,7 @@ bool test_stream_read_exact_buffer_size(void)
 
 	// First read should get exactly 1024 bytes
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	bool success = (read_result.status == ASYNC_COMPLETED) &&
 				   (bytes_read == 1024) && (stream->end_of_stream);
@@ -161,7 +161,7 @@ bool test_stream_read_exact_buffer_size(void)
 	// Second read should return 0 bytes
 	if (success) {
 		read_result = fun_stream_read(stream, &bytes_read);
-		fun_async_await(&read_result);
+		fun_async_await(&read_result, -1);
 
 		success = (read_result.status == ASYNC_COMPLETED) && (bytes_read == 0);
 	}

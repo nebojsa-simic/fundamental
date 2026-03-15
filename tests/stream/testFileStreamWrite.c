@@ -21,7 +21,7 @@ bool test_fun_stream_write_basic(void)
 	AsyncResult stream_result =
 		fun_stream_open("testData/test_output.txt", STREAM_MODE_WRITE,
 						buffer_result.value, 1024, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	if (fun_error_is_error(stream_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -37,7 +37,7 @@ bool test_fun_stream_write_basic(void)
 	AsyncResult write_result = fun_stream_write(stream, test_data, data_size);
 
 	// Wait for write to complete
-	fun_async_await(&write_result);
+	fun_async_await(&write_result, -1);
 
 	if (fun_error_is_error(write_result.error)) {
 		fun_stream_close(stream);
@@ -47,7 +47,7 @@ bool test_fun_stream_write_basic(void)
 
 	// Close stream
 	AsyncResult close_result = fun_stream_close(stream);
-	fun_async_await(&close_result);
+	fun_async_await(&close_result, -1);
 	if (fun_error_is_error(close_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -85,7 +85,7 @@ bool test_fun_stream_write_large_data(void)
 	AsyncResult stream_result =
 		fun_stream_open("testData/large_output.txt", STREAM_MODE_WRITE,
 						buffer_result.value, 4096, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	if (fun_error_is_error(stream_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -101,7 +101,7 @@ bool test_fun_stream_write_large_data(void)
 
 	// Write large data to stream
 	AsyncResult write_result = fun_stream_write(stream, large_data, 2048);
-	fun_async_await(&write_result);
+	fun_async_await(&write_result, -1);
 	if (fun_error_is_error(write_result.error)) {
 		fun_stream_close(stream);
 		fun_memory_free(&buffer_result.value);
@@ -110,7 +110,7 @@ bool test_fun_stream_write_large_data(void)
 
 	// Close stream
 	AsyncResult close_result = fun_stream_close(stream);
-	fun_async_await(&close_result);
+	fun_async_await(&close_result, -1);
 	if (fun_error_is_error(close_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -152,7 +152,7 @@ bool test_fun_stream_write_null_parameters(void)
 	AsyncResult stream_result =
 		fun_stream_open("testData/null_params_test.txt", STREAM_MODE_WRITE,
 						buffer_result.value, 1024, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 	if (fun_error_is_error(stream_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;
@@ -170,7 +170,7 @@ bool test_fun_stream_write_null_parameters(void)
 
 	// Close stream
 	AsyncResult close_result = fun_stream_close(stream);
-	fun_async_await(&close_result);
+	fun_async_await(&close_result, -1);
 	if (fun_error_is_error(close_result.error)) {
 		fun_memory_free(&buffer_result.value);
 		return false;

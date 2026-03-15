@@ -21,7 +21,7 @@ bool test_stream_read_null_parameters(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 256, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -49,7 +49,7 @@ bool test_stream_read_after_end_of_stream(void)
 
 	AsyncResult stream_result = fun_stream_create_file_read(
 		"testData/small.txt", buffer_result.value, 128, FILE_MODE_AUTO);
-	fun_async_await(&stream_result);
+	fun_async_await(&stream_result, -1);
 
 	if (stream_result.status != ASYNC_COMPLETED) {
 		fun_memory_free(&buffer_result.value);
@@ -61,7 +61,7 @@ bool test_stream_read_after_end_of_stream(void)
 
 	// Read entire file
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	if (read_result.status != ASYNC_COMPLETED || !stream->end_of_stream) {
 		fun_stream_destroy(stream);
@@ -71,7 +71,7 @@ bool test_stream_read_after_end_of_stream(void)
 
 	// Try to read again after EOF
 	read_result = fun_stream_read(stream, &bytes_read);
-	fun_async_await(&read_result);
+	fun_async_await(&read_result, -1);
 
 	bool success = (read_result.status == ASYNC_COMPLETED) &&
 				   (bytes_read == 0) && (!fun_stream_can_read(stream));

@@ -32,6 +32,8 @@
 #define ERROR_CODE_NETWORK_ADDRESS_PARSE_FAILED 238
 #define ERROR_CODE_NETWORK_INVALID_STATE 239
 
+#define ERROR_CODE_ASYNC_TIMEOUT 240
+
 typedef struct {
 	uint8_t code;
 	const char *message;
@@ -138,6 +140,8 @@ static ErrorResult ERROR_RESULT_NETWORK_ADDRESS_PARSE_FAILED = {
 static ErrorResult ERROR_RESULT_NETWORK_INVALID_STATE = {
 	ERROR_CODE_NETWORK_INVALID_STATE, "Connection is in an invalid state"
 };
+static ErrorResult ERROR_RESULT_ASYNC_TIMEOUT = { ERROR_CODE_ASYNC_TIMEOUT,
+												  "Async operation timed out" };
 
 #pragma GCC diagnostic pop
 

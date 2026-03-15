@@ -80,7 +80,8 @@ Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src
 | Memory | Complete | `fun_memory_allocate()`, `fun_memory_free()` |
 | String | Complete | `fun_string_copy()`, `fun_string_template()`, conversions |
 | Error | Complete | `DEFINE_RESULT_TYPE()`, `fun_error_is_error()` |
-| Async | Complete | `fun_async_await()`, process spawn |
+| Async | Complete | `fun_async_await(result, timeout_ms)`, `fun_async_await_all()` — pure future, no process coupling |
+| Process | Complete | `fun_process_spawn()`, `fun_process_terminate()`, `fun_process_free()` |
 | Console | Complete | `fun_console_write()`, `fun_console_write_line()` |
 | File | Complete | `fun_read_file_in_memory()`, `fun_write_memory_to_file()` |
 | Stream | Complete | `fun_stream_create_file_read()`, `fun_stream_read()` |
@@ -98,7 +99,7 @@ Each test directory under `tests/` has:
 - Tests validate both success and error conditions
 - Test names follow `test_<function_under_test>` pattern
 
-Test modules: async, collections, console, filesystem, hashmap, memory, network, process_spawn, rbtree, set, stream, string_*, file_*
+Test modules: async, collections, console, filesystem, hashmap, memory, network, process, rbtree, set, stream, string_*, file_*
 
 ## OpenSpec Workflow
 
@@ -120,7 +121,8 @@ Specialized skills in `.opencode/skills/` provide copy-paste examples for common
 | Directory | `fundamental-directory.md` | Create, list, remove, iterate |
 | String | `fundamental-string.md` | Copy, join, template, convert |
 | Collections | `fundamental-collections.md` | Arrays, hashmaps, sets, RB-trees |
-| Async | `fundamental-async.md` | Await, poll, spawn processes |
+| Async | `fundamental-async.md` | Await with timeout, poll |
+| Process | `fundamental-process.md` | Spawn processes, capture stdout/stderr |
 | Config | `fundamental-config.md` | Load config, cascade sources |
 | Network | `fundamental-network.md` | TCP/UDP connect, event loop, address parse, scatter/gather I/O |
 | Platform | `fundamental-platform.md` | Detect OS/arch, convert to string |
