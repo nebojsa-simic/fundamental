@@ -1,39 +1,40 @@
-# Async Module Specification 
-## Purpose  
-Asynchronous operations module provides polling mechanism for non-blocking execution allowing applications to  
-perform other work while waiting for operations.  
+# Async Module Specification
+## Purpose
+Asynchronous operations module provides polling mechanism for non-blocking execution allowing applications to
+perform other work while waiting for operations.
 
 ## Requirements
 
 ### Requirement: Single operation await
-Async module SHALL provide function to suspend execution until single operation completes.
+Async module SHALL provide `fun_async_await` to suspend execution until a single operation completes or a timeout elapses.
 
-#### Scenario: Wait for pending operation
-- **WHEN** fun_async_await is called with pending AsyncResult
-- **THEN** function blocks until operation completes or errors
+#### Scenario: Wait for pending operation that completes
+- **WHEN** `fun_async_await` is called with a pending `AsyncResult` and `timeout_ms = -1`
+- **THEN** the function SHALL block until the operation completes and `result->status` SHALL be `ASYNC_COMPLETED`
+
+#### Scenario: Wait times out
+- **WHEN** `fun_async_await` is called with `timeout_ms > 0` and the operation does not complete within that duration
+- **THEN** `fun_async_await` SHALL return an error result with `ERROR_CODE_ASYNC_TIMEOUT` and `result->status` SHALL be set to `ASYNC_ERROR`
+
+#### Scenario: Poll once with zero timeout
+- **WHEN** `fun_async_await` is called with `timeout_ms = 0`
+- **THEN** the function SHALL invoke `poll` exactly once and return immediately regardless of whether the operation completed
+
+#### Scenario: Operation errors before timeout
+- **WHEN** `fun_async_await` is called and the operation's `poll` function sets `status` to `ASYNC_ERROR`
+- **THEN** `fun_async_await` SHALL return that error immediately without waiting for the timeout
 
 ### Requirement: Multiple operation await
-Async module SHALL provide function to suspend execution until all operations in a collection complete.
+Async module SHALL provide `fun_async_await_all` to suspend execution until all operations complete or the timeout elapses.
 
-#### Scenario: Wait for multiple pending operations
-- **WHEN** fun_async_await_all is called with array of pending AsyncResult objects
-- **THEN** function blocks until all operations complete or error
-- **AND** each individual AsyncResult is polled independently during waiting
-- **AND** function returns when no operations remain pending
+#### Scenario: All operations complete within timeout
+- **WHEN** `fun_async_await_all` is called with an array of pending `AsyncResult` objects and `timeout_ms = -1`
+- **THEN** the function SHALL block until every operation has `status` of `ASYNC_COMPLETED` or `ASYNC_ERROR`
 
-### Requirement: Async process spawn function
-Async module SHALL provide async function to spawn external processes.
-
-#### Scenario: Spawn returns async result
-- **WHEN** fun_async_process_spawn is called
-- **THEN** function returns immediately with AsyncResult containing Process handle on success
-
-### Requirement: Process handle access from AsyncResult
-Async module SHALL provide function to extract Process handle from AsyncResult after spawn.
-
-#### Scenario: Get process from completed spawn result
-- **WHEN** fun_async_result_get_process is called on spawn result
-- **THEN** function returns pointer to Process data embedded in AsyncResult
+#### Scenario: Timeout expires before all complete
+- **WHEN** `fun_async_await_all` is called with `timeout_ms > 0` and one or more operations do not complete in time
+- **THEN** each incomplete operation SHALL have `status` set to `ASYNC_ERROR` and `error` set to `ERROR_CODE_ASYNC_TIMEOUT`
+- **AND** `fun_async_await_all` SHALL return an error result with `ERROR_CODE_ASYNC_TIMEOUT`
 
 ## Constraints
 - Functions MUST avoid busy-waiting when possible
