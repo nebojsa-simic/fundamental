@@ -89,7 +89,7 @@ Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src
 | Platform | Complete | `fun_platform_get()`, OS/arch detection via arch layer |
 | Collections | Complete | Arrays, HashMaps, RB-Trees, Sets |
 | Config | In Dev | `fun_config_load()`, cascading CLI > env > INI |
-| Network | Complete | `fun_network_tcp_connect()`, `fun_network_loop_run()`, `fun_network_udp_bind()` |
+| Network | Complete | `fun_network_tcp_connect()`, `fun_network_tcp_send()`, `fun_network_tcp_receive_exact()`, `fun_network_udp_send()` |
 
 ## Test Organization
 
@@ -124,7 +124,7 @@ Specialized skills in `.opencode/skills/` provide copy-paste examples for common
 | Async | `fundamental-async.md` | Await with timeout, poll |
 | Process | `fundamental-process.md` | Spawn processes, capture stdout/stderr |
 | Config | `fundamental-config.md` | Load config, cascade sources |
-| Network | `fundamental-network.md` | TCP/UDP connect, event loop, address parse, scatter/gather I/O |
+| Network | `fundamental-network.md` | Simple async TCP/UDP client, address parse, overflow-buffered receive |
 | Platform | `fundamental-platform.md` | Detect OS/arch, convert to string |
 | Index | `fundamental-skills-index.md` | Central cross-reference |
 

@@ -15,6 +15,8 @@ SOURCES=(
     "$SCRIPT_DIR/test_network.c"
     "$PROJECT_ROOT/src/network/network.c"
     "$PROJECT_ROOT/arch/network/linux-amd64/network.c"
+    "$PROJECT_ROOT/src/async/async.c"
+    "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
     "$PROJECT_ROOT/src/string/stringOperations.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"
 )

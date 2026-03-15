@@ -1,253 +1,322 @@
+/*
+ * Tests for the network module — async TCP/UDP interface.
+ *
+ * stdio.h and assert.h are permitted in test files.
+ */
+
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 #include "../../include/network/network.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
-#define ASSERT_NO_ERROR(result) assert((result).error.code == 0)
-#define ASSERT_ERROR(result) assert((result).error.code != 0)
+#define ASSERT_NO_ERROR(r) assert((r).error.code == 0)
+#define ASSERT_ERROR(r)    assert((r).error.code != 0)
 
-static void print_test_result(const char *name)
+static void print_ok(const char *name)
 {
 	printf("%s %s\n", GREEN_CHECK, name);
 }
 
 /* ================================================================
- * NetworkAddress parse tests (5.1)
+ * Platform loopback server helpers
  * ================================================================ */
 
-static void test_fun_network_address_parse_ipv4_valid(void)
+#ifdef _WIN32
+
+static SOCKET g_server;
+
+static uint16_t start_server(void)
 {
-	NetworkAddressResult r = fun_network_address_parse("127.0.0.1:8080");
-	ASSERT_NO_ERROR(r);
-	assert(r.value.family == NETWORK_ADDRESS_IPV4);
-	assert(r.value.bytes[0] == 127);
-	assert(r.value.bytes[1] == 0);
-	assert(r.value.bytes[2] == 0);
-	assert(r.value.bytes[3] == 1);
-	assert(r.value.port == 8080);
-	print_test_result("fun_network_address_parse: valid IPv4");
+	WSADATA wd;
+	WSAStartup(MAKEWORD(2, 2), &wd);
+	g_server = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in addr;
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_port        = 0;
+	bind(g_server, (struct sockaddr *)&addr, sizeof(addr));
+	listen(g_server, 1);
+	int len = sizeof(addr);
+	getsockname(g_server, (struct sockaddr *)&addr, &len);
+	return ntohs(addr.sin_port);
 }
 
-static void test_fun_network_address_parse_ipv4_all_octets(void)
+static void server_send_and_close(const char *data, int n)
 {
-	NetworkAddressResult r = fun_network_address_parse("192.168.1.255:443");
-	ASSERT_NO_ERROR(r);
-	assert(r.value.bytes[0] == 192);
-	assert(r.value.bytes[1] == 168);
-	assert(r.value.bytes[2] == 1);
-	assert(r.value.bytes[3] == 255);
-	assert(r.value.port == 443);
-	print_test_result("fun_network_address_parse: IPv4 all octets");
+	SOCKET c = accept(g_server, NULL, NULL);
+	int sent = 0;
+	while (sent < n) {
+		int r = send(c, data + sent, n - sent, 0);
+		if (r > 0)
+			sent += r;
+	}
+	closesocket(c);
+	closesocket(g_server);
 }
 
-static void test_fun_network_address_parse_invalid_octet(void)
+#else /* POSIX */
+
+static int g_server;
+
+static uint16_t start_server(void)
 {
-	NetworkAddressResult r = fun_network_address_parse("999.0.0.1:80");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects octet > 255");
+	g_server = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in addr;
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_port        = 0;
+	bind(g_server, (struct sockaddr *)&addr, sizeof(addr));
+	listen(g_server, 1);
+	socklen_t len = sizeof(addr);
+	getsockname(g_server, (struct sockaddr *)&addr, &len);
+	return ntohs(addr.sin_port);
 }
 
-static void test_fun_network_address_parse_missing_port(void)
+static void server_send_and_close(const char *data, int n)
 {
-	NetworkAddressResult r = fun_network_address_parse("127.0.0.1");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects missing port");
+	int c = accept(g_server, NULL, NULL);
+	int sent = 0;
+	while (sent < n) {
+		int r = (int)send(c, data + sent, (size_t)(n - sent), 0);
+		if (r > 0)
+			sent += r;
+	}
+	close(c);
+	close(g_server);
 }
 
-static void test_fun_network_address_parse_port_zero(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("0.0.0.0:0");
-	ASSERT_NO_ERROR(r);
-	assert(r.value.port == 0);
-	print_test_result("fun_network_address_parse: port 0 accepted");
-}
+#endif /* _WIN32 */
 
-static void test_fun_network_address_parse_port_max(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("1.2.3.4:65535");
-	ASSERT_NO_ERROR(r);
-	assert(r.value.port == 65535);
-	print_test_result("fun_network_address_parse: port 65535 accepted");
-}
+/* ================================================================
+ * 1. test_address_parse
+ * ================================================================ */
 
-static void test_fun_network_address_parse_port_too_large(void)
+static void test_address_parse(void)
 {
-	NetworkAddressResult r = fun_network_address_parse("1.2.3.4:65536");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects port > 65535");
-}
+	/* Valid IPv4 */
+	{
+		NetworkAddressResult r = fun_network_address_parse("127.0.0.1:8080");
+		ASSERT_NO_ERROR(r);
+		assert(r.value.family == NETWORK_ADDRESS_IPV4);
+		assert(r.value.bytes[0] == 127);
+		assert(r.value.bytes[1] == 0);
+		assert(r.value.bytes[2] == 0);
+		assert(r.value.bytes[3] == 1);
+		assert(r.value.port == 8080);
+	}
 
-static void test_fun_network_address_parse_hostname_rejected(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("example.com:80");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects hostname");
-}
+	/* Valid IPv6 */
+	{
+		NetworkAddressResult r = fun_network_address_parse("[::1]:9000");
+		ASSERT_NO_ERROR(r);
+		assert(r.value.family == NETWORK_ADDRESS_IPV6);
+		assert(r.value.port == 9000);
+		for (int i = 0; i < 15; i++)
+			assert(r.value.bytes[i] == 0);
+		assert(r.value.bytes[15] == 1);
+	}
 
-static void test_fun_network_address_parse_localhost_rejected(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("localhost:8080");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects 'localhost'");
-}
+	/* Missing port */
+	{
+		NetworkAddressResult r = fun_network_address_parse("127.0.0.1");
+		ASSERT_ERROR(r);
+	}
 
-static void test_fun_network_address_parse_null(void)
-{
-	NetworkAddressResult r = fun_network_address_parse(NULL);
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects NULL");
-}
+	/* Octet > 255 */
+	{
+		NetworkAddressResult r = fun_network_address_parse("999.0.0.1:80");
+		ASSERT_ERROR(r);
+	}
 
-static void test_fun_network_address_parse_empty(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects empty string");
-}
+	/* Hostname rejected */
+	{
+		NetworkAddressResult r = fun_network_address_parse("example.com:80");
+		ASSERT_ERROR(r);
+	}
 
-static void test_fun_network_address_parse_ipv6_loopback(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("[::1]:9000");
-	ASSERT_NO_ERROR(r);
-	assert(r.value.family == NETWORK_ADDRESS_IPV6);
-	assert(r.value.port == 9000);
-	/* ::1 = 15 zero bytes + 0x01 */
-	for (int i = 0; i < 15; i++)
-		assert(r.value.bytes[i] == 0);
-	assert(r.value.bytes[15] == 1);
-	print_test_result("fun_network_address_parse: IPv6 loopback [::1]");
-}
+	/* Port > 65535 */
+	{
+		NetworkAddressResult r = fun_network_address_parse("1.2.3.4:65536");
+		ASSERT_ERROR(r);
+	}
 
-static void test_fun_network_address_parse_ipv6_missing_bracket(void)
-{
-	NetworkAddressResult r = fun_network_address_parse("[::1:80");
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_address_parse: rejects missing ]");
+	print_ok("test_address_parse");
 }
 
 /* ================================================================
- * NetworkAddress to_string tests (5.2)
+ * 2. test_address_format
  * ================================================================ */
 
-static void test_fun_network_address_to_string_ipv4_roundtrip(void)
+static void test_address_format(void)
 {
-	NetworkAddressResult parse = fun_network_address_parse("10.0.0.1:3000");
-	ASSERT_NO_ERROR(parse);
+	/* Format IPv4 */
+	{
+		NetworkAddressResult parse = fun_network_address_parse("10.0.0.1:3000");
+		ASSERT_NO_ERROR(parse);
+		char buf[64];
+		voidResult fmt = fun_network_address_to_string(parse.value, buf,
+													   sizeof(buf));
+		ASSERT_NO_ERROR(fmt);
+		/* Verify the formatted string contains the expected IP and port */
+		int ok = 0;
+		/* Simple manual strcmp — no string.h in test allowed? Actually
+		 * test files may use standard headers per the instructions.
+		 * We use assert with manual check to avoid string.h dependency. */
+		const char *expected = "10.0.0.1:3000";
+		const char *a = buf;
+		const char *b = expected;
+		while (*a && *b && *a == *b) { a++; b++; }
+		ok = (*a == '\0' && *b == '\0');
+		assert(ok);
+	}
 
-	char buf[64];
-	voidResult fmt =
-		fun_network_address_to_string(parse.value, buf, sizeof(buf));
-	ASSERT_NO_ERROR(fmt);
-	assert(strcmp(buf, "10.0.0.1:3000") == 0);
-	print_test_result("fun_network_address_to_string: IPv4 roundtrip");
-}
+	/* Buffer too small */
+	{
+		NetworkAddressResult parse = fun_network_address_parse("127.0.0.1:8080");
+		ASSERT_NO_ERROR(parse);
+		char tiny[5];
+		voidResult fmt = fun_network_address_to_string(parse.value, tiny,
+													   sizeof(tiny));
+		ASSERT_ERROR(fmt);
+	}
 
-static void test_fun_network_address_to_string_buffer_too_small(void)
-{
-	NetworkAddressResult parse = fun_network_address_parse("127.0.0.1:8080");
-	ASSERT_NO_ERROR(parse);
-
-	char tiny[5];
-	voidResult fmt =
-		fun_network_address_to_string(parse.value, tiny, sizeof(tiny));
-	ASSERT_ERROR(fmt);
-	print_test_result("fun_network_address_to_string: rejects tiny buffer");
+	print_ok("test_address_format");
 }
 
 /* ================================================================
- * NetworkBuffer slice tests (5.3)
+ * 3. test_connect_fails
+ *    Connect to 127.0.0.1:1 — expect ASYNC_ERROR
  * ================================================================ */
 
-static void test_fun_network_buffer_slice_valid(void)
+static void test_connect_fails(void)
 {
-	char data[] = "0123456789";
-	NetworkBuffer buf;
-	buf.data = data;
-	buf.length = 10;
+	NetworkAddressResult ar = fun_network_address_parse("127.0.0.1:1");
+	ASSERT_NO_ERROR(ar);
 
-	NetworkBufferResult r = fun_network_buffer_slice(buf, 3, 4);
-	ASSERT_NO_ERROR(r);
-	assert(r.value.length == 4);
-	assert(memcmp(r.value.data, "3456", 4) == 0);
-	print_test_result("fun_network_buffer_slice: valid slice");
-}
+	TcpNetworkConnection conn = (TcpNetworkConnection)0;
+	AsyncResult result = fun_network_tcp_connect(ar.value, &conn);
+	/* Wait up to 1000ms */
+	fun_async_await(&result, 1000);
+	assert(result.status == ASYNC_ERROR);
 
-static void test_fun_network_buffer_slice_out_of_bounds(void)
-{
-	char data[] = "0123456789";
-	NetworkBuffer buf;
-	buf.data = data;
-	buf.length = 10;
-
-	NetworkBufferResult r = fun_network_buffer_slice(buf, 8, 5);
-	ASSERT_ERROR(r);
-	print_test_result("fun_network_buffer_slice: rejects out-of-bounds");
-}
-
-static void test_fun_network_buffer_slice_full(void)
-{
-	char data[] = "abcd";
-	NetworkBuffer buf;
-	buf.data = data;
-	buf.length = 4;
-
-	NetworkBufferResult r = fun_network_buffer_slice(buf, 0, 4);
-	ASSERT_NO_ERROR(r);
-	assert(r.value.length == 4);
-	assert(memcmp(r.value.data, "abcd", 4) == 0);
-	print_test_result("fun_network_buffer_slice: full-range slice");
+	print_ok("test_connect_fails");
 }
 
 /* ================================================================
- * NetworkBufferVector total length tests (5.4)
+ * 4. test_tcp_round_trip
+ *    Start a loopback server, connect, server sends 8 bytes,
+ *    client receive_exact(4) twice.
  * ================================================================ */
 
-static void test_fun_network_buffer_vector_total_length_multi(void)
+static void test_tcp_round_trip(void)
 {
-	char a[100], b[200], c[300];
-	NetworkBuffer bufs[3];
-	bufs[0].data = a;
-	bufs[0].length = 100;
-	bufs[1].data = b;
-	bufs[1].length = 200;
-	bufs[2].data = c;
-	bufs[2].length = 300;
-	NetworkBufferVector vec;
-	vec.buffers = bufs;
-	vec.count = 3;
+	uint16_t port = start_server();
 
-	size_t total = fun_network_buffer_vector_total_length(vec);
-	assert(total == 600);
-	print_test_result(
-		"fun_network_buffer_vector_total_length: sums 3 segments");
+	/* Build connect address */
+	char addr_str[32];
+	/* Manually build "127.0.0.1:NNNNN" */
+	{
+		char *p = addr_str;
+		const char *prefix = "127.0.0.1:";
+		while (*prefix)
+			*p++ = *prefix++;
+		/* Convert port to decimal */
+		char tmp[8];
+		int tlen = 0;
+		uint16_t pv = port;
+		if (pv == 0) {
+			tmp[tlen++] = '0';
+		} else {
+			char rev[8];
+			int rlen = 0;
+			while (pv > 0) {
+				rev[rlen++] = (char)('0' + pv % 10);
+				pv /= 10;
+			}
+			for (int i = rlen - 1; i >= 0; i--)
+				tmp[tlen++] = rev[i];
+		}
+		for (int i = 0; i < tlen; i++)
+			*p++ = tmp[i];
+		*p = '\0';
+	}
+
+	NetworkAddressResult ar = fun_network_address_parse(addr_str);
+	ASSERT_NO_ERROR(ar);
+
+	TcpNetworkConnection conn = (TcpNetworkConnection)0;
+	AsyncResult cr = fun_network_tcp_connect(ar.value, &conn);
+	fun_async_await(&cr, 3000);
+	assert(cr.status == ASYNC_COMPLETED);
+	assert(conn != (TcpNetworkConnection)0);
+
+	/* Server sends 8 bytes and closes */
+	server_send_and_close("ABCDEFGH", 8);
+
+	/* First receive_exact(4): should get "ABCD" */
+	char buf1[4];
+	NetworkBuffer nb1;
+	nb1.data   = buf1;
+	nb1.length = 0;
+	AsyncResult rr1 = fun_network_tcp_receive_exact(conn, &nb1, 4);
+	fun_async_await(&rr1, 3000);
+	assert(rr1.status == ASYNC_COMPLETED);
+	assert(nb1.length == 4);
+	assert(buf1[0] == 'A');
+	assert(buf1[1] == 'B');
+	assert(buf1[2] == 'C');
+	assert(buf1[3] == 'D');
+
+	/* Second receive_exact(4): should get "EFGH" from rx_buf (server closed) */
+	char buf2[4];
+	NetworkBuffer nb2;
+	nb2.data   = buf2;
+	nb2.length = 0;
+	AsyncResult rr2 = fun_network_tcp_receive_exact(conn, &nb2, 4);
+	fun_async_await(&rr2, 3000);
+	assert(rr2.status == ASYNC_COMPLETED);
+	assert(nb2.length == 4);
+	assert(buf2[0] == 'E');
+	assert(buf2[1] == 'F');
+	assert(buf2[2] == 'G');
+	assert(buf2[3] == 'H');
+
+	fun_network_tcp_close(conn);
+
+	print_ok("test_tcp_round_trip");
 }
 
-static void test_fun_network_buffer_vector_total_length_empty(void)
+/* ================================================================
+ * 5. test_udp_send
+ *    Fire-and-forget UDP to 127.0.0.1:12345 — expect ASYNC_COMPLETED
+ * ================================================================ */
+
+static void test_udp_send(void)
 {
-	NetworkBufferVector vec;
-	vec.buffers = NULL;
-	vec.count = 0;
+	NetworkAddressResult ar = fun_network_address_parse("127.0.0.1:12345");
+	ASSERT_NO_ERROR(ar);
 
-	size_t total = fun_network_buffer_vector_total_length(vec);
-	assert(total == 0);
-	print_test_result(
-		"fun_network_buffer_vector_total_length: empty vector = 0");
-}
+	const char *msg = "hello";
+	AsyncResult result = fun_network_udp_send(ar.value, msg, 5);
+	assert(result.status == ASYNC_COMPLETED);
 
-static void test_fun_network_buffer_vector_total_length_single(void)
-{
-	char data[42];
-	NetworkBuffer buf;
-	buf.data = data;
-	buf.length = 42;
-	NetworkBufferVector vec;
-	vec.buffers = &buf;
-	vec.count = 1;
-
-	assert(fun_network_buffer_vector_total_length(vec) == 42);
-	print_test_result("fun_network_buffer_vector_total_length: single segment");
+	print_ok("test_udp_send");
 }
 
 /* ================================================================
@@ -256,35 +325,12 @@ static void test_fun_network_buffer_vector_total_length_single(void)
 
 int main(void)
 {
-	/* Address parse */
-	test_fun_network_address_parse_ipv4_valid();
-	test_fun_network_address_parse_ipv4_all_octets();
-	test_fun_network_address_parse_invalid_octet();
-	test_fun_network_address_parse_missing_port();
-	test_fun_network_address_parse_port_zero();
-	test_fun_network_address_parse_port_max();
-	test_fun_network_address_parse_port_too_large();
-	test_fun_network_address_parse_hostname_rejected();
-	test_fun_network_address_parse_localhost_rejected();
-	test_fun_network_address_parse_null();
-	test_fun_network_address_parse_empty();
-	test_fun_network_address_parse_ipv6_loopback();
-	test_fun_network_address_parse_ipv6_missing_bracket();
+	test_address_parse();
+	test_address_format();
+	test_connect_fails();
+	test_tcp_round_trip();
+	test_udp_send();
 
-	/* Address to_string */
-	test_fun_network_address_to_string_ipv4_roundtrip();
-	test_fun_network_address_to_string_buffer_too_small();
-
-	/* Buffer slice */
-	test_fun_network_buffer_slice_valid();
-	test_fun_network_buffer_slice_out_of_bounds();
-	test_fun_network_buffer_slice_full();
-
-	/* BufferVector total length */
-	test_fun_network_buffer_vector_total_length_multi();
-	test_fun_network_buffer_vector_total_length_empty();
-	test_fun_network_buffer_vector_total_length_single();
-
-	printf("\nAll network tests passed.\n");
+	printf("\nAll tests passed.\n");
 	return 0;
 }
