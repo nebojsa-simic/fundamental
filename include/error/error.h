@@ -21,6 +21,17 @@
 #define ERROR_CODE_CONFIG_PARSE_ERROR 221
 #define ERROR_CODE_CONFIG_INVALID_APP_NAME 222
 
+#define ERROR_CODE_NETWORK_INIT_FAILED 230
+#define ERROR_CODE_NETWORK_CONNECT_FAILED 231
+#define ERROR_CODE_NETWORK_CONNECT_TIMEOUT 232
+#define ERROR_CODE_NETWORK_SEND_FAILED 233
+#define ERROR_CODE_NETWORK_WOULD_BLOCK 234
+#define ERROR_CODE_NETWORK_RECEIVE_FAILED 235
+#define ERROR_CODE_NETWORK_BIND_FAILED 236
+#define ERROR_CODE_NETWORK_CLOSED 237
+#define ERROR_CODE_NETWORK_ADDRESS_PARSE_FAILED 238
+#define ERROR_CODE_NETWORK_INVALID_STATE 239
+
 typedef struct {
 	uint8_t code;
 	const char *message;
@@ -96,6 +107,36 @@ static ErrorResult ERROR_RESULT_CONFIG_PARSE_ERROR = {
 };
 static ErrorResult ERROR_RESULT_CONFIG_INVALID_APP_NAME = {
 	ERROR_CODE_CONFIG_INVALID_APP_NAME, "Invalid app name (null or empty)"
+};
+static ErrorResult ERROR_RESULT_NETWORK_INIT_FAILED = {
+	ERROR_CODE_NETWORK_INIT_FAILED, "Network loop initialisation failed"
+};
+static ErrorResult ERROR_RESULT_NETWORK_CONNECT_FAILED = {
+	ERROR_CODE_NETWORK_CONNECT_FAILED, "TCP connection failed"
+};
+static ErrorResult ERROR_RESULT_NETWORK_CONNECT_TIMEOUT = {
+	ERROR_CODE_NETWORK_CONNECT_TIMEOUT, "TCP connection timed out"
+};
+static ErrorResult ERROR_RESULT_NETWORK_SEND_FAILED = {
+	ERROR_CODE_NETWORK_SEND_FAILED, "Network send failed"
+};
+static ErrorResult ERROR_RESULT_NETWORK_WOULD_BLOCK = {
+	ERROR_CODE_NETWORK_WOULD_BLOCK,
+	"Send buffer full; wait for on_write_complete"
+};
+static ErrorResult ERROR_RESULT_NETWORK_RECEIVE_FAILED = {
+	ERROR_CODE_NETWORK_RECEIVE_FAILED, "Network receive failed"
+};
+static ErrorResult ERROR_RESULT_NETWORK_BIND_FAILED = {
+	ERROR_CODE_NETWORK_BIND_FAILED, "UDP socket bind failed"
+};
+static ErrorResult ERROR_RESULT_NETWORK_CLOSED = { ERROR_CODE_NETWORK_CLOSED,
+												   "Connection is closed" };
+static ErrorResult ERROR_RESULT_NETWORK_ADDRESS_PARSE_FAILED = {
+	ERROR_CODE_NETWORK_ADDRESS_PARSE_FAILED, "Failed to parse network address"
+};
+static ErrorResult ERROR_RESULT_NETWORK_INVALID_STATE = {
+	ERROR_CODE_NETWORK_INVALID_STATE, "Connection is in an invalid state"
 };
 
 #pragma GCC diagnostic pop

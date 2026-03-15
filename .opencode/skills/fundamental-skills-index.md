@@ -39,6 +39,7 @@ This is the central index for all Fundamental Library skills for AI coding agent
 |-------|------|-------------|
 | **Async** | [fundamental-async.md](fundamental-async.md) | Await results, poll status, spawn processes |
 | **Config** | [fundamental-config.md](fundamental-config.md) | Load configuration, cascade sources, get values |
+| **Network** | [fundamental-network.md](fundamental-network.md) | TCP/UDP client, event loop, address parse, scatter/gather I/O |
 | **Platform** | [fundamental-platform.md](fundamental-platform.md) | Detect OS and architecture, convert to string |
 
 ---
@@ -136,6 +137,10 @@ fundamental-async.md
 fundamental-platform.md
     └──→ fundamental-console.md (for logging platform info)
     └──→ fundamental-async.md (for spawning platform-specific processes)
+
+fundamental-network.md
+    └──→ fundamental-async.md (for non-blocking I/O patterns)
+    └──→ fundamental-memory.md (for receive buffer allocation)
 ```
 
 ---
@@ -155,6 +160,7 @@ fundamental-platform.md
 | Allocate memory | fundamental-memory.md |
 | List files | fundamental-directory.md |
 | Detect OS/arch | fundamental-platform.md |
+| Connect TCP/UDP | fundamental-network.md |
 
 ---
 

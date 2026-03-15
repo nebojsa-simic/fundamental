@@ -88,6 +88,7 @@ Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src
 | Platform | Complete | `fun_platform_get()`, OS/arch detection via arch layer |
 | Collections | Complete | Arrays, HashMaps, RB-Trees, Sets |
 | Config | In Dev | `fun_config_load()`, cascading CLI > env > INI |
+| Network | Complete | `fun_network_tcp_connect()`, `fun_network_loop_run()`, `fun_network_udp_bind()` |
 
 ## Test Organization
 
@@ -97,7 +98,7 @@ Each test directory under `tests/` has:
 - Tests validate both success and error conditions
 - Test names follow `test_<function_under_test>` pattern
 
-Test modules: async, collections, console, filesystem, hashmap, memory, process_spawn, rbtree, set, stream, string_*, file_*
+Test modules: async, collections, console, filesystem, hashmap, memory, network, process_spawn, rbtree, set, stream, string_*, file_*
 
 ## OpenSpec Workflow
 
@@ -121,6 +122,7 @@ Specialized skills in `.opencode/skills/` provide copy-paste examples for common
 | Collections | `fundamental-collections.md` | Arrays, hashmaps, sets, RB-trees |
 | Async | `fundamental-async.md` | Await, poll, spawn processes |
 | Config | `fundamental-config.md` | Load config, cascade sources |
+| Network | `fundamental-network.md` | TCP/UDP connect, event loop, address parse, scatter/gather I/O |
 | Platform | `fundamental-platform.md` | Detect OS/arch, convert to string |
 | Index | `fundamental-skills-index.md` | Central cross-reference |
 
