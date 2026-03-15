@@ -122,15 +122,33 @@ AsyncResult fun_process_arch_spawn(const char *executable, const char **args,
 	/* Build command line */
 	char cmd_line[4096] = { 0 };
 	cmd_line[0] = '"';
-	fun_string_copy(executable, cmd_line + 1);
+	voidResult copy_r =
+		fun_string_copy(executable, cmd_line + 1, sizeof(cmd_line) - 1);
+	if (fun_error_is_error(copy_r.error)) {
+		result.status = ASYNC_ERROR;
+		result.error = copy_r.error;
+		return result;
+	}
 	StringLength exe_len = fun_string_length(executable);
 	cmd_line[1 + exe_len] = '"';
 	cmd_line[2 + exe_len] = '\0';
 	if (args != NULL) {
 		for (int i = 1; args[i] != NULL; i++) {
 			StringLength cur_len = fun_string_length((String)cmd_line);
+			if (cur_len + 2 >= sizeof(cmd_line)) {
+				result.status = ASYNC_ERROR;
+				result.error = fun_error_result(ERROR_CODE_BUFFER_TOO_SMALL,
+												"Command line too long");
+				return result;
+			}
 			cmd_line[cur_len] = ' ';
-			fun_string_copy((String)args[i], cmd_line + cur_len + 1);
+			copy_r = fun_string_copy((String)args[i], cmd_line + cur_len + 1,
+									 sizeof(cmd_line) - cur_len - 1);
+			if (fun_error_is_error(copy_r.error)) {
+				result.status = ASYNC_ERROR;
+				result.error = copy_r.error;
+				return result;
+			}
 		}
 	}
 

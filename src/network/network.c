@@ -18,15 +18,15 @@
  * Arch-layer declarations (implemented per platform in arch/network/)
  * ------------------------------------------------------------------ */
 
-int  fun_network_arch_tcp_connect(NetworkAddress addr, intptr_t *out_fd);
-int  fun_network_arch_tcp_poll_connect(intptr_t fd);
-int  fun_network_arch_tcp_send(intptr_t fd, const void *data, size_t len,
-							   size_t *sent);
-int  fun_network_arch_tcp_recv(intptr_t fd, void *data, size_t len,
-							   size_t *received);
+int fun_network_arch_tcp_connect(NetworkAddress addr, intptr_t *out_fd);
+int fun_network_arch_tcp_poll_connect(intptr_t fd);
+int fun_network_arch_tcp_send(intptr_t fd, const void *data, size_t len,
+							  size_t *sent);
+int fun_network_arch_tcp_recv(intptr_t fd, void *data, size_t len,
+							  size_t *received);
 void fun_network_arch_tcp_close_fd(intptr_t fd);
-int  fun_network_arch_udp_send(NetworkAddress addr, const void *data,
-							   size_t len);
+int fun_network_arch_udp_send(NetworkAddress addr, const void *data,
+							  size_t len);
 
 /* ------------------------------------------------------------------
  * Internal helpers
@@ -384,31 +384,41 @@ voidResult fun_network_address_to_string(NetworkAddress address, char *out_buf,
  * Connection pool
  * ------------------------------------------------------------------ */
 
-#define NETWORK_POOL_SIZE      16
+#define NETWORK_POOL_SIZE 16
 #define NETWORK_RX_BUF_DEFAULT 4096
 
-#define CONN_OP_NONE       0
-#define CONN_OP_CONNECT    1
-#define CONN_OP_SEND       2
+#define CONN_OP_NONE 0
+#define CONN_OP_CONNECT 1
+#define CONN_OP_SEND 2
 #define CONN_OP_RECV_EXACT 3
 
 struct TcpNetworkConnection_s {
-	intptr_t fd;      /* socket fd; -1 = not connected */
-	int      in_use;
-	Memory   rx_buf;  /* overflow / staging buffer */
-	size_t   rx_head; /* offset of first valid byte in rx_buf */
-	size_t   rx_len;  /* bytes of valid data in rx_buf */
-	size_t   rx_cap;  /* total capacity of rx_buf */
-	int      op_type; /* current op: CONN_OP_* */
+	intptr_t fd; /* socket fd; -1 = not connected */
+	int in_use;
+	Memory rx_buf; /* overflow / staging buffer */
+	size_t rx_head; /* offset of first valid byte in rx_buf */
+	size_t rx_len; /* bytes of valid data in rx_buf */
+	size_t rx_cap; /* total capacity of rx_buf */
+	int op_type; /* current op: CONN_OP_* */
 	union {
-		struct { OutputTcpNetworkConnection out_conn; } connect;
-		struct { const void *data; size_t total; size_t sent; } send;
-		struct { OutputNetworkBuffer response; size_t bytes; size_t received; } recv_exact;
+		struct {
+			OutputTcpNetworkConnection out_conn;
+		} connect;
+		struct {
+			const void *data;
+			size_t total;
+			size_t sent;
+		} send;
+		struct {
+			OutputNetworkBuffer response;
+			size_t bytes;
+			size_t received;
+		} recv_exact;
 	} op;
 };
 
 static struct TcpNetworkConnection_s conn_pool[NETWORK_POOL_SIZE];
-static int    pool_ready    = 0;
+static int pool_ready = 0;
 static size_t g_rx_buf_size = NETWORK_RX_BUF_DEFAULT;
 
 static void pool_init(void)
@@ -416,12 +426,12 @@ static void pool_init(void)
 	if (pool_ready)
 		return;
 	for (int i = 0; i < NETWORK_POOL_SIZE; i++) {
-		conn_pool[i].fd      = -1;
-		conn_pool[i].in_use  = 0;
-		conn_pool[i].rx_buf  = (Memory)0;
+		conn_pool[i].fd = -1;
+		conn_pool[i].in_use = 0;
+		conn_pool[i].rx_buf = (Memory)0;
 		conn_pool[i].rx_head = 0;
-		conn_pool[i].rx_len  = 0;
-		conn_pool[i].rx_cap  = 0;
+		conn_pool[i].rx_len = 0;
+		conn_pool[i].rx_cap = 0;
 		conn_pool[i].op_type = CONN_OP_NONE;
 	}
 	pool_ready = 1;
@@ -432,10 +442,10 @@ static struct TcpNetworkConnection_s *pool_acquire(void)
 	pool_init();
 	for (int i = 0; i < NETWORK_POOL_SIZE; i++) {
 		if (!conn_pool[i].in_use) {
-			conn_pool[i].in_use  = 1;
-			conn_pool[i].fd      = -1;
+			conn_pool[i].in_use = 1;
+			conn_pool[i].fd = -1;
 			conn_pool[i].rx_head = 0;
-			conn_pool[i].rx_len  = 0;
+			conn_pool[i].rx_len = 0;
 			conn_pool[i].op_type = CONN_OP_NONE;
 			return &conn_pool[i];
 		}
@@ -456,10 +466,10 @@ static void pool_release(struct TcpNetworkConnection_s *conn)
 		conn->rx_buf = (Memory)0;
 	}
 	conn->rx_head = 0;
-	conn->rx_len  = 0;
-	conn->rx_cap  = 0;
+	conn->rx_len = 0;
+	conn->rx_cap = 0;
 	conn->op_type = CONN_OP_NONE;
-	conn->in_use  = 0;
+	conn->in_use = 0;
 }
 
 /* ------------------------------------------------------------------
@@ -483,23 +493,23 @@ static AsyncStatus poll_connect(AsyncResult *result)
 		if (fun_error_is_error(mr.error)) {
 			pool_release(conn);
 			result->status = ASYNC_ERROR;
-			result->error  = ERROR_RESULT_NETWORK_CONNECT_FAILED;
+			result->error = ERROR_RESULT_NETWORK_CONNECT_FAILED;
 			return ASYNC_ERROR;
 		}
-		conn->rx_buf  = mr.value;
-		conn->rx_cap  = g_rx_buf_size;
+		conn->rx_buf = mr.value;
+		conn->rx_cap = g_rx_buf_size;
 		conn->rx_head = 0;
-		conn->rx_len  = 0;
+		conn->rx_len = 0;
 		conn->op_type = CONN_OP_NONE;
 		*(conn->op.connect.out_conn) = conn;
 		result->status = ASYNC_COMPLETED;
-		result->error  = ERROR_RESULT_NO_ERROR;
+		result->error = ERROR_RESULT_NO_ERROR;
 		return ASYNC_COMPLETED;
 	}
 	/* Error */
 	pool_release(conn);
 	result->status = ASYNC_ERROR;
-	result->error  = ERROR_RESULT_NETWORK_CONNECT_FAILED;
+	result->error = ERROR_RESULT_NETWORK_CONNECT_FAILED;
 	return ASYNC_ERROR;
 }
 
@@ -508,14 +518,14 @@ static AsyncStatus poll_send(AsyncResult *result)
 	struct TcpNetworkConnection_s *conn =
 		(struct TcpNetworkConnection_s *)result->state;
 
-	const uint8_t *data  = (const uint8_t *)conn->op.send.data;
-	size_t         total = conn->op.send.total;
-	size_t         sent  = conn->op.send.sent;
+	const uint8_t *data = (const uint8_t *)conn->op.send.data;
+	size_t total = conn->op.send.total;
+	size_t sent = conn->op.send.sent;
 
 	while (sent < total) {
 		size_t chunk = 0;
-		int rc = fun_network_arch_tcp_send(conn->fd, data + sent,
-										   total - sent, &chunk);
+		int rc = fun_network_arch_tcp_send(conn->fd, data + sent, total - sent,
+										   &chunk);
 		if (rc == 1) {
 			/* Would-block */
 			conn->op.send.sent = sent;
@@ -523,18 +533,18 @@ static AsyncStatus poll_send(AsyncResult *result)
 			return ASYNC_PENDING;
 		}
 		if (rc == -1) {
-			conn->op_type  = CONN_OP_NONE;
+			conn->op_type = CONN_OP_NONE;
 			result->status = ASYNC_ERROR;
-			result->error  = ERROR_RESULT_NETWORK_SEND_FAILED;
+			result->error = ERROR_RESULT_NETWORK_SEND_FAILED;
 			return ASYNC_ERROR;
 		}
 		sent += chunk;
 	}
 
 	conn->op.send.sent = sent;
-	conn->op_type      = CONN_OP_NONE;
-	result->status     = ASYNC_COMPLETED;
-	result->error      = ERROR_RESULT_NO_ERROR;
+	conn->op_type = CONN_OP_NONE;
+	result->status = ASYNC_COMPLETED;
+	result->error = ERROR_RESULT_NO_ERROR;
 	return ASYNC_COMPLETED;
 }
 
@@ -543,33 +553,32 @@ static AsyncStatus poll_recv_exact(AsyncResult *result)
 	struct TcpNetworkConnection_s *conn =
 		(struct TcpNetworkConnection_s *)result->state;
 
-	uint8_t *dest     = (uint8_t *)conn->op.recv_exact.response->data;
-	size_t   bytes    = conn->op.recv_exact.bytes;
-	size_t   received = conn->op.recv_exact.received;
+	uint8_t *dest = (uint8_t *)conn->op.recv_exact.response->data;
+	size_t bytes = conn->op.recv_exact.bytes;
+	size_t received = conn->op.recv_exact.received;
 
 	/* Step 1: drain from rx_buf first */
 	if (conn->rx_len > 0 && received < bytes) {
 		size_t take = bytes - received;
 		if (take > conn->rx_len)
 			take = conn->rx_len;
-		voidResult cr = fun_memory_copy(
-			(Memory)((uint8_t *)conn->rx_buf + conn->rx_head),
-			(Memory)(dest + received),
-			take);
+		voidResult cr =
+			fun_memory_copy((Memory)((uint8_t *)conn->rx_buf + conn->rx_head),
+							(Memory)(dest + received), take);
 		(void)cr;
 		conn->rx_head += take;
-		conn->rx_len  -= take;
+		conn->rx_len -= take;
 		if (conn->rx_len == 0)
 			conn->rx_head = 0;
 		received += take;
 	}
 
 	if (received >= bytes) {
-		conn->op.recv_exact.received  = received;
+		conn->op.recv_exact.received = received;
 		conn->op.recv_exact.response->length = bytes;
-		conn->op_type  = CONN_OP_NONE;
+		conn->op_type = CONN_OP_NONE;
 		result->status = ASYNC_COMPLETED;
-		result->error  = ERROR_RESULT_NO_ERROR;
+		result->error = ERROR_RESULT_NO_ERROR;
 		return ASYNC_COMPLETED;
 	}
 
@@ -595,7 +604,7 @@ static AsyncStatus poll_recv_exact(AsyncResult *result)
 
 	/* Recv into the tail of rx_buf */
 	uint8_t *tail = (uint8_t *)conn->rx_buf + conn->rx_head + conn->rx_len;
-	size_t   got  = 0;
+	size_t got = 0;
 	int rc = fun_network_arch_tcp_recv(conn->fd, tail, space, &got);
 	if (rc == 1) {
 		/* Would-block */
@@ -604,16 +613,16 @@ static AsyncStatus poll_recv_exact(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 	if (rc == -1) {
-		conn->op_type  = CONN_OP_NONE;
+		conn->op_type = CONN_OP_NONE;
 		result->status = ASYNC_ERROR;
-		result->error  = ERROR_RESULT_NETWORK_RECEIVE_FAILED;
+		result->error = ERROR_RESULT_NETWORK_RECEIVE_FAILED;
 		return ASYNC_ERROR;
 	}
 	if (got == 0) {
 		/* EOF / connection closed */
-		conn->op_type  = CONN_OP_NONE;
+		conn->op_type = CONN_OP_NONE;
 		result->status = ASYNC_ERROR;
-		result->error  = ERROR_RESULT_NETWORK_CLOSED;
+		result->error = ERROR_RESULT_NETWORK_CLOSED;
 		return ASYNC_ERROR;
 	}
 	conn->rx_len += got;
@@ -622,13 +631,12 @@ static AsyncStatus poll_recv_exact(AsyncResult *result)
 	size_t take = bytes - received;
 	if (take > conn->rx_len)
 		take = conn->rx_len;
-	voidResult cr = fun_memory_copy(
-		(Memory)((uint8_t *)conn->rx_buf + conn->rx_head),
-		(Memory)(dest + received),
-		take);
+	voidResult cr =
+		fun_memory_copy((Memory)((uint8_t *)conn->rx_buf + conn->rx_head),
+						(Memory)(dest + received), take);
 	(void)cr;
 	conn->rx_head += take;
-	conn->rx_len  -= take;
+	conn->rx_len -= take;
 	if (conn->rx_len == 0)
 		conn->rx_head = 0;
 	received += take;
@@ -636,9 +644,9 @@ static AsyncStatus poll_recv_exact(AsyncResult *result)
 
 	if (received >= bytes) {
 		conn->op.recv_exact.response->length = bytes;
-		conn->op_type  = CONN_OP_NONE;
+		conn->op_type = CONN_OP_NONE;
 		result->status = ASYNC_COMPLETED;
-		result->error  = ERROR_RESULT_NO_ERROR;
+		result->error = ERROR_RESULT_NO_ERROR;
 		return ASYNC_COMPLETED;
 	}
 
@@ -654,20 +662,20 @@ AsyncResult fun_network_tcp_connect(NetworkAddress address,
 									OutputTcpNetworkConnection out_conn)
 {
 	AsyncResult result;
-	result.poll  = poll_connect;
+	result.poll = poll_connect;
 	result.state = (void *)0;
 	result.error = ERROR_RESULT_NO_ERROR;
 
 	if (!out_conn) {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NULL_POINTER;
+		result.error = ERROR_RESULT_NULL_POINTER;
 		return result;
 	}
 
 	struct TcpNetworkConnection_s *conn = pool_acquire();
 	if (!conn) {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NETWORK_CONNECT_FAILED;
+		result.error = ERROR_RESULT_NETWORK_CONNECT_FAILED;
 		return result;
 	}
 
@@ -676,7 +684,7 @@ AsyncResult fun_network_tcp_connect(NetworkAddress address,
 	if (rc == -1) {
 		pool_release(conn);
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NETWORK_CONNECT_FAILED;
+		result.error = ERROR_RESULT_NETWORK_CONNECT_FAILED;
 		return result;
 	}
 
@@ -685,7 +693,7 @@ AsyncResult fun_network_tcp_connect(NetworkAddress address,
 	conn->op.connect.out_conn = out_conn;
 	*out_conn = (TcpNetworkConnection)0;
 
-	result.state  = (void *)conn;
+	result.state = (void *)conn;
 	result.status = ASYNC_PENDING;
 	return result;
 }
@@ -694,22 +702,22 @@ AsyncResult fun_network_tcp_send(TcpNetworkConnection conn, const void *data,
 								 size_t length)
 {
 	AsyncResult result;
-	result.poll  = poll_send;
+	result.poll = poll_send;
 	result.state = (void *)0;
 	result.error = ERROR_RESULT_NO_ERROR;
 
 	if (!conn || !data) {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NULL_POINTER;
+		result.error = ERROR_RESULT_NULL_POINTER;
 		return result;
 	}
 
-	conn->op_type      = CONN_OP_SEND;
-	conn->op.send.data  = data;
+	conn->op_type = CONN_OP_SEND;
+	conn->op.send.data = data;
 	conn->op.send.total = length;
-	conn->op.send.sent  = 0;
+	conn->op.send.sent = 0;
 
-	result.state  = (void *)conn;
+	result.state = (void *)conn;
 	result.status = ASYNC_PENDING;
 	return result;
 }
@@ -719,22 +727,22 @@ AsyncResult fun_network_tcp_receive_exact(TcpNetworkConnection conn,
 										  size_t bytes)
 {
 	AsyncResult result;
-	result.poll  = poll_recv_exact;
+	result.poll = poll_recv_exact;
 	result.state = (void *)0;
 	result.error = ERROR_RESULT_NO_ERROR;
 
 	if (!conn || !response) {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NULL_POINTER;
+		result.error = ERROR_RESULT_NULL_POINTER;
 		return result;
 	}
 
-	conn->op_type                = CONN_OP_RECV_EXACT;
+	conn->op_type = CONN_OP_RECV_EXACT;
 	conn->op.recv_exact.response = response;
-	conn->op.recv_exact.bytes    = bytes;
+	conn->op.recv_exact.bytes = bytes;
 	conn->op.recv_exact.received = 0;
 
-	result.state  = (void *)conn;
+	result.state = (void *)conn;
 	result.status = ASYNC_PENDING;
 	return result;
 }
@@ -755,22 +763,22 @@ AsyncResult fun_network_udp_send(NetworkAddress addr, const void *data,
 								 size_t length)
 {
 	AsyncResult result;
-	result.poll  = (AsyncPollFn)0;
+	result.poll = (AsyncPollFn)0;
 	result.state = (void *)0;
 
 	if (!data) {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NULL_POINTER;
+		result.error = ERROR_RESULT_NULL_POINTER;
 		return result;
 	}
 
 	int rc = fun_network_arch_udp_send(addr, data, length);
 	if (rc == 0) {
 		result.status = ASYNC_COMPLETED;
-		result.error  = ERROR_RESULT_NO_ERROR;
+		result.error = ERROR_RESULT_NO_ERROR;
 	} else {
 		result.status = ASYNC_ERROR;
-		result.error  = ERROR_RESULT_NETWORK_SEND_FAILED;
+		result.error = ERROR_RESULT_NETWORK_SEND_FAILED;
 	}
 	return result;
 }

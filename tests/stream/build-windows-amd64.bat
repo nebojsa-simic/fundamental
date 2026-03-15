@@ -26,6 +26,7 @@ gcc ^
     ../../src/string/stringConversion.c ^
     ../../src/string/stringTemplate.c ^
     ../../src/async/async.c ^
+    ../../arch/async/windows-amd64/async.c ^
     -o test.exe
 
 REM Strip unnecessary symbols

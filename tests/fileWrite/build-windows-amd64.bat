@@ -13,6 +13,7 @@ gcc ^
     ../../src/string/stringConversion.c ^
     ../../src/string/stringTemplate.c ^
     ../../src/async/async.c ^
+    ../../arch/async/windows-amd64/async.c ^
     -lkernel32 ^
     -o test.exe
 

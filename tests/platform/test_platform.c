@@ -38,7 +38,8 @@ static void test_fun_platform_get_fills_struct(void)
 static void test_fun_platform_os_to_string_windows(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_WINDOWS, buf);
+	ErrorResult r =
+		fun_platform_os_to_string(PLATFORM_OS_WINDOWS, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "windows") == 0;
 
@@ -48,7 +49,8 @@ static void test_fun_platform_os_to_string_windows(void)
 static void test_fun_platform_os_to_string_linux(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_LINUX, buf);
+	ErrorResult r =
+		fun_platform_os_to_string(PLATFORM_OS_LINUX, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "linux") == 0;
 
@@ -58,7 +60,8 @@ static void test_fun_platform_os_to_string_linux(void)
 static void test_fun_platform_os_to_string_darwin(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_DARWIN, buf);
+	ErrorResult r =
+		fun_platform_os_to_string(PLATFORM_OS_DARWIN, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "darwin") == 0;
 
@@ -68,7 +71,8 @@ static void test_fun_platform_os_to_string_darwin(void)
 static void test_fun_platform_os_to_string_unknown(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_UNKNOWN, buf);
+	ErrorResult r =
+		fun_platform_os_to_string(PLATFORM_OS_UNKNOWN, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "unknown") == 0;
 
@@ -77,7 +81,7 @@ static void test_fun_platform_os_to_string_unknown(void)
 
 static void test_fun_platform_os_to_string_null(void)
 {
-	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_WINDOWS, NULL);
+	ErrorResult r = fun_platform_os_to_string(PLATFORM_OS_WINDOWS, NULL, 0);
 
 	int passed = fun_error_is_error(r);
 
@@ -91,7 +95,8 @@ static void test_fun_platform_os_to_string_null(void)
 static void test_fun_platform_arch_to_string_amd64(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_AMD64, buf);
+	ErrorResult r =
+		fun_platform_arch_to_string(PLATFORM_ARCH_AMD64, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "amd64") == 0;
 
@@ -102,7 +107,8 @@ static void test_fun_platform_arch_to_string_amd64(void)
 static void test_fun_platform_arch_to_string_arm64(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_ARM64, buf);
+	ErrorResult r =
+		fun_platform_arch_to_string(PLATFORM_ARCH_ARM64, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "arm64") == 0;
 
@@ -113,7 +119,8 @@ static void test_fun_platform_arch_to_string_arm64(void)
 static void test_fun_platform_arch_to_string_unknown(void)
 {
 	char buf[16];
-	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_UNKNOWN, buf);
+	ErrorResult r =
+		fun_platform_arch_to_string(PLATFORM_ARCH_UNKNOWN, buf, sizeof(buf));
 
 	int passed = !fun_error_is_error(r) && strcmp(buf, "unknown") == 0;
 
@@ -123,7 +130,7 @@ static void test_fun_platform_arch_to_string_unknown(void)
 
 static void test_fun_platform_arch_to_string_null(void)
 {
-	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_AMD64, NULL);
+	ErrorResult r = fun_platform_arch_to_string(PLATFORM_ARCH_AMD64, NULL, 0);
 
 	int passed = fun_error_is_error(r);
 
@@ -140,12 +147,12 @@ static void test_fun_platform_to_string_format(void)
 	fun_platform_get(&p);
 
 	char buf[32];
-	voidResult r = fun_platform_to_string(p, buf);
+	voidResult r = fun_platform_to_string(p, buf, sizeof(buf));
 
 	char os_buf[16];
 	char arch_buf[16];
-	fun_platform_os_to_string(p.os, os_buf);
-	fun_platform_arch_to_string(p.arch, arch_buf);
+	fun_platform_os_to_string(p.os, os_buf, sizeof(os_buf));
+	fun_platform_arch_to_string(p.arch, arch_buf, sizeof(arch_buf));
 
 	char expected[32];
 	snprintf(expected, sizeof(expected), "%s-%s", os_buf, arch_buf);
@@ -160,7 +167,7 @@ static void test_fun_platform_to_string_null(void)
 	Platform p;
 	fun_platform_get(&p);
 
-	voidResult r = fun_platform_to_string(p, NULL);
+	voidResult r = fun_platform_to_string(p, NULL, 0);
 
 	int passed = fun_error_is_error(r.error);
 

@@ -26,7 +26,7 @@
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define ASSERT_NO_ERROR(r) assert((r).error.code == 0)
-#define ASSERT_ERROR(r)    assert((r).error.code != 0)
+#define ASSERT_ERROR(r) assert((r).error.code != 0)
 
 static void print_ok(const char *name)
 {
@@ -47,9 +47,9 @@ static uint16_t start_server(void)
 	WSAStartup(MAKEWORD(2, 2), &wd);
 	g_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in addr;
-	addr.sin_family      = AF_INET;
+	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	addr.sin_port        = 0;
+	addr.sin_port = 0;
 	bind(g_server, (struct sockaddr *)&addr, sizeof(addr));
 	listen(g_server, 1);
 	int len = sizeof(addr);
@@ -78,9 +78,9 @@ static uint16_t start_server(void)
 {
 	g_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in addr;
-	addr.sin_family      = AF_INET;
+	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	addr.sin_port        = 0;
+	addr.sin_port = 0;
 	bind(g_server, (struct sockaddr *)&addr, sizeof(addr));
 	listen(g_server, 1);
 	socklen_t len = sizeof(addr);
@@ -170,8 +170,8 @@ static void test_address_format(void)
 		NetworkAddressResult parse = fun_network_address_parse("10.0.0.1:3000");
 		ASSERT_NO_ERROR(parse);
 		char buf[64];
-		voidResult fmt = fun_network_address_to_string(parse.value, buf,
-													   sizeof(buf));
+		voidResult fmt =
+			fun_network_address_to_string(parse.value, buf, sizeof(buf));
 		ASSERT_NO_ERROR(fmt);
 		/* Verify the formatted string contains the expected IP and port */
 		int ok = 0;
@@ -181,18 +181,22 @@ static void test_address_format(void)
 		const char *expected = "10.0.0.1:3000";
 		const char *a = buf;
 		const char *b = expected;
-		while (*a && *b && *a == *b) { a++; b++; }
+		while (*a && *b && *a == *b) {
+			a++;
+			b++;
+		}
 		ok = (*a == '\0' && *b == '\0');
 		assert(ok);
 	}
 
 	/* Buffer too small */
 	{
-		NetworkAddressResult parse = fun_network_address_parse("127.0.0.1:8080");
+		NetworkAddressResult parse =
+			fun_network_address_parse("127.0.0.1:8080");
 		ASSERT_NO_ERROR(parse);
 		char tiny[5];
-		voidResult fmt = fun_network_address_to_string(parse.value, tiny,
-													   sizeof(tiny));
+		voidResult fmt =
+			fun_network_address_to_string(parse.value, tiny, sizeof(tiny));
 		ASSERT_ERROR(fmt);
 	}
 
@@ -272,7 +276,7 @@ static void test_tcp_round_trip(void)
 	/* First receive_exact(4): should get "ABCD" */
 	char buf1[4];
 	NetworkBuffer nb1;
-	nb1.data   = buf1;
+	nb1.data = buf1;
 	nb1.length = 0;
 	AsyncResult rr1 = fun_network_tcp_receive_exact(conn, &nb1, 4);
 	fun_async_await(&rr1, 3000);
@@ -286,7 +290,7 @@ static void test_tcp_round_trip(void)
 	/* Second receive_exact(4): should get "EFGH" from rx_buf (server closed) */
 	char buf2[4];
 	NetworkBuffer nb2;
-	nb2.data   = buf2;
+	nb2.data = buf2;
 	nb2.length = 0;
 	AsyncResult rr2 = fun_network_tcp_receive_exact(conn, &nb2, 4);
 	fun_async_await(&rr2, 3000);

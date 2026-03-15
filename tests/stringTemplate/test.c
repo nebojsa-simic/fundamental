@@ -23,8 +23,9 @@ void test_fun_string_template()
 	// Test case 1: Basic string template
 	StringTemplateParam params1[] = { { "name", { .stringValue = "Alice" } },
 									  { "age", { .intValue = 30 } } };
-	fun_string_template("Hello, ${name}! You are #{age} years old.", params1, 2,
-						result);
+	ASSERT_NO_ERROR(
+		fun_string_template("Hello, ${name}! You are #{age} years old.",
+							params1, 2, result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello, Alice! You are 30 years old.") ==
 		   0);
 
@@ -32,9 +33,9 @@ void test_fun_string_template()
 	void *ptr = (void *)0x12345678;
 	StringTemplateParam params2[] = { { "pi", { .doubleValue = 3.14159 } },
 									  { "address", { .pointerValue = ptr } } };
-	fun_string_template(
+	ASSERT_NO_ERROR(fun_string_template(
 		"Pi is approximately %{pi} and the pointer is *{address}", params2, 2,
-		result);
+		result, sizeof(result)));
 	assert(
 		fun_string_compare(
 			result,
@@ -43,36 +44,41 @@ void test_fun_string_template()
 
 	// Test case 3: Missing parameter
 	StringTemplateParam params3[] = { { "name", { .stringValue = "Bob" } } };
-	fun_string_template("Hello, ${name}! Your age is #{age}.", params3, 1,
-						result);
+	ASSERT_NO_ERROR(fun_string_template("Hello, ${name}! Your age is #{age}.",
+										params3, 1, result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello, Bob! Your age is .") == 0);
 
 	// Test case 4: Empty template
-	fun_string_template("", params1, 2, result);
+	ASSERT_NO_ERROR(
+		fun_string_template("", params1, 2, result, sizeof(result)));
 	assert(fun_string_compare(result, "") == 0);
 
 	// Test case 5: Template with no parameters
-	fun_string_template("Hello, World!", NULL, 0, result);
+	ASSERT_NO_ERROR(
+		fun_string_template("Hello, World!", NULL, 0, result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello, World!") == 0);
 
 	// Test case 6: Invalid template syntax
-	fun_string_template("Invalid ${syntax", params1, 2, result);
+	ASSERT_NO_ERROR(fun_string_template("Invalid ${syntax", params1, 2, result,
+										sizeof(result)));
 	assert(fun_string_compare(result, "Invalid ${syntax") == 0);
 
 	// Test case 7: Don't crash on NULL template
-	fun_string_template(NULL, params1, 2, result);
+	ASSERT_ERROR(fun_string_template(NULL, params1, 2, result, sizeof(result)));
 
 	// Test case 8: Very large number
 	StringTemplateParam params4[] = {
 		{ "large", { .intValue = 9223372036854775807LL } } // Max int64_t value
 	};
-	fun_string_template("Large number: #{large}", params4, 1, result);
+	ASSERT_NO_ERROR(fun_string_template("Large number: #{large}", params4, 1,
+										result, sizeof(result)));
 	assert(fun_string_compare(result, "Large number: 9223372036854775807") ==
 		   0);
 
 	// Test case 9: Multiple occurrences of the same parameter
 	StringTemplateParam params5[] = { { "repeat", { .stringValue = "echo" } } };
-	fun_string_template("${repeat} ${repeat} ${repeat}", params5, 1, result);
+	ASSERT_NO_ERROR(fun_string_template("${repeat} ${repeat} ${repeat}",
+										params5, 1, result, sizeof(result)));
 	assert(fun_string_compare(result, "echo echo echo") == 0);
 
 	// Test case 10: Mixed parameter types in one template
@@ -82,7 +88,8 @@ void test_fun_string_template()
 		{ "dbl", { .doubleValue = 3.14 } },
 		{ "ptr", { .pointerValue = (void *)0xABCDEF } }
 	};
-	fun_string_template("${str} #{num} %{dbl} *{ptr}", params6, 4, result);
+	ASSERT_NO_ERROR(fun_string_template("${str} #{num} %{dbl} *{ptr}", params6,
+										4, result, sizeof(result)));
 	assert(fun_string_compare(result, "mixed 42 3.140 0x0000000000abcdef") ==
 		   0);
 

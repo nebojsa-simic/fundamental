@@ -10,6 +10,7 @@ gcc \
     ../../src/string/stringConversion.c \
     ../../src/string/stringTemplate.c \
     ../../src/async/async.c \
+    ../../arch/async/linux-amd64/async.c \
     -o test
 
 strip --strip-unneeded test

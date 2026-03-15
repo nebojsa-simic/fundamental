@@ -38,8 +38,8 @@ static int ensure_wsa(void)
  * Address helpers
  * ------------------------------------------------------------------ */
 
-static int addr_to_sockaddr(NetworkAddress addr,
-							struct sockaddr_storage *out, int *out_len)
+static int addr_to_sockaddr(NetworkAddress addr, struct sockaddr_storage *out,
+							int *out_len)
 {
 	memset(out, 0, sizeof(*out));
 	if (addr.family == NETWORK_ADDRESS_IPV4) {
@@ -126,7 +126,7 @@ int fun_network_arch_tcp_poll_connect(intptr_t fd)
 	FD_SET((SOCKET)fd, &wset);
 	FD_SET((SOCKET)fd, &eset);
 	struct timeval tv;
-	tv.tv_sec  = 0;
+	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 
 	int rc = select(0, NULL, &wset, &eset, &tv);
@@ -144,8 +144,8 @@ int fun_network_arch_tcp_poll_connect(intptr_t fd)
 		/* Check SO_ERROR */
 		int err = 0;
 		int len = sizeof(err);
-		if (getsockopt((SOCKET)fd, SOL_SOCKET, SO_ERROR,
-					   (char *)&err, &len) != 0)
+		if (getsockopt((SOCKET)fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len) !=
+			0)
 			return -1;
 		if (err != 0)
 			return -1;
@@ -218,8 +218,7 @@ void fun_network_arch_tcp_close_fd(intptr_t fd)
  * Returns 0 = ok, -1 = error.
  * ------------------------------------------------------------------ */
 
-int fun_network_arch_udp_send(NetworkAddress addr, const void *data,
-							  size_t len)
+int fun_network_arch_udp_send(NetworkAddress addr, const void *data, size_t len)
 {
 	if (ensure_wsa() != 0)
 		return -1;
@@ -236,8 +235,7 @@ int fun_network_arch_udp_send(NetworkAddress addr, const void *data,
 		return -1;
 	}
 
-	sendto(fd, (const char *)data, (int)len, 0,
-		   (struct sockaddr *)&sa, sa_len);
+	sendto(fd, (const char *)data, (int)len, 0, (struct sockaddr *)&sa, sa_len);
 
 	closesocket(fd);
 	return 0;

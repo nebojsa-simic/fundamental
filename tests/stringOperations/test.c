@@ -20,16 +20,14 @@ char result[MAX_TEST_STRING_LENGTH];
 
 void test_fun_string_join()
 {
-	fun_string_join("Hello, ", "World!", result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(
+		fun_string_join("Hello, ", "World!", result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello, World!") == 0);
 
-	fun_string_join("", "Empty", result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(fun_string_join("", "Empty", result, sizeof(result)));
 	assert(fun_string_compare(result, "Empty") == 0);
 
-	fun_string_join("Prefix", "", result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(fun_string_join("Prefix", "", result, sizeof(result)));
 	assert(fun_string_compare(result, "Prefix") == 0);
 
 	print_test_result("fun_string_join");
@@ -68,17 +66,14 @@ void test_fun_string_compare()
 
 void test_fun_string_copy()
 {
-	fun_string_copy("Hello", result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(fun_string_copy("Hello", result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello") == 0);
 
-	fun_string_copy("", result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(fun_string_copy("", result, sizeof(result)));
 	assert(fun_string_compare(result, "") == 0);
 
-	fun_string_copy("Hello", result);
-	fun_string_copy(NULL, result);
-	ASSERT_NO_ERROR(fun_string_is_valid(result, MAX_TEST_STRING_LENGTH));
+	ASSERT_NO_ERROR(fun_string_copy("Hello", result, sizeof(result)));
+	ASSERT_ERROR(fun_string_copy(NULL, result, sizeof(result)));
 	assert(fun_string_compare(result, "Hello") == 0);
 
 	print_test_result("fun_string_copy");

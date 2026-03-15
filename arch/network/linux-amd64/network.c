@@ -20,8 +20,7 @@
  * Address helpers
  * ------------------------------------------------------------------ */
 
-static int addr_to_sockaddr(NetworkAddress addr,
-							struct sockaddr_storage *out,
+static int addr_to_sockaddr(NetworkAddress addr, struct sockaddr_storage *out,
 							socklen_t *out_len)
 {
 	memset(out, 0, sizeof(*out));
@@ -97,8 +96,8 @@ int fun_network_arch_tcp_connect(NetworkAddress addr, intptr_t *out_fd)
 int fun_network_arch_tcp_poll_connect(intptr_t fd)
 {
 	struct pollfd pfd;
-	pfd.fd      = (int)fd;
-	pfd.events  = POLLOUT;
+	pfd.fd = (int)fd;
+	pfd.events = POLLOUT;
 	pfd.revents = 0;
 
 	int rc = poll(&pfd, 1, 0);
@@ -184,8 +183,7 @@ void fun_network_arch_tcp_close_fd(intptr_t fd)
  * Returns 0 = ok, -1 = error.
  * ------------------------------------------------------------------ */
 
-int fun_network_arch_udp_send(NetworkAddress addr, const void *data,
-							  size_t len)
+int fun_network_arch_udp_send(NetworkAddress addr, const void *data, size_t len)
 {
 	int domain = (addr.family == NETWORK_ADDRESS_IPV6) ? AF_INET6 : AF_INET;
 	int fd = socket(domain, SOCK_DGRAM, 0);
@@ -199,8 +197,7 @@ int fun_network_arch_udp_send(NetworkAddress addr, const void *data,
 		return -1;
 	}
 
-	sendto(fd, data, len, MSG_NOSIGNAL,
-		   (struct sockaddr *)&sa, sa_len);
+	sendto(fd, data, len, MSG_NOSIGNAL, (struct sockaddr *)&sa, sa_len);
 
 	close(fd);
 	return 0;

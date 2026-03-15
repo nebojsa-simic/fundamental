@@ -6,6 +6,7 @@ gcc \
     ../../arch/file/linux-amd64/fileAppend.c \
     ../../arch/memory/linux-amd64/memory.c \
     ../../src/async/async.c \
+    ../../arch/async/linux-amd64/async.c \
     ../../arch/file/linux-amd64/fileRead.c \
     ../../arch/file/linux-amd64/fileReadMmap.c \
     -o test
