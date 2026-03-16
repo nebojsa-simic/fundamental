@@ -8,54 +8,54 @@
 
 ## 2. String to Path Conversion
 
-- [ ] 2.1 Implement `fun_path_from_string(String path, OutputPath output)` in `src/filesystem/path.c`
-- [ ] 2.2 Handle absolute path detection (leading `/` or Windows drive letter)
-- [ ] 2.3 Parse string by separator, populate components array
-- [ ] 2.4 Handle edge cases: empty string, NULL input, trailing separators, multiple separators
-- [ ] 2.5 Preserve `.` and `..` components without normalization (separate function)
-- [ ] 2.6 Add error handling with appropriate error codes
+- [x] 2.1 Implement `fun_path_from_string(String path, OutputPath output)` in `src/filesystem/path.c`
+- [x] 2.2 Handle absolute path detection (leading `/` or Windows drive letter)
+- [x] 2.3 Parse string by separator, populate components array
+- [x] 2.4 Handle edge cases: empty string, NULL input, trailing separators, multiple separators
+- [x] 2.5 Preserve `.` and `..` components without normalization (separate function)
+- [x] 2.6 Add error handling with appropriate error codes
 
 ## 3. Path to String Conversion
 
-- [ ] 3.1 Implement `fun_path_to_string(Path path, OutputString output, size_t buffer_size)` in `src/filesystem/path.c`
-- [ ] 3.2 Add platform-specific separator logic in arch layer
-- [ ] 3.3 Implement `arch/filesystem/windows-amd64/path.c` with Windows separator handling
-- [ ] 3.4 Implement `arch/filesystem/linux-amd64/path.c` with POSIX separator handling
-- [ ] 3.5 Handle absolute path prefix (add leading separator or drive letter)
-- [ ] 3.6 Validate buffer size, return error if too small
+- [x] 3.1 Implement `fun_path_to_string(Path path, OutputString output, size_t buffer_size)` in `src/filesystem/path.c`
+- [x] 3.2 Add platform-specific separator logic in arch layer
+- [x] 3.3 Implement `arch/filesystem/windows-amd64/path.c` with Windows separator handling
+- [x] 3.4 Implement `arch/filesystem/linux-amd64/path.c` with POSIX separator handling
+- [x] 3.5 Handle absolute path prefix (add leading separator or drive letter)
+- [x] 3.6 Validate buffer size, return error if too small
 
 ## 4. Path Operations - Join
 
-- [ ] 4.1 Implement `fun_path_join(Path base, Path relative, OutputPath output)` in `src/filesystem/path.c`
-- [ ] 4.2 Copy base components to output
-- [ ] 4.3 Process relative components: skip `.`, handle `..` by removing last base component
-- [ ] 4.4 Preserve is_absolute flag from base
-- [ ] 4.5 Handle edge cases: empty base, empty relative
+- [x] 4.1 Implement `fun_path_join(Path base, Path relative, OutputPath output)` in `src/filesystem/path.c`
+- [x] 4.2 Copy base components to output
+- [x] 4.3 Process relative components: skip `.`, handle `..` by removing last base component
+- [x] 4.4 Preserve is_absolute flag from base
+- [x] 4.5 Handle edge cases: empty base, empty relative
 
 ## 5. Path Operations - Normalize
 
-- [ ] 5.1 Implement `fun_path_normalize(Path path, OutputPath output)` in `src/filesystem/path.c`
-- [ ] 5.2 Remove all `.` components
-- [ ] 5.3 Resolve `..` by removing preceding component
-- [ ] 5.4 Discard `..` that would go before root for absolute paths
-- [ ] 5.5 Preserve is_absolute flag
+- [x] 5.1 Implement `fun_path_normalize(Path path, OutputPath output)` in `src/filesystem/path.c`
+- [x] 5.2 Remove all `.` components
+- [x] 5.3 Resolve `..` by removing preceding component
+- [x] 5.4 Discard `..` that would go before root for absolute paths
+- [x] 5.5 Preserve is_absolute flag
 
 ## 6. Path Operations - Parent and Filename
 
-- [ ] 6.1 Implement `fun_path_get_parent(Path path, OutputPath output)` in `src/filesystem/path.c`
-- [ ] 6.2 Copy all components except last to output
-- [ ] 6.3 Handle edge cases: single component, empty path, root path
-- [ ] 6.4 Implement `fun_path_get_filename(Path path, OutputPath output)` in `src/filesystem/path.c`
-- [ ] 6.5 Copy only last component to output
-- [ ] 6.6 Handle edge cases: empty path, single component
+- [x] 6.1 Implement `fun_path_get_parent(Path path, OutputPath output)` in `src/filesystem/path.c`
+- [x] 6.2 Copy all components except last to output
+- [x] 6.3 Handle edge cases: single component, empty path, root path
+- [x] 6.4 Implement `fun_path_get_filename(Path path, OutputPath output)` in `src/filesystem/path.c`
+- [x] 6.5 Copy only last component to output
+- [x] 6.6 Handle edge cases: empty path, single component
 
 ## 7. Path Component Access
 
-- [ ] 7.1 Implement `fun_path_get_component(Path path, size_t index)` in `src/filesystem/path.c`
-- [ ] 7.2 Return component string at index, NULL if out of bounds
-- [ ] 7.3 Implement `fun_path_component_count(Path path)` as inline or simple function
-- [ ] 7.4 Implement `fun_path_is_valid(Path path)` validation function
-- [ ] 7.5 Check for NULL components, empty components
+- [x] 7.1 Implement `fun_path_get_component(Path path, size_t index)` in `src/filesystem/path.c`
+- [x] 7.2 Return component string at index, NULL if out of bounds
+- [x] 7.3 Implement `fun_path_component_count(Path path)` as inline or simple function
+- [x] 7.4 Implement `fun_path_is_valid(Path path)` validation function
+- [x] 7.5 Check for NULL components, empty components
 
 ## 8. Filesystem API Migration
 
