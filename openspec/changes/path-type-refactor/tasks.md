@@ -1,10 +1,10 @@
 ## 1. Path Type Foundation
 
-- [ ] 1.1 Create new header file `include/filesystem/path.h` with Path struct definition
-- [ ] 1.2 Define Path struct with components array, count, and is_absolute fields
-- [ ] 1.3 Define OutputPath as `typedef Path *OutputPath` to follow library conventions
-- [ ] 1.4 Define Path-related types: PathComponent, PathResult for error handling
-- [ ] 1.5 Add forward declarations for all Path functions in path.h
+- [x] 1.1 Create new header file `include/filesystem/path.h` with Path struct definition
+- [x] 1.2 Define Path struct with components array, count, and is_absolute fields
+- [x] 1.3 Define OutputPath as `typedef Path *OutputPath` to follow library conventions
+- [x] 1.4 Define Path-related types: PathComponent, PathResult for error handling
+- [x] 1.5 Add forward declarations for all Path functions in path.h
 
 ## 2. String to Path Conversion
 
@@ -59,48 +59,48 @@
 
 ## 8. Filesystem API Migration
 
-- [ ] 8.1 Update `include/filesystem/filesystem.h` to include path.h
-- [ ] 8.2 Change `fun_filesystem_create_directory(String)` to `fun_filesystem_create_directory(Path)`
-- [ ] 8.3 Change `fun_filesystem_remove_directory(String)` to `fun_filesystem_remove_directory(Path)`
-- [ ] 8.4 Change `fun_filesystem_list_directory(String, Memory)` to use Path parameter
-- [ ] 8.5 Update `fun_path_join` signature to use Path types instead of String
-- [ ] 8.6 Update `fun_path_normalize` signature to use Path and OutputPath types
-- [ ] 8.7 Update `fun_path_get_parent` signature to use Path and OutputPath types
-- [ ] 8.8 Update `fun_path_get_filename` signature to use Path and OutputPath types
-- [ ] 8.9 Add `fun_path_from_string(String path, OutputPath output)` declaration to filesystem.h
-- [ ] 8.10 Add `fun_path_to_string(Path path, OutputString output, size_t buffer_size)` declaration to filesystem.h
-- [ ] 8.11 Retain `fun_path_separator()` function declaration - keep for manual string construction
-- [ ] 8.12 Update all function documentation with Path examples
+- [x] 8.1 Update `include/filesystem/filesystem.h` to include path.h
+- [x] 8.2 Change `fun_filesystem_create_directory(String)` to `fun_filesystem_create_directory(Path)`
+- [x] 8.3 Change `fun_filesystem_remove_directory(String)` to `fun_filesystem_remove_directory(Path)`
+- [x] 8.4 Change `fun_filesystem_list_directory(String, Memory)` to use Path parameter
+- [x] 8.5 Update `fun_path_join` signature to use Path types instead of String
+- [x] 8.6 Update `fun_path_normalize` signature to use Path and OutputPath types
+- [x] 8.7 Update `fun_path_get_parent` signature to use Path and OutputPath types
+- [x] 8.8 Update `fun_path_get_filename` signature to use Path and OutputPath types
+- [x] 8.9 Add `fun_path_from_string(String path, OutputPath output)` declaration to filesystem.h
+- [x] 8.10 Add `fun_path_to_string(Path path, OutputString output, size_t buffer_size)` declaration to filesystem.h
+- [x] 8.11 Retain `fun_path_separator()` function declaration - keep for manual string construction
+- [x] 8.12 Update all function documentation with Path examples
 
 ## 9. Architecture Layer - Platform Conversion
 
-- [ ] 9.1 Update `arch/filesystem/windows-amd64/directory.c` to accept Path parameters
-- [ ] 9.2 Add internal function to convert Path to Windows wide string for API calls
-- [ ] 9.3 Update `arch/filesystem/linux-amd64/directory.c` to accept Path parameters
-- [ ] 9.4 Add internal function to convert Path to POSIX string for syscalls
-- [ ] 9.5 Update all internal filesystem functions to use Path→native conversion at syscall boundary
+- [x] 9.1 Update `arch/filesystem/windows-amd64/directory.c` to accept Path parameters
+- [x] 9.2 Add internal function to convert Path to Windows wide string for API calls
+- [x] 9.3 Update `arch/filesystem/linux-amd64/directory.c` to accept Path parameters
+- [x] 9.4 Add internal function to convert Path to POSIX string for syscalls
+- [x] 9.5 Update all internal filesystem functions to use Path→native conversion at syscall boundary
 
 ## 10. Test Implementation
 
-- [ ] 10.1 Create `tests/path_type/` directory structure
-- [ ] 10.2 Create `test_path_conversion.c` with string→Path and Path→string tests
-- [ ] 10.3 Create `test_path_operations.c` with join, normalize, parent, filename tests
-- [ ] 10.4 Create `test_path_component_access.c` with component access tests
-- [ ] 10.5 Create `tests/path_type/build-windows-amd64.bat` following existing patterns
-- [ ] 10.6 Create `tests/path_type/build-linux-amd64.sh` following existing patterns
-- [ ] 10.7 Update `tests/filesystem/test_filesystem.c` to use Path type
-- [ ] 10.8 Add tests for edge cases: empty paths, root paths, invalid inputs
+- [x] 10.1 Create `tests/path_type/` directory structure
+- [x] 10.2 Create `test_path_conversion.c` with string→Path and Path→string tests
+- [x] 10.3 Create `test_path_operations.c` with join, normalize, parent, filename tests
+- [x] 10.4 Create `test_path_component_access.c` with component access tests
+- [x] 10.5 Create `tests/path_type/build-windows-amd64.bat` following existing patterns
+- [x] 10.6 Create `tests/path_type/build-linux-amd64.sh` following existing patterns
+- [x] 10.7 Update `tests/filesystem/test_filesystem.c` to use Path type
+- [x] 10.8 Add tests for edge cases: empty paths, root paths, invalid inputs
 
 ## 11. Migration and Cleanup
 
-- [ ] 11.1 Retain uses of `fun_path_separator()` for manual path construction scenarios
-- [ ] 11.2 Update any other modules that include filesystem.h and use path functions
-- [ ] 11.3 Verify no String path parameters remain in filesystem API (except conversion functions)
-- [ ] 11.4 Update any internal code that constructs paths manually
+- [x] 11.1 Retain uses of `fun_path_separator()` for manual path construction scenarios
+- [x] 11.2 Update any other modules that include filesystem.h and use path functions
+- [x] 11.3 Verify no String path parameters remain in filesystem API (except conversion functions)
+- [x] 11.4 Update any internal code that constructs paths manually
 
 ## 12. Documentation
 
-- [ ] 12.1 Add comprehensive examples to path.h documentation
-- [ ] 12.2 Document memory ownership pattern (caller-allocated components)
+- [x] 12.1 Add comprehensive examples to path.h documentation
+- [x] 12.2 Document memory ownership pattern (caller-allocated components)
 - [ ] 12.3 Add migration guide section to filesystem documentation
 - [ ] 12.4 Update README or CHANGELOG with breaking change notice

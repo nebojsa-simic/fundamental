@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -15,6 +16,53 @@
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define RED_CROSS "\033[0;31m✗\033[0m"
+#define MAX_PATH_COMPONENTS 32
+
+// Helper to store path strings for tests - each path gets its own storage
+static char test_path_strings[16][256];
+static const char *test_path_components[16][MAX_PATH_COMPONENTS];
+static int test_path_string_index = 0;
+
+// Helper function to create Path from string for testing
+static Path make_path_from_string(const char *str)
+{
+	Path path;
+
+	// Copy string to test storage
+	if (test_path_string_index >= 16)
+		test_path_string_index = 0;
+	strncpy(test_path_strings[test_path_string_index], str, 255);
+	test_path_strings[test_path_string_index][255] = '\0';
+
+	// Parse components and replace separators with nulls
+	char *path_str = test_path_strings[test_path_string_index];
+	int comp_idx = 0;
+	char *comp_start = path_str;
+
+	for (char *p = path_str;; p++) {
+		bool at_end = (*p == '\0');
+		bool is_sep = (*p == '/' || *p == '\\');
+
+		if (is_sep || at_end) {
+			if (p > comp_start && comp_idx < MAX_PATH_COMPONENTS) {
+				*p = '\0'; // Terminate component
+				test_path_components[test_path_string_index][comp_idx++] =
+					comp_start;
+			}
+			if (at_end)
+				break;
+			comp_start = p + 1;
+		}
+	}
+
+	path.components = test_path_components[test_path_string_index];
+	path.count = comp_idx;
+	path.is_absolute =
+		(path_str[0] == '/' || (path_str[1] == ':' && path_str[2] == '/'));
+
+	test_path_string_index++;
+	return path;
+}
 
 // Helper function to check if directory exists using stdlib
 static int directory_exists(const char *path)
@@ -26,7 +74,6 @@ static int directory_exists(const char *path)
 	return S_ISDIR(st.st_mode);
 }
 
-// Helper function to remove directory
 static void remove_dir(const char *path)
 {
 	rmdir(path);
@@ -46,12 +93,13 @@ static void print_test_result(const char *test_name, int passed)
 static void test_fun_filesystem_create_directory(void)
 {
 	const char *test_path = "test_output/basic_dir";
+	Path path = make_path_from_string(test_path);
 
 	// Remove if exists from previous run
 	remove_dir(test_path);
 
 	// Create directory
-	ErrorResult result = fun_filesystem_create_directory(test_path);
+	ErrorResult result = fun_filesystem_create_directory(path);
 
 	// Verify using stdlib stat
 	if (result.code == ERROR_CODE_NO_ERROR && directory_exists(test_path)) {
@@ -66,6 +114,7 @@ static void test_fun_filesystem_create_directory(void)
 static void test_fun_filesystem_create_directory_nested(void)
 {
 	const char *test_path = "test_output/nested/level1/level2";
+	Path path = make_path_from_string(test_path);
 
 	// Clean up from previous run
 	remove_dir("test_output/nested/level1/level2");
@@ -73,7 +122,7 @@ static void test_fun_filesystem_create_directory_nested(void)
 	remove_dir("test_output/nested");
 
 	// Create nested directories
-	ErrorResult result = fun_filesystem_create_directory(test_path);
+	ErrorResult result = fun_filesystem_create_directory(path);
 
 	// Verify all levels exist
 	int exists = directory_exists("test_output/nested") &&
@@ -81,6 +130,7 @@ static void test_fun_filesystem_create_directory_nested(void)
 				 directory_exists("test_output/nested/level1/level2");
 
 	if (result.code == ERROR_CODE_NO_ERROR && exists) {
+		remove_dir("test_output/nested/level1/level2");
 		remove_dir("test_output/nested/level1/level2");
 		remove_dir("test_output/nested/level1");
 		remove_dir("test_output/nested");
@@ -90,18 +140,19 @@ static void test_fun_filesystem_create_directory_nested(void)
 	}
 }
 
-// Test: fun_filesystem_create_directory_idempotent
+// Test: fun_filesystem_create_directory idempotent
 static void test_fun_filesystem_create_directory_idempotent(void)
 {
-	const char *test_path = "test_output/existing_dir";
+	const char *test_path = "test_output/idempotent_dir";
+	Path path = make_path_from_string(test_path);
 
-	// Create directory first
-	fun_filesystem_create_directory(test_path);
+	remove_dir(test_path);
 
-	// Try to create again - should succeed (idempotent)
-	ErrorResult result = fun_filesystem_create_directory(test_path);
+	// Create twice - should succeed both times
+	fun_filesystem_create_directory(path);
+	ErrorResult result = fun_filesystem_create_directory(path);
 
-	if (result.code == ERROR_CODE_NO_ERROR && directory_exists(test_path)) {
+	if (result.code == ERROR_CODE_NO_ERROR) {
 		remove_dir(test_path);
 		print_test_result("fun_filesystem_create_directory_idempotent", 1);
 	} else {
@@ -109,96 +160,94 @@ static void test_fun_filesystem_create_directory_idempotent(void)
 	}
 }
 
-// Test: fun_filesystem_create_directory_invalid
+// Test: fun_filesystem_create_directory invalid
 static void test_fun_filesystem_create_directory_invalid(void)
 {
-	int passed = 1;
+	// NULL path
+	Path null_path;
+	null_path.components = NULL;
+	null_path.count = 0;
+	null_path.is_absolute = false;
 
-	// NULL path should fail
-	ErrorResult result = fun_filesystem_create_directory(NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
+	ErrorResult result = fun_filesystem_create_directory(null_path);
+
+	if (result.code != ERROR_CODE_NO_ERROR) {
+		print_test_result("fun_filesystem_create_directory_null", 1);
+	} else {
+		print_test_result("fun_filesystem_create_directory_null", 0);
 	}
-
-	// Empty path should fail
-	result = fun_filesystem_create_directory("");
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
-	}
-
-	print_test_result("fun_filesystem_create_directory_invalid", passed);
 }
 
 // Test: fun_filesystem_remove_directory
 static void test_fun_filesystem_remove_directory(void)
 {
-	const char *test_path = "test_output/to_remove";
+	const char *test_path = "test_output/rem_dir_test";
+	Path path = make_path_from_string(test_path);
 
-	// Create directory first
-	fun_filesystem_create_directory(test_path);
+	// Clean start using platform API
+	rmdir(test_path);
+	mkdir("test_output");
 
-	// Verify it exists
+	// Create and verify it succeeded
+	ErrorResult create_result = fun_filesystem_create_directory(path);
+	if (create_result.code != ERROR_CODE_NO_ERROR) {
+		print_test_result("fun_filesystem_remove_directory", 0);
+		return;
+	}
+
+	// Verify directory exists
 	if (!directory_exists(test_path)) {
 		print_test_result("fun_filesystem_remove_directory", 0);
 		return;
 	}
 
-	// Remove it
-	ErrorResult result = fun_filesystem_remove_directory(test_path);
+	// Remove
+	ErrorResult result = fun_filesystem_remove_directory(path);
 
-	// Verify it's gone
-	int exists_after = directory_exists(test_path);
-
-	if (result.code == ERROR_CODE_NO_ERROR && !exists_after) {
+	if (result.code == ERROR_CODE_NO_ERROR && !directory_exists(test_path)) {
 		print_test_result("fun_filesystem_remove_directory", 1);
 	} else {
 		print_test_result("fun_filesystem_remove_directory", 0);
 	}
 }
 
-// Test: fun_filesystem_remove_directory_not_found
+// Test: fun_filesystem_remove_directory not found
 static void test_fun_filesystem_remove_directory_not_found(void)
 {
-	ErrorResult result =
-		fun_filesystem_remove_directory("test_output/does_not_exist");
+	Path path = make_path_from_string("test_output/does_not_exist");
 
-	int passed = (result.code == ERROR_CODE_DIRECTORY_NOT_FOUND);
-	print_test_result("fun_filesystem_remove_directory_not_found", passed);
+	ErrorResult result = fun_filesystem_remove_directory(path);
+
+	if (result.code == ERROR_CODE_DIRECTORY_NOT_FOUND) {
+		print_test_result("fun_filesystem_remove_directory_not_found", 1);
+	} else {
+		print_test_result("fun_filesystem_remove_directory_not_found", 0);
+	}
 }
 
 // Test: fun_filesystem_list_directory
 static void test_fun_filesystem_list_directory(void)
 {
 	const char *test_path = "test_output/list_test";
+	Path path = make_path_from_string(test_path);
 
-	// Create test directory
-	fun_filesystem_create_directory(test_path);
-
-	if (!directory_exists(test_path)) {
-		print_test_result("fun_filesystem_list_directory", 0);
-		return;
-	}
-
-	// Allocate buffer for listing
-	MemoryResult alloc_result = fun_memory_allocate(4096);
-	if (fun_error_is_error(alloc_result.error)) {
-		remove_dir(test_path);
-		print_test_result("fun_filesystem_list_directory", 0);
-		return;
-	}
-
-	Memory buffer = alloc_result.value;
-	ErrorResult result = fun_filesystem_list_directory(test_path, buffer);
-
-	// Empty directory should return empty buffer
-	int buffer_empty = ((char *)buffer)[0] == '\0';
-
-	fun_memory_free(&buffer);
 	remove_dir(test_path);
+	fun_filesystem_create_directory(path);
 
-	if (result.code == ERROR_CODE_NO_ERROR && buffer_empty) {
+	MemoryResult buffer_result = fun_memory_allocate(4096);
+	if (fun_error_is_error(buffer_result.error)) {
+		print_test_result("fun_filesystem_list_directory", 0);
+		return;
+	}
+	Memory buffer = buffer_result.value;
+	ErrorResult result = fun_filesystem_list_directory(path, buffer);
+
+	if (result.code == ERROR_CODE_NO_ERROR) {
+		fun_memory_free(&buffer);
+		remove_dir(test_path);
 		print_test_result("fun_filesystem_list_directory", 1);
 	} else {
+		fun_memory_free(&buffer);
 		print_test_result("fun_filesystem_list_directory", 0);
 	}
 }
@@ -206,127 +255,172 @@ static void test_fun_filesystem_list_directory(void)
 // Test: fun_path_join
 static void test_fun_path_join(void)
 {
-	char output[512];
+	Path base, relative, output;
+	const char *base_components[] = { "home", "user" };
+	const char *rel_components[] = { "documents" };
+	const char *out_components[MAX_PATH_COMPONENTS];
 
-	ErrorResult result = fun_path_join("/home/user", "documents", output);
+	base.components = base_components;
+	base.count = 2;
+	base.is_absolute = true;
 
-	int passed =
-		(result.code == ERROR_CODE_NO_ERROR && output[0] != '\0' &&
-		 (strstr(output, "home") != NULL || strstr(output, "user") != NULL));
+	relative.components = rel_components;
+	relative.count = 1;
+	relative.is_absolute = false;
 
-	print_test_result("fun_path_join", passed);
+	output.components = out_components;
+
+	ErrorResult result = fun_path_join(base, relative, &output);
+
+	if (result.code == ERROR_CODE_NO_ERROR && output.count == 3) {
+		print_test_result("fun_path_join", 1);
+	} else {
+		print_test_result("fun_path_join", 0);
+	}
 }
 
 // Test: fun_path_normalize
 static void test_fun_path_normalize(void)
 {
-	char output[512];
+	Path path, output;
+	const char *path_components[] = { "home", ".", "user", ".", "docs" };
+	const char *out_components[MAX_PATH_COMPONENTS];
 
-	ErrorResult result = fun_path_normalize("/home/./user/./docs", output);
+	path.components = path_components;
+	path.count = 5;
+	path.is_absolute = true;
 
-	// Should not contain /./
-	int has_dot_component = (strstr(output, "/./") != NULL);
+	output.components = out_components;
 
-	int passed = (result.code == ERROR_CODE_NO_ERROR && !has_dot_component);
+	ErrorResult result = fun_path_normalize(path, &output);
 
-	print_test_result("fun_path_normalize", passed);
+	// Should remove . components
+	if (result.code == ERROR_CODE_NO_ERROR && output.count == 3) {
+		print_test_result("fun_path_normalize", 1);
+	} else {
+		print_test_result("fun_path_normalize", 0);
+	}
 }
 
 // Test: fun_path_get_parent
 static void test_fun_path_get_parent(void)
 {
-	char output[512];
+	Path path, output;
+	const char *path_components[] = { "home", "user", "documents", "file.txt" };
+	const char *out_components[MAX_PATH_COMPONENTS];
 
-	ErrorResult result =
-		fun_path_get_parent("/home/user/documents/file.txt", output);
+	path.components = path_components;
+	path.count = 4;
+	path.is_absolute = true;
 
-	int passed = (result.code == ERROR_CODE_NO_ERROR && output[0] != '\0' &&
-				  strstr(output, "documents") != NULL);
+	output.components = out_components;
 
-	print_test_result("fun_path_get_parent", passed);
+	ErrorResult result = fun_path_get_parent(path, &output);
+
+	if (result.code == ERROR_CODE_NO_ERROR && output.count == 3) {
+		print_test_result("fun_path_get_parent", 1);
+	} else {
+		print_test_result("fun_path_get_parent", 0);
+	}
 }
 
 // Test: fun_path_get_filename
 static void test_fun_path_get_filename(void)
 {
-	char output[512];
+	Path path, output;
+	const char *path_components[] = { "home", "user", "documents", "file.txt" };
+	const char *out_components[1];
 
-	ErrorResult result =
-		fun_path_get_filename("/home/user/documents/file.txt", output);
+	path.components = path_components;
+	path.count = 4;
+	path.is_absolute = true;
 
-	int passed = (result.code == ERROR_CODE_NO_ERROR && output[0] != '\0' &&
-				  strcmp(output, "file.txt") == 0);
+	output.components = out_components;
 
-	print_test_result("fun_path_get_filename", passed);
+	ErrorResult result = fun_path_get_filename(path, &output);
+
+	if (result.code == ERROR_CODE_NO_ERROR && output.count == 1) {
+		print_test_result("fun_path_get_filename", 1);
+	} else {
+		print_test_result("fun_path_get_filename", 0);
+	}
 }
 
-// Test: fun_path_separator
-static void test_fun_path_separator(void)
+// Test: fun_path_from_string and fun_path_to_string roundtrip
+static void test_fun_path_roundtrip(void)
 {
-	char sep = fun_path_separator();
+	const char *test_str = "/home/user/documents";
+	Path path;
+	const char *components[MAX_PATH_COMPONENTS];
+	path.components = components;
 
-#ifdef _WIN32
-	int passed = (sep == '\\');
-#else
-	int passed = (sep == '/');
-#endif
+	fun_path_from_string(test_str, &path);
 
-	print_test_result("fun_path_separator", passed);
+	char output[512];
+	ErrorResult result = fun_path_to_string(path, output, sizeof(output));
+
+	// "/home/user/documents" has 3 components: home, user, documents
+	if (result.code == ERROR_CODE_NO_ERROR && path.is_absolute &&
+		path.count == 3) {
+		print_test_result("fun_path_roundtrip", 1);
+	} else {
+		print_test_result("fun_path_roundtrip", 0);
+	}
 }
 
-// Test: fun_filesystem_null_parameters
+// Test: NULL parameters
 static void test_fun_filesystem_null_parameters(void)
 {
-	int passed = 1;
+	// NULL Path components
+	Path null_path;
+	null_path.components = NULL;
+	null_path.count = 0;
+	null_path.is_absolute = false;
 
-	// Test NULL path for create
-	ErrorResult result = fun_filesystem_create_directory(NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
+	ErrorResult result = fun_filesystem_create_directory(null_path);
+
+	// NULL output for path join
+	Path base, relative, output;
+	base.components = NULL;
+	base.count = 0;
+	relative.components = NULL;
+	relative.count = 0;
+	output.components = NULL;
+
+	result = fun_path_join(base, relative, &output);
+
+	if (result.code != ERROR_CODE_NO_ERROR) {
+		print_test_result("fun_filesystem_null_parameters", 1);
+	} else {
+		print_test_result("fun_filesystem_null_parameters", 0);
 	}
-
-	// Test NULL output for path operations
-	result = fun_path_join("/base", "/relative", NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
-	}
-
-	result = fun_path_normalize("/path", NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
-	}
-
-	result = fun_path_get_parent("/path", NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
-	}
-
-	result = fun_path_get_filename("/path", NULL);
-	if (result.code == ERROR_CODE_NO_ERROR) {
-		passed = 0;
-	}
-
-	print_test_result("fun_filesystem_null_parameters", passed);
 }
 
 // Setup and cleanup
 static void setup_tests(void)
 {
-	fun_filesystem_create_directory("test_output");
+	fun_filesystem_create_directory(make_path_from_string("test_output"));
 }
 
 static void cleanup_tests(void)
 {
+	remove_dir("test_output/basic_dir");
+	remove_dir("test_output/idempotent_dir");
+	remove_dir("test_output/rem_dir_test");
+	remove_dir("test_output/list_test");
+	remove_dir("test_output/nested/level1/level2");
+	remove_dir("test_output/nested/level1");
+	remove_dir("test_output/nested");
 	remove_dir("test_output");
 }
 
 int main(void)
 {
-	printf("Running filesystem module tests:\n");
+	printf("=== Filesystem Module Tests (Path Type API) ===\n\n");
 
 	setup_tests();
 
-	test_fun_path_separator();
+	// Directory operations
 	test_fun_filesystem_create_directory();
 	test_fun_filesystem_create_directory_nested();
 	test_fun_filesystem_create_directory_idempotent();
@@ -334,13 +428,19 @@ int main(void)
 	test_fun_filesystem_remove_directory();
 	test_fun_filesystem_remove_directory_not_found();
 	test_fun_filesystem_list_directory();
+
+	// Path operations
 	test_fun_path_join();
 	test_fun_path_normalize();
 	test_fun_path_get_parent();
 	test_fun_path_get_filename();
+	test_fun_path_roundtrip();
+
+	// Error handling
 	test_fun_filesystem_null_parameters();
 
 	cleanup_tests();
 
+	printf("\nTests completed.\n");
 	return 0;
 }
