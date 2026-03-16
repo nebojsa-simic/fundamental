@@ -57,6 +57,66 @@ CanReturnError(void) fun_string_join(String left, String right,
 CanReturnError(void)
 	fun_string_copy(String source, OutputString output, size_t output_size);
 
+// substring and slice operations
+
+/**
+ * Extract a substring from source string.
+ * 
+ * @param source REQUIRED - Source string to extract from
+ * @param start REQUIRED - Starting index (0-based)
+ * @param length REQUIRED - Number of characters to extract
+ * @param output REQUIRED - Buffer to store result
+ * @param output_size REQUIRED - Size of output buffer in bytes
+ * 
+ * @return voidResult with error code
+ * 
+ * Error codes:
+ * - ERROR_CODE_NO_ERROR: Success
+ * - ERROR_CODE_NULL_POINTER: source or output is NULL
+ * - ERROR_CODE_INDEX_OUT_OF_BOUNDS: start >= source length or start+length > source length
+ * - ERROR_CODE_BUFFER_TOO_SMALL: output_size < length + 1
+ * 
+ * Example:
+ * char output[32];
+ * fun_string_substring("Hello World", 6, 5, output, sizeof(output));
+ * // output = "World"
+ */
+CanReturnError(void)
+	fun_string_substring(String source, size_t start, size_t length,
+						 OutputString output, size_t output_size);
+
+/**
+ * Extract a slice of string from start to end index (Python-style).
+ * Supports negative indices (offset from end).
+ * 
+ * @param source REQUIRED - Source string to extract from
+ * @param start REQUIRED - Starting index (negative = from end)
+ * @param end REQUIRED - Ending index (exclusive, negative = from end)
+ * @param output REQUIRED - Buffer to store result
+ * @param output_size REQUIRED - Size of output buffer in bytes
+ * 
+ * @return voidResult with error code
+ * 
+ * Error codes:
+ * - ERROR_CODE_NO_ERROR: Success
+ * - ERROR_CODE_NULL_POINTER: source or output is NULL
+ * - ERROR_CODE_INDEX_OUT_OF_BOUNDS: start or end out of valid range
+ * - ERROR_CODE_BUFFER_TOO_SMALL: output_size < (end-start) + 1
+ * 
+ * Notes:
+ * - If start >= end after resolving negatives, returns empty string
+ * - Negative indices: -1 = last character, -2 = second to last, etc.
+ * 
+ * Example:
+ * char output[32];
+ * fun_string_slice("Hello World", 0, 5, output, sizeof(output));
+ * // output = "Hello"
+ * fun_string_slice("Hello World", -5, -1, output, sizeof(output));
+ * // output = "Worl"
+ */
+CanReturnError(void) fun_string_slice(String source, int64_t start, int64_t end,
+									  OutputString output, size_t output_size);
+
 // templating
 CanReturnError(void)
 	fun_string_template(String template, StringTemplateParam *params,
