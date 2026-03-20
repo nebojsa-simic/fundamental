@@ -30,8 +30,8 @@ static void test_path_from_string_absolute_unix(void)
 	const char *components[MAX_COMPONENTS];
 	path.components = components;
 
-	ErrorResult result =
-		fun_path_from_string("/home/user/documents/file.txt", &path);
+	char path_str[] = "/home/user/documents/file.txt";
+	ErrorResult result = fun_path_from_string(path_str, &path);
 
 	int passed = (result.code == ERROR_CODE_NO_ERROR &&
 				  path.is_absolute == true && path.count == 4);
@@ -46,7 +46,8 @@ static void test_path_from_string_relative(void)
 	const char *components[MAX_COMPONENTS];
 	path.components = components;
 
-	ErrorResult result = fun_path_from_string("documents/file.txt", &path);
+	char path_str[] = "documents/file.txt";
+	ErrorResult result = fun_path_from_string(path_str, &path);
 
 	int passed = (result.code == ERROR_CODE_NO_ERROR &&
 				  path.is_absolute == false && path.count == 2);
@@ -61,7 +62,8 @@ static void test_path_from_string_with_dot_components(void)
 	const char *components[MAX_COMPONENTS];
 	path.components = components;
 
-	ErrorResult result = fun_path_from_string("./documents/../file.txt", &path);
+	char path_str[] = "./documents/../file.txt";
+	ErrorResult result = fun_path_from_string(path_str, &path);
 
 	// Should preserve . and .. without normalization
 	int passed = (result.code == ERROR_CODE_NO_ERROR && path.count == 4);
@@ -76,7 +78,8 @@ static void test_path_from_string_multiple_separators(void)
 	const char *components[MAX_COMPONENTS];
 	path.components = components;
 
-	ErrorResult result = fun_path_from_string("/home//user///documents", &path);
+	char path_str[] = "/home//user///documents";
+	ErrorResult result = fun_path_from_string(path_str, &path);
 
 	// Multiple separators should be treated as single separator
 	int passed = (result.code == ERROR_CODE_NO_ERROR && path.count == 3);
@@ -91,7 +94,8 @@ static void test_path_from_string_trailing_separator(void)
 	const char *components[MAX_COMPONENTS];
 	path.components = components;
 
-	ErrorResult result = fun_path_from_string("/home/user/", &path);
+	char path_str[] = "/home/user/";
+	ErrorResult result = fun_path_from_string(path_str, &path);
 
 	int passed = (result.code == ERROR_CODE_NO_ERROR && path.count == 2);
 

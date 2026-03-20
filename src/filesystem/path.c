@@ -56,7 +56,7 @@ static size_t string_length(const char *s)
 // Path Type Implementation
 // ==================================================================
 
-ErrorResult fun_path_from_string(String path, OutputPath output)
+ErrorResult fun_path_from_string(char *path, OutputPath output)
 {
 	if (path == NULL) {
 		return fun_error_result(ERROR_CODE_NULL_POINTER, "Path string is NULL");
@@ -102,6 +102,11 @@ ErrorResult fun_path_from_string(String path, OutputPath output)
 				if (output->count >= max_components) {
 					return fun_error_result(ERROR_CODE_BUFFER_TOO_SMALL,
 											"Too many path components");
+				}
+
+				// Null-terminate this component in the mutable buffer
+				if (i < path_len) {
+					path[i] = '\0';
 				}
 
 				// Preserve . and .. components (normalization is separate)

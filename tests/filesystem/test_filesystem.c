@@ -349,7 +349,7 @@ static void test_fun_path_get_filename(void)
 // Test: fun_path_from_string and fun_path_to_string roundtrip
 static void test_fun_path_roundtrip(void)
 {
-	const char *test_str = "/home/user/documents";
+	char test_str[] = "/home/user/documents";
 	Path path;
 	const char *components[MAX_PATH_COMPONENTS];
 	path.components = components;
