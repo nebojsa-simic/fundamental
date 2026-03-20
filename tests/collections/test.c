@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/array/array.h"
+#include "fundamental/array/array.h"
 
 DEFINE_ARRAY_TYPE(int)
 

@@ -5,9 +5,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "memory/memory.h"
-#include "string/string.h"
-#include "error/error.h"
+#include "../memory/memory.h"
+#include "../string/string.h"
+#include "../error/error.h"
 #include "path.h"
 
 // ------------------------------------------------------------------

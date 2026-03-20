@@ -22,7 +22,7 @@
 #include <unistd.h>
 #endif
 
-#include "../../include/network/network.h"
+#include "fundamental/network/network.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define ASSERT_NO_ERROR(r) assert((r).error.code == 0)

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/set/set.h"
+#include "fundamental/set/set.h"
 
 DEFINE_SET_TYPE(int)
 

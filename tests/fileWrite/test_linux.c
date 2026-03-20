@@ -7,9 +7,9 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "../../include/file/file.h"
-#include "../../include/memory/memory.h"
-#include "../../include/async/async.h"
+#include "fundamental/file/file.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/async/async.h"
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define TEST_FILENAME "test_write_file.tmp"

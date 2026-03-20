@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
-#include "../../include/console/console.h"
+#include "fundamental/console/console.h"
 
 #define GREEN_CHECK "\033[0;32m\342\234\223\033[0m"
 

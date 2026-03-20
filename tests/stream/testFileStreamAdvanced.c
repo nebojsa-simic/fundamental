@@ -1,5 +1,5 @@
-#include "stream/stream.h"
-#include "memory/memory.h"
+#include "fundamental/stream/stream.h"
+#include "fundamental/memory/memory.h"
 #include <stdio.h>
 
 bool test_stream_position_tracking(void)

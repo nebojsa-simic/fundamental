@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/hashmap/hashmap.h"
+#include "fundamental/hashmap/hashmap.h"
 
 DEFINE_HASHMAP_TYPE(int, int)
 

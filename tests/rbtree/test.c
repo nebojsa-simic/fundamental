@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/rbtree/rbtree.h"
+#include "fundamental/rbtree/rbtree.h"
 
 DEFINE_RBTREE_TYPE(int, int)
 

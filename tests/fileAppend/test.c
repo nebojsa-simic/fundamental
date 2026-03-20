@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/file/file.h"
-#include "../../include/memory/memory.h"
-#include "../../include/async/async.h"
+#include "fundamental/file/file.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/async/async.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)

@@ -19,8 +19,8 @@
 #define UNSET_ENV(k) unsetenv(k)
 #endif
 
-#include "config/config.h"
-#include "error/error.h"
+#include "fundamental/config/config.h"
+#include "fundamental/error/error.h"
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define RED_CROSS "\033[0;31m✗\033[0m"

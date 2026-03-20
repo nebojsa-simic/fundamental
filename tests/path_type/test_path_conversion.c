@@ -1,5 +1,5 @@
-#include "filesystem/filesystem.h"
-#include "memory/memory.h"
+#include "fundamental/filesystem/filesystem.h"
+#include "fundamental/memory/memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

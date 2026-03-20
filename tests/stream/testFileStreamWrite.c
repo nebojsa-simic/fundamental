@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../include/stream/stream.h"
-#include "../../include/memory/memory.h"
+#include "fundamental/stream/stream.h"
+#include "fundamental/memory/memory.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)

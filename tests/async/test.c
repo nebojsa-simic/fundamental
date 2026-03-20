@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../../include/async/async.h"
+#include "fundamental/async/async.h"
 
 #define GREEN_CHECK "\033[0;32m\342\234\223\033[0m"
 

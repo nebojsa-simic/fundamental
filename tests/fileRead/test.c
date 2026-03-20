@@ -9,11 +9,11 @@
 #include <errno.h> // For errno
 
 // Include headers for the fundamental library components being tested or used
-#include "../../include/file/file.h"
-#include "../../include/memory/memory.h"
-#include "../../include/string/string.h"
-#include "../../include/error/error.h"
-#include "../../include/async/async.h" // Assuming async provides a wait/get result mechanism
+#include "fundamental/file/file.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/string/string.h"
+#include "fundamental/error/error.h"
+#include "fundamental/async/async.h" // Assuming async provides a wait/get result mechanism
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define TEST_FILENAME "test_read_file.tmp"

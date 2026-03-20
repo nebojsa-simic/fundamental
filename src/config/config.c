@@ -7,12 +7,12 @@
  *   INI file  ({exe_dir}/{app}.ini) - lowest priority
  */
 
-#include "../../include/config/config.h"
-#include "../../include/error/error.h"
-#include "../../include/hashmap/hashmap.h"
-#include "../../include/memory/memory.h"
-#include "../../include/string/string.h"
-#include "../../include/filesystem/filesystem.h"
+#include "fundamental/config/config.h"
+#include "fundamental/error/error.h"
+#include "fundamental/hashmap/hashmap.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/string/string.h"
+#include "fundamental/filesystem/filesystem.h"
 
 /* ------------------------------------------------------------------
  * Platform functions (implemented in arch/config/{platform}/env.c)

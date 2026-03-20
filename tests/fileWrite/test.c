@@ -8,11 +8,11 @@
 #include <errno.h>
 
 // Include headers for the fundamental library components
-#include "../../include/file/file.h"
-#include "../../include/memory/memory.h"
-#include "../../include/string/string.h"
-#include "../../include/error/error.h"
-#include "../../include/async/async.h"
+#include "fundamental/file/file.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/string/string.h"
+#include "fundamental/error/error.h"
+#include "fundamental/async/async.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define TEST_FILENAME "test_write_file.tmp"

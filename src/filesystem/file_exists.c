@@ -1,4 +1,4 @@
-#include "filesystem/filesystem.h"
+#include "fundamental/filesystem/filesystem.h"
 #include <stdbool.h>
 
 // Platform-specific functions (implemented in arch/filesystem/*/file_exists.c)

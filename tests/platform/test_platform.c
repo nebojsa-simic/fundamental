@@ -1,5 +1,5 @@
-#include "platform/platform.h"
-#include "string/string.h"
+#include "fundamental/platform/platform.h"
+#include "fundamental/string/string.h"
 #include <stdio.h>
 #include <string.h>
 

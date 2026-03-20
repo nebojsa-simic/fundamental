@@ -1,6 +1,6 @@
-#include "stream/stream.h"
-#include "memory/memory.h"
-#include "string/string.h"
+#include "fundamental/stream/stream.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/string/string.h"
 #include <stdio.h>
 #include <assert.h>
 

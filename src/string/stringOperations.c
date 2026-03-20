@@ -1,4 +1,4 @@
-#include "string/string.h" // contains our declarations and result type definitions
+#include "fundamental/string/string.h" // contains our declarations and result type definitions
 
 StringDifference fun_string_compare(String source, String target)
 {
