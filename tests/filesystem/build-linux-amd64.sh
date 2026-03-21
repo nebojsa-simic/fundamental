@@ -14,8 +14,12 @@ CFLAGS="-I$PROJECT_ROOT/include -I$PROJECT_ROOT/arch/filesystem/linux-amd64 -Wal
 SOURCES=(
     "$SCRIPT_DIR/test_filesystem.c"
     "$PROJECT_ROOT/src/filesystem/directory.c"
+    "$PROJECT_ROOT/src/filesystem/file_exists.c"
+    "$PROJECT_ROOT/src/filesystem/file_size.c"
     "$PROJECT_ROOT/src/filesystem/path.c"
     "$PROJECT_ROOT/arch/filesystem/linux-amd64/directory.c"
+    "$PROJECT_ROOT/arch/filesystem/linux-amd64/file_exists.c"
+    "$PROJECT_ROOT/arch/filesystem/linux-amd64/file_size.c"
     "$PROJECT_ROOT/arch/filesystem/linux-amd64/path.c"
     "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"

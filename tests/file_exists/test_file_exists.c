@@ -40,9 +40,9 @@ static Path make_path(const char *str, char *buf, size_t buf_size,
 }
 
 // Convenience macro: declare a Path named 'pvar' from string literal 'str'
-#define MAKE_PATH(pvar, str)                                \
-	char pvar##_buf_[512];                                  \
-	const char *pvar##_comps_[MAX_TEST_COMPONENTS];         \
+#define MAKE_PATH(pvar, str)                        \
+	char pvar##_buf_[512];                          \
+	const char *pvar##_comps_[MAX_TEST_COMPONENTS]; \
 	Path pvar = make_path(str, pvar##_buf_, sizeof(pvar##_buf_), pvar##_comps_)
 
 // Helper function to check if file exists using stdlib

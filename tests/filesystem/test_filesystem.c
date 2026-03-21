@@ -396,6 +396,61 @@ static void test_fun_filesystem_null_parameters(void)
 	}
 }
 
+// Test: fun_file_size
+static void test_fun_file_size(void)
+{
+	// Create a small file with known content
+	const char *test_path = "test_output/size_test.txt";
+	Path path = make_path_from_string(test_path);
+
+	// Write known content using stdlib for setup
+	FILE *f = fopen(test_path, "wb");
+	if (f == NULL) {
+		print_test_result("fun_file_size", 0);
+		return;
+	}
+	fwrite("hello", 1, 5, f);
+	fclose(f);
+
+	uint64_t size = 0;
+	voidResult result = fun_file_size(path, &size);
+
+	remove(test_path);
+
+	if (fun_error_is_ok(result.error) && size == 5) {
+		print_test_result("fun_file_size", 1);
+	} else {
+		print_test_result("fun_file_size", 0);
+	}
+}
+
+// Test: fun_file_size on non-existent file
+static void test_fun_file_size_not_found(void)
+{
+	Path path = make_path_from_string("test_output/does_not_exist.txt");
+	uint64_t size = 0;
+	voidResult result = fun_file_size(path, &size);
+
+	if (fun_error_is_error(result.error)) {
+		print_test_result("fun_file_size_not_found", 1);
+	} else {
+		print_test_result("fun_file_size_not_found", 0);
+	}
+}
+
+// Test: fun_file_size with null output
+static void test_fun_file_size_null_output(void)
+{
+	Path path = make_path_from_string("test_output/size_test.txt");
+	voidResult result = fun_file_size(path, NULL);
+
+	if (fun_error_is_error(result.error)) {
+		print_test_result("fun_file_size_null_output", 1);
+	} else {
+		print_test_result("fun_file_size_null_output", 0);
+	}
+}
+
 // Setup and cleanup
 static void setup_tests(void)
 {
@@ -435,6 +490,11 @@ int main(void)
 	test_fun_path_get_parent();
 	test_fun_path_get_filename();
 	test_fun_path_roundtrip();
+
+	// File metadata
+	test_fun_file_size();
+	test_fun_file_size_not_found();
+	test_fun_file_size_null_output();
 
 	// Error handling
 	test_fun_filesystem_null_parameters();

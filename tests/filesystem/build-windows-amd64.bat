@@ -17,8 +17,12 @@ REM Source files
 set SOURCES=^
     %SCRIPT_DIR%test_filesystem.c ^
     %PROJECT_ROOT%\src\filesystem\directory.c ^
+    %PROJECT_ROOT%\src\filesystem\file_exists.c ^
+    %PROJECT_ROOT%\src\filesystem\file_size.c ^
     %PROJECT_ROOT%\src\filesystem\path.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\directory.c ^
+    %PROJECT_ROOT%\arch\filesystem\windows-amd64\file_exists.c ^
+    %PROJECT_ROOT%\arch\filesystem\windows-amd64\file_size.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\path.c ^
     %PROJECT_ROOT%\arch\memory\windows-amd64\memory.c ^
     %PROJECT_ROOT%\src\string\stringValidation.c ^
