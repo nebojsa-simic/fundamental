@@ -20,6 +20,8 @@ set SOURCES=^
     %PROJECT_ROOT%\src\filesystem\file_exists.c ^
     %PROJECT_ROOT%\src\filesystem\file_size.c ^
     %PROJECT_ROOT%\src\filesystem\path.c ^
+    %PROJECT_ROOT%\src\filesystem\walk.c ^
+    %PROJECT_ROOT%\src\tsv\tsv.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\directory.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\file_exists.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\file_size.c ^
