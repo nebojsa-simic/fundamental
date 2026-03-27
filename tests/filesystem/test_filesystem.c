@@ -664,6 +664,69 @@ static void test_fun_filesystem_walk_null(void)
 					  null_state_ok && null_mem_ok && null_root_ok);
 }
 
+// 7.1: Test path too long error
+static void test_path_too_long(void)
+{
+	// Build a path with enough components to exceed 512 bytes
+	// Each component is 31 chars + separator = 32 bytes
+	// Need about 17 components to exceed 512 bytes
+	static char long_path_string[600];
+	static const char *components[64];
+
+	// Build "/component1/component2/..." pattern
+	long_path_string[0] = '/';
+	size_t pos = 1;
+	int comp_count = 0;
+
+	for (int i = 0; i < 20; i++) {
+		// Add 30-character component
+		for (int j = 0; j < 30 && pos < sizeof(long_path_string) - 2; j++) {
+			long_path_string[pos++] = 'a';
+		}
+		components[comp_count++] = &long_path_string[pos - 30];
+		long_path_string[pos++] = '/';
+	}
+	long_path_string[pos - 1] = '\0'; // Remove trailing separator
+
+	Path path;
+	path.components = components;
+	path.count = comp_count;
+	path.is_absolute = true;
+
+	ErrorResult result = fun_filesystem_create_directory(path);
+
+	// Should fail with ERROR_CODE_PATH_TOO_LONG
+	print_test_result("test_path_too_long",
+					  result.code == ERROR_CODE_PATH_TOO_LONG);
+}
+
+// 7.2: Test remove_directory returns DIRECTORY_NOT_EMPTY for non-empty dir
+static void test_remove_directory_not_empty_error_code(void)
+{
+	const char *test_path = "test_output/not_empty_dir";
+	const char *file_path = "test_output/not_empty_dir/inside_file.txt";
+	Path path = make_path_from_string(test_path);
+
+	// Clean start
+	remove(file_path);
+	remove_dir(test_path);
+
+	// Create directory and put a file inside
+	fun_filesystem_create_directory(path);
+	create_test_file(file_path);
+
+	// Try to remove the non-empty directory
+	ErrorResult result = fun_filesystem_remove_directory(path);
+
+	// Clean up
+	remove(file_path);
+	remove_dir(test_path);
+
+	// Should return DIRECTORY_NOT_EMPTY, not PERMISSION_DENIED
+	print_test_result("test_remove_directory_not_empty_error_code",
+					  result.code == ERROR_CODE_DIRECTORY_NOT_EMPTY);
+}
+
 // Setup and cleanup
 static void setup_tests(void)
 {
@@ -721,6 +784,10 @@ int main(void)
 	test_fun_filesystem_walk_empty();
 	test_fun_filesystem_walk_close();
 	test_fun_filesystem_walk_null();
+
+	// New tests for red team fixes
+	test_path_too_long();
+	test_remove_directory_not_empty_error_code();
 
 	cleanup_tests();
 
