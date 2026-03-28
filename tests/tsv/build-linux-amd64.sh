@@ -8,7 +8,7 @@ PROJECT_ROOT="$SCRIPT_DIR/../.."
 
 # Compiler flags
 CC=gcc
-CFLAGS="-I$PROJECT_ROOT/include -Wall -Wextra -g -O0 -nostdlib -lc"
+CFLAGS="-I$PROJECT_ROOT/include -Wall -Wextra -g -O0"
 
 # Source files
 SOURCES=(

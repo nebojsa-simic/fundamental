@@ -5,6 +5,7 @@ gcc \
     test_linux.c \
     ../../arch/file/linux-amd64/fileReadMmap.c \
     ../../arch/file/linux-amd64/fileRead.c \
+    ../../arch/file/linux-amd64/fileReadRing.c \
     ../../arch/memory/linux-amd64/memory.c \
     ../../src/string/stringOperations.c \
     ../../src/string/stringConversion.c \

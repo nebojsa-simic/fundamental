@@ -9,6 +9,7 @@ gcc \
     ../../arch/async/linux-amd64/async.c \
     ../../src/process/process.c \
     ../../arch/process/linux-amd64/process.c \
+    ../../arch/config/linux-amd64/env.c \
     ../../src/string/stringOperations.c \
     -o test
 

@@ -23,4 +23,15 @@ $CC $CFLAGS \
     "$PROJECT_ROOT/src/string/stringValidation.c" \
     -o "$SCRIPT_DIR/test_slice"
 
+# Create wrapper test script
+cat > "$SCRIPT_DIR/test" << 'EOF'
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+./test_substring
+./test_slice
+echo "All stringSubstring tests passed!"
+EOF
+chmod +x "$SCRIPT_DIR/test"
+
 echo "Build complete!"

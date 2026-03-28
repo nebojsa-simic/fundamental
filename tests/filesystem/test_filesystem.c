@@ -199,7 +199,7 @@ static void test_fun_filesystem_remove_directory(void)
 
 	// Clean start using platform API
 	rmdir(test_path);
-	mkdir("test_output");
+	mkdir("test_output", 0755);
 
 	// Create and verify it succeeded
 	ErrorResult create_result = fun_filesystem_create_directory(path);

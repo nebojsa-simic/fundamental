@@ -9,6 +9,7 @@ gcc \
     ../../arch/async/linux-amd64/async.c \
     ../../arch/file/linux-amd64/fileRead.c \
     ../../arch/file/linux-amd64/fileReadMmap.c \
+    ../../arch/file/linux-amd64/fileReadRing.c \
     -o test
 
 strip --strip-unneeded test

@@ -6,21 +6,57 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#define SET_ENV(k, v) SetEnvironmentVariableA(k, v)
-#define UNSET_ENV(k) SetEnvironmentVariableA(k, NULL)
-#else
-#include <unistd.h>
-#define SET_ENV(k, v) setenv(k, v, 1)
-#define UNSET_ENV(k) unsetenv(k)
-#endif
 
 #include "fundamental/config/config.h"
 #include "fundamental/error/error.h"
+
+/* Mock environment for tests - simulates env vars set at startup */
+static const char *mock_env[256];
+static int mock_env_count = 0;
+
+static void init_mock_env(void)
+{
+	mock_env_count = 0;
+	mock_env[0] = NULL;
+}
+
+static void set_mock_env(const char *key, const char *value)
+{
+	static char env_storage[256][256];
+	static int storage_idx = 0;
+
+	if (mock_env_count >= 255)
+		return;
+
+	/* Check if key already exists */
+	for (int i = 0; i < mock_env_count; i++) {
+		const char *e = mock_env[i];
+		size_t key_len = 0;
+		while (key[key_len])
+			key_len++;
+		size_t j;
+		for (j = 0; j < key_len; j++) {
+			if (e[j] != key[j])
+				break;
+		}
+		if (j == key_len && e[j] == '=') {
+			/* Replace existing */
+			snprintf(env_storage[storage_idx], 256, "%s=%s", key, value);
+			mock_env[i] = env_storage[storage_idx];
+			storage_idx = (storage_idx + 1) % 256;
+			return;
+		}
+	}
+
+	/* Add new */
+	snprintf(env_storage[storage_idx], 256, "%s=%s", key, value);
+	mock_env[mock_env_count++] = env_storage[storage_idx];
+	mock_env[mock_env_count] = NULL;
+	storage_idx = (storage_idx + 1) % 256;
+}
+
+extern void fun_arch_set_envp(const char **envp);
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define RED_CROSS "\033[0;31m✗\033[0m"
@@ -210,12 +246,14 @@ static void test_config_ini_malformed_lines(void)
 
 static void test_config_get_from_env(void)
 {
-	SET_ENV("TESTAPP_DATABASE_HOST", "envhost");
+	init_mock_env();
+	set_mock_env("TESTAPP_DATABASE_HOST", "envhost");
+	fun_arch_set_envp(mock_env);
 
 	ConfigResult result = fun_config_load("testapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("TESTAPP_DATABASE_HOST");
 		print_result("test_config_get_from_env", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 
@@ -223,7 +261,6 @@ static void test_config_get_from_env(void)
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
 			  strcmp(sr.value, "envhost") == 0);
 
-	UNSET_ENV("TESTAPP_DATABASE_HOST");
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_from_env", ok);
 }
@@ -231,12 +268,14 @@ static void test_config_get_from_env(void)
 static void test_config_env_key_transformation(void)
 {
 	/* "database.host" with app "myapp" → MYAPP_DATABASE_HOST */
-	SET_ENV("MYAPP_DATABASE_HOST", "transformed");
+	init_mock_env();
+	set_mock_env("MYAPP_DATABASE_HOST", "transformed");
+	fun_arch_set_envp(mock_env);
 
 	ConfigResult result = fun_config_load("myapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("MYAPP_DATABASE_HOST");
 		print_result("test_config_env_key_transformation", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 
@@ -244,14 +283,14 @@ static void test_config_env_key_transformation(void)
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
 			  strcmp(sr.value, "transformed") == 0);
 
-	UNSET_ENV("MYAPP_DATABASE_HOST");
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_key_transformation", ok);
 }
 
 static void test_config_env_missing(void)
 {
-	UNSET_ENV("TESTAPP_MISSING_KEY_XYZ");
+	init_mock_env();
+	fun_arch_set_envp(mock_env);
 
 	ConfigResult result = fun_config_load("testapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
@@ -268,12 +307,14 @@ static void test_config_env_missing(void)
 
 static void test_config_env_prefix_correct(void)
 {
-	SET_ENV("MYAPP_SERVER_PORT", "9090");
+	init_mock_env();
+	set_mock_env("MYAPP_SERVER_PORT", "9090");
+	fun_arch_set_envp(mock_env);
 
 	ConfigResult result = fun_config_load("myapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("MYAPP_SERVER_PORT");
 		print_result("test_config_env_prefix_correct", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 
@@ -281,7 +322,6 @@ static void test_config_env_prefix_correct(void)
 	int ok =
 		(sr.error.code == ERROR_CODE_NO_ERROR && strcmp(sr.value, "9090") == 0);
 
-	UNSET_ENV("MYAPP_SERVER_PORT");
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_prefix_correct", ok);
 }
@@ -326,19 +366,20 @@ static void test_config_cli_multiple_args(void)
 
 static void test_config_cli_override_env(void)
 {
-	SET_ENV("TESTAPP_DATABASE_HOST", "envhost");
+	init_mock_env();
+	set_mock_env("TESTAPP_DATABASE_HOST", "envhost");
+	fun_arch_set_envp(mock_env);
 	const char *argv[] = { "prog", "--config:database.host=clihost" };
 	ConfigResult result = fun_config_load("testapp", 2, argv);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("TESTAPP_DATABASE_HOST");
 		print_result("test_config_cli_override_env", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	/* CLI should win over env */
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
 			  strcmp(sr.value, "clihost") == 0);
-	UNSET_ENV("TESTAPP_DATABASE_HOST");
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_override_env", ok);
 }
@@ -364,18 +405,19 @@ static void test_config_cli_quoted_values(void)
 
 static void test_config_cli_overrides_all(void)
 {
-	SET_ENV("TESTAPP_DATABASE_HOST", "envhost");
+	init_mock_env();
+	set_mock_env("TESTAPP_DATABASE_HOST", "envhost");
+	fun_arch_set_envp(mock_env);
 	const char *argv[] = { "prog", "--config:database.host=clihost" };
 	ConfigResult result = fun_config_load("testapp", 2, argv);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("TESTAPP_DATABASE_HOST");
 		print_result("test_config_cli_overrides_all", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
 			  strcmp(sr.value, "clihost") == 0);
-	UNSET_ENV("TESTAPP_DATABASE_HOST");
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_overrides_all", ok);
 }
@@ -385,17 +427,18 @@ static void test_config_env_overrides_ini(void)
 	/* Env var takes priority over any INI content.
 	 * Since we can't easily test with a real INI file at exe_dir,
 	 * verify env var is returned when CLI is absent. */
-	SET_ENV("TESTAPP_LEVEL_KEY", "envval");
+	init_mock_env();
+	set_mock_env("TESTAPP_LEVEL_KEY", "envval");
+	fun_arch_set_envp(mock_env);
 	ConfigResult result = fun_config_load("testapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
-		UNSET_ENV("TESTAPP_LEVEL_KEY");
 		print_result("test_config_env_overrides_ini", 0);
+		fun_config_destroy(&result.value);
 		return;
 	}
 	StringResult sr = fun_config_get_string(&result.value, "level.key");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
 			  strcmp(sr.value, "envval") == 0);
-	UNSET_ENV("TESTAPP_LEVEL_KEY");
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_overrides_ini", ok);
 }
@@ -403,7 +446,8 @@ static void test_config_env_overrides_ini(void)
 static void test_config_ini_fallback(void)
 {
 	/* Without CLI or env, key not found (no INI in exe dir for this test) */
-	UNSET_ENV("TESTAPP_FALLBACK_KEY");
+	init_mock_env();
+	fun_arch_set_envp(mock_env);
 	const char *argv[] = { "prog" };
 	ConfigResult result = fun_config_load("testapp", 1, argv);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
@@ -420,7 +464,8 @@ static void test_config_ini_fallback(void)
 
 static void test_config_all_sources_missing(void)
 {
-	UNSET_ENV("TESTAPP_NONEXISTENT_KEY_ABC123");
+	init_mock_env();
+	fun_arch_set_envp(mock_env);
 	ConfigResult result = fun_config_load("testapp", 0, NULL);
 	if (result.error.code != ERROR_CODE_NO_ERROR) {
 		print_result("test_config_all_sources_missing", 0);
