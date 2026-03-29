@@ -164,12 +164,26 @@ AsyncResult fun_register_file_change_notification(String filePath,
 						  .error = ERROR_RESULT_NO_ERROR };
 }
 
-AsyncResult fun_unregister_file_change_notification(String filePath)
+AsyncResult fun_unregister_file_change_notification(void *state)
 {
-	if (!filePath) {
+	if (!state) {
 		return (AsyncResult){ .status = ASYNC_ERROR,
 							  .error = ERROR_RESULT_NULL_POINTER };
 	}
+
+	FileNotificationState *s = (FileNotificationState *)state;
+
+	if (s->watch_fd_valid) {
+		syscall2(SYS_inotify_rm_watch, s->inotify_fd, s->watch_fd);
+		s->watch_fd_valid = false;
+	}
+
+	if (s->inotify_fd_valid) {
+		syscall1(SYS_close, s->inotify_fd);
+		s->inotify_fd_valid = false;
+	}
+
+	fun_memory_free((Memory *)&state);
 
 	return (AsyncResult){ .status = ASYNC_COMPLETED,
 						  .error = ERROR_RESULT_NO_ERROR };

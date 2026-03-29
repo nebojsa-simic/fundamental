@@ -1,6 +1,7 @@
 #include "fileRead.h"
 #include "fileAdaptive.h"
 #include "syscall_nums.h"
+#include "page_size.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -103,7 +104,14 @@ AsyncStatus poll_mmap(AsyncResult *result)
 			goto cleanup;
 		}
 
-		uint64_t granularity = PAGE_SIZE;
+		/* off_t is a signed 64-bit type; reject offsets that overflow it. */
+		if (state->parameters.offset > (uint64_t)INT64_MAX) {
+			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
+		}
+
+		uint64_t granularity = get_page_size();
 		state->adjusted_offset =
 			(state->parameters.offset / granularity) * granularity;
 		uint64_t intra_page_offset =

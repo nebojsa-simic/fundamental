@@ -97,8 +97,10 @@ fundamental/
 - Multiple I/O strategies: standard, memory-mapped, ring-based, direct
 - Platform-optimized implementations
 - Non-blocking read, write, append operations
-- File locking for exclusive access
+- File locking for exclusive access with configurable timeout
 - File change notifications (platform-specific)
+- **Durability modes**: `FILE_DURABILITY_ASYNC` (default), `FILE_DURABILITY_SYNC` (msync/fsync), `FILE_DURABILITY_FULL` (fsync data+metadata)
+- **Robustness**: integer overflow protection on all size/offset calculations, runtime page-size detection, proper io_uring CQE consumption with partial-transfer handling
 
 ### **Stream Module**
 - Asynchronous buffered file I/O
@@ -234,6 +236,43 @@ if (result.status == ASYNC_COMPLETED) {
     // File read successfully
 }
 ```
+
+### File Write with Durability Guarantee
+
+```c
+#include "file/file.h"
+#include "memory/memory.h"
+
+const char *data = "critical record";
+size_t len = 15;
+
+MemoryResult buf = fun_memory_allocate(len);
+memcpy(buf.value, data, len);
+
+/* FILE_DURABILITY_FULL: fsync() ensures data and metadata reach disk */
+Write params = {
+    .file_path       = "/data/journal.log",
+    .input           = buf.value,
+    .bytes_to_write  = len,
+    .offset          = 0,
+    .mode            = FILE_MODE_MMAP,
+    .durability_mode = FILE_DURABILITY_FULL,
+};
+
+AsyncResult result = fun_write_memory_to_file(params);
+fun_async_await(&result, -1);
+fun_memory_free(&buf.value);
+
+if (result.status == ASYNC_COMPLETED) {
+    /* guaranteed on disk */
+}
+```
+
+| Mode | Guarantee | Use when |
+|------|-----------|----------|
+| `FILE_DURABILITY_ASYNC` | Page cache only | Performance-critical, loss acceptable |
+| `FILE_DURABILITY_SYNC` | `msync`/`fsync` after write | Data must survive process crash |
+| `FILE_DURABILITY_FULL` | `fsync` data + metadata | Data must survive power loss |
 
 ### Stream I/O
 

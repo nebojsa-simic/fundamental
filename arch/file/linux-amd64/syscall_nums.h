@@ -80,11 +80,11 @@
 #define MS_SYNC 4 /* Synchronous sync */
 
 /* ============================================================================
- * Page Size
+ * io_uring Ring Map Offsets
  * ============================================================================ */
-#define PAGE_SIZE 4096 /* x86_64 standard page size */
-#define PAGE_MASK (~(PAGE_SIZE - 1))
-#define PAGE_ALIGN(addr) (((addr) + PAGE_SIZE - 1) & PAGE_MASK)
+#define IORING_OFF_SQ_RING 0ULL
+#define IORING_OFF_CQ_RING 0x8000000ULL
+#define IORING_OFF_SQES 0x10000000ULL
 
 /* ============================================================================
  * io_uring Syscalls

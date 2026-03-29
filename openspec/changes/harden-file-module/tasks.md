@@ -7,7 +7,7 @@
 - [x] 1.5 Update `fileReadMmap.c` to use overflow checks on view_size calculation
 - [x] 1.6 Update `fileWriteMmap.c` to use overflow checks on required_size calculation
 - [x] 1.7 Update `fileAppend.c` to use overflow checks on all size calculations
-- [ ] 1.8 Add overflow check tests in `tests/file_overflow/`
+- [x] 1.8 Add overflow check tests in `tests/file_overflow/`
 
 ## 2. Resource State Tracking
 
@@ -22,13 +22,13 @@
 
 ## 3. io_uring CQE Consumption
 
-- [ ] 3.1 Update `fileReadRing.c` to use `io_uring_for_each_cqe()` macro
-- [ ] 3.2 Update `fileReadRing.c` to call `io_uring_cqe_seen()` after processing
-- [ ] 3.3 Update `fileWriteRing.c` to use `io_uring_for_each_cqe()` macro
-- [ ] 3.4 Update `fileWriteRing.c` to call `io_uring_cqe_seen()` after processing
-- [ ] 3.5 Add handling for partial completions (cqe->res < expected)
-- [ ] 3.6 Add handling for `IORING_CQE_F_MORE` flag
-- [ ] 3.7 Track `bytes_processed` and submit remaining I/O if partial
+- [x] 3.1 Update `fileReadRing.c` to use `io_uring_for_each_cqe()` macro
+- [x] 3.2 Update `fileReadRing.c` to call `io_uring_cqe_seen()` after processing
+- [x] 3.3 Update `fileWriteRing.c` to use `io_uring_for_each_cqe()` macro
+- [x] 3.4 Update `fileWriteRing.c` to call `io_uring_cqe_seen()` after processing
+- [x] 3.5 Add handling for partial completions (cqe->res < expected)
+- [x] 3.6 Add handling for `IORING_CQE_F_MORE` flag
+- [x] 3.7 Track `bytes_processed` and submit remaining I/O if partial
 - [ ] 3.8 Add tests: simulate partial completions, multiple CQEs, errors
 
 ## 4. Lock Timeout
@@ -41,19 +41,19 @@
 - [x] 4.6 Add monotonic time tracking for timeout
 - [x] 4.7 Define `ERROR_RESULT_LOCK_TIMEOUT` error code
 - [x] 4.8 Keep `fun_file_lock()` as wrapper with default timeout
-- [ ] 4.9 Add tests: concurrent lock holders, timeout behavior, deadlock scenario
+- [x] 4.9 Add tests: concurrent lock holders, timeout behavior, deadlock scenario
 
 ## 5. Notification Cleanup
 
 - [x] 5.1 Add `inotify_opened`, `watch_registered` flags to `FileNotificationState`
 - [x] 5.2 Update `fun_register_file_change_notification()` to set flags
-- [ ] 5.3 Update `fun_unregister_file_change_notification()` to:
-  - [ ] 5.3.1 Call `inotify_rm_watch()` if watch registered
-  - [ ] 5.3.2 Call `close()` on inotify_fd if opened
-  - [ ] 5.3.3 Free the state struct
-  - [ ] 5.3.4 Clear flags after each operation
-- [ ] 5.4 Add tests: unregister without register, multiple unregisters
-- [ ] 5.5 Add tests: verify fd closure with `lsof` or `/proc/self/fd`
+- [x] 5.3 Update `fun_unregister_file_change_notification()` to:
+  - [x] 5.3.1 Call `inotify_rm_watch()` if watch registered
+  - [x] 5.3.2 Call `close()` on inotify_fd if opened
+  - [x] 5.3.3 Free the state struct
+  - [x] 5.3.4 Clear flags after each operation
+- [x] 5.4 Add tests: unregister without register, multiple unregisters
+- [x] 5.5 Add tests: verify fd closure with `lsof` or `/proc/self/fd`
 
 ## 6. Buffer Validation
 
@@ -61,17 +61,17 @@
 - [x] 6.2 Update `fileReadRing.c` to check `bytes_to_read <= output.capacity`
 - [x] 6.3 Update `fileRead.c` to check `bytes_to_read <= output.capacity`
 - [x] 6.4 Define `ERROR_RESULT_BUFFER_TOO_SMALL` error code
-- [ ] 6.5 Add tests: buffer smaller than requested, exact size, larger
-- [ ] 6.6 Add tests: zero-capacity buffer, NULL buffer
+- [x] 6.5 Add tests: buffer smaller than requested, exact size, larger
+- [x] 6.6 Add tests: zero-capacity buffer, NULL buffer
 
 ## 7. Runtime Page Size
 
-- [ ] 7.1 Remove `#define PAGE_SIZE 4096` from all files
-- [ ] 7.2 Create `static inline long get_page_size()` helper with caching
-- [ ] 7.3 Add `#include <unistd.h>` for `sysconf()`
-- [ ] 7.4 Update `fileReadMmap.c` to use `get_page_size()`
-- [ ] 7.5 Update `fileWriteMmap.c` to use `get_page_size()`
-- [ ] 7.6 Add fallback to 4096 if `sysconf()` fails
+- [x] 7.1 Remove `#define PAGE_SIZE 4096` from all files
+- [x] 7.2 Create `static inline long get_page_size()` helper with caching
+- [x] 7.3 Add `#include <unistd.h>` for `sysconf()`
+- [x] 7.4 Update `fileReadMmap.c` to use `get_page_size()`
+- [x] 7.5 Update `fileWriteMmap.c` to use `get_page_size()`
+- [x] 7.6 Add fallback to 4096 if `sysconf()` fails
 - [ ] 7.7 Add tests: verify page size matches system, alignment correct
 
 ## 8. Durability Modes
@@ -84,7 +84,7 @@
 - [x] 8.6 Update `fileAppend.c` to call `fsync()` for SYNC/FULL modes
 - [x] 8.7 Add `#include <sys/mman.h>` for `msync()` constants
 - [x] 8.8 Default to `FILE_DURABILITY_ASYNC` for backward compatibility
-- [ ] 8.9 Add tests: crash simulation, verify data persistence per mode
+- [x] 8.9 Add tests: crash simulation, verify data persistence per mode
 
 ## 9. Syscall Headers
 
@@ -104,10 +104,10 @@
 
 ## 11. Test Coverage Expansion
 
-- [ ] 11.1 Create `tests/file_overflow/` for integer overflow tests
-- [ ] 11.2 Create `tests/file_concurrent/` for concurrent access tests
+- [x] 11.1 Create `tests/file_overflow/` for integer overflow tests
+- [x] 11.2 Create `tests/file_concurrent/` for concurrent access tests
 - [ ] 11.3 Create `tests/file_large/` for >2GB file tests
-- [ ] 11.4 Create `tests/file_durability/` for fsync/msync tests
+- [x] 11.4 Create `tests/file_durability/` for fsync/msync tests
 - [ ] 11.5 Add tests: permission denied scenarios
 - [ ] 11.6 Add tests: disk full conditions
 - [ ] 11.7 Add tests: interrupted syscalls (EINTR)
@@ -117,18 +117,18 @@
 
 ## 12. Documentation
 
-- [ ] 12.1 Update header file comments with durability modes and guarantees
-- [ ] 12.2 Document lock timeout behavior and error codes
-- [ ] 12.3 Add migration guide for breaking changes
-- [ ] 12.4 Update README.md with new robustness features
-- [ ] 12.5 Add example code for each durability mode
+- [x] 12.1 Update header file comments with durability modes and guarantees
+- [x] 12.2 Document lock timeout behavior and error codes
+- [x] 12.3 Add migration guide for breaking changes
+- [x] 12.4 Update README.md with new robustness features
+- [x] 12.5 Add example code for each durability mode
 
 ## 13. Validation
 
 - [ ] 13.1 Run `openspec validate harden-file-module`
 - [ ] 13.2 Run `openspec validate --specs` for this change
 - [x] 13.3 Run full test suite: `./run-tests-linux-amd64.sh`
-- [ ] 13.4 Run code format: `./code-format.sh`
-- [ ] 13.5 Performance benchmark: verify <1% overhead
-- [ ] 13.6 Fuzz test: run with AFL or libFuzzer for 24 hours
-- [ ] 13.7 Code review: security-focused review of all changes
+- [x] 13.4 Run code format: `./code-format.sh` (re-run after documentation changes)
+- [-] 13.5 Performance benchmark: verify <1% overhead
+- [-] 13.6 Fuzz test: run with AFL or libFuzzer for 24 hours
+- [-] 13.7 Code review: security-focused review of all changes

@@ -1,6 +1,7 @@
 #include "fileWrite.h"
 #include "fileAdaptive.h"
 #include "syscall_nums.h"
+#include "page_size.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -143,7 +144,7 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 	}
 
 	if (!state->mmap_valid) {
-		uint64_t granularity = PAGE_SIZE;
+		uint64_t granularity = get_page_size();
 		state->adjusted_offset =
 			(state->parameters.offset / granularity) * granularity;
 		uint64_t intra_page_offset =

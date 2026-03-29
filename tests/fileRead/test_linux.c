@@ -129,6 +129,88 @@ static bool test_fun_read_file_in_memory_null_pointer(void)
 	return success;
 }
 
+/* -----------------------------------------------------------------------
+ * Buffer validation tests (tasks 6.5, 6.6)
+ * --------------------------------------------------------------------- */
+
+/* Read exactly the right number of bytes — should succeed */
+static bool test_fun_read_file_exact_buffer(void)
+{
+	const char *content = "ExactFit";
+	size_t len = strlen(content);
+
+	if (!create_test_file(TEST_FILENAME, content, len))
+		return false;
+
+	MemoryResult buf = fun_memory_allocate(len);
+	if (fun_error_is_error(buf.error)) {
+		unlink(TEST_FILENAME);
+		return false;
+	}
+
+	Read params = { .file_path = TEST_FILENAME,
+					.output = buf.value,
+					.bytes_to_read = len,
+					.offset = 0,
+					.mode = FILE_MODE_MMAP };
+
+	AsyncResult result = fun_read_file_in_memory(params);
+	fun_async_await(&result, -1);
+
+	bool success = (result.status == ASYNC_COMPLETED) &&
+				   fun_error_is_ok(result.error) &&
+				   memcmp(buf.value, content, len) == 0;
+
+	fun_memory_free(&buf.value);
+	unlink(TEST_FILENAME);
+
+	if (success)
+		printf("%s test_fun_read_file_exact_buffer\n", GREEN_CHECK);
+	return success;
+}
+
+/*
+ * Request more bytes than the buffer can hold — should return an error.
+ *
+ * fun_memory_size() returns 4096 for any allocation.  The buffer-too-small
+ * check in fileRead.c compares bytes_to_read > fun_memory_size(), so we
+ * must request more than 4096 bytes to trigger it.
+ */
+static bool test_fun_read_file_buffer_too_small(void)
+{
+	const char *content = "TooSmall";
+	size_t file_len = strlen(content);
+
+	if (!create_test_file(TEST_FILENAME, content, file_len))
+		return false;
+
+	MemoryResult buf = fun_memory_allocate(4096);
+	if (fun_error_is_error(buf.error)) {
+		unlink(TEST_FILENAME);
+		return false;
+	}
+
+	Read params = { .file_path = TEST_FILENAME,
+					.output = buf.value,
+					.bytes_to_read =
+						5000, /* > 4096 reported by fun_memory_size */
+					.offset = 0,
+					.mode = FILE_MODE_MMAP };
+
+	AsyncResult result = fun_read_file_in_memory(params);
+	fun_async_await(&result, -1);
+
+	bool success = (result.status == ASYNC_ERROR) &&
+				   fun_error_is_error(result.error);
+
+	fun_memory_free(&buf.value);
+	unlink(TEST_FILENAME);
+
+	if (success)
+		printf("%s test_fun_read_file_buffer_too_small\n", GREEN_CHECK);
+	return success;
+}
+
 int main(void)
 {
 	printf("Running file read module tests:\n");
@@ -139,6 +221,10 @@ int main(void)
 	if (!test_fun_read_file_in_memory_offset())
 		failures++;
 	if (!test_fun_read_file_in_memory_null_pointer())
+		failures++;
+	if (!test_fun_read_file_exact_buffer())
+		failures++;
+	if (!test_fun_read_file_buffer_too_small())
 		failures++;
 
 	if (failures == 0) {
