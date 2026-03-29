@@ -114,7 +114,8 @@ AsyncStatus poll_mmap(AsyncResult *result)
 			final_status = ASYNC_ERROR;
 			goto cleanup;
 		}
-		uint64_t view_size = state->parameters.bytes_to_read + intra_page_offset;
+		uint64_t view_size =
+			state->parameters.bytes_to_read + intra_page_offset;
 
 		void *mapped = sys_mmap(NULL, view_size, PROT_READ, MAP_PRIVATE,
 								state->file_descriptor,

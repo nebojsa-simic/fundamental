@@ -170,8 +170,7 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 			goto cleanup;
 		}
 		uint64_t append_offset = file_stat.st_size;
-		if (state->parameters.bytes_to_append >
-			UINT64_MAX - append_offset) {
+		if (state->parameters.bytes_to_append > UINT64_MAX - append_offset) {
 			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
 			final_status = ASYNC_ERROR;
 			goto cleanup;

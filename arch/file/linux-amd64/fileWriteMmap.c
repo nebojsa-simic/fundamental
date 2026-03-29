@@ -149,8 +149,7 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		uint64_t intra_page_offset =
 			state->parameters.offset - state->adjusted_offset;
 
-		if (state->parameters.bytes_to_write >
-			UINT64_MAX - intra_page_offset) {
+		if (state->parameters.bytes_to_write > UINT64_MAX - intra_page_offset) {
 			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
 			final_status = ASYNC_ERROR;
 			goto cleanup;

@@ -16,8 +16,8 @@ void fun_arch_set_envp(const char **envp)
 }
 
 /* Forward declaration */
-int fun_platform_read_text_file(const char *path, char *buffer,
-								size_t max_size, size_t *out_bytes_read);
+int fun_platform_read_text_file(const char *path, char *buffer, size_t max_size,
+								size_t *out_bytes_read);
 
 /* __environ is set by libc and updated by setenv() - weak reference */
 extern char **__environ __attribute__((weak));
