@@ -1,23 +1,10 @@
 #include "fileWrite.h"
 #include "fileAdaptive.h"
+#include "syscall_nums.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
-#define SYS_io_uring_setup 425
-#define SYS_io_uring_enter 426
-#define SYS_open 2
-#define SYS_close 3
-#define SYS_mmap 9
-#define SYS_munmap 11
-
-#define IORING_OP_WRITEV 2
-#define IORING_ENTER_GETEVENTS 0x01
-
-#define O_WRONLY 1
-#define O_CREAT 0100
-#define O_TRUNC 01000
 
 struct io_uring_sqe {
 	uint8_t opcode;

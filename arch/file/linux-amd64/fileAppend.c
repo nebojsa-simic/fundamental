@@ -2,38 +2,14 @@
 #include "fileAdaptive.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/error/error.h"
+#include "syscall_nums.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
-#include <stddef.h>
-
 typedef unsigned long size_t;
 typedef long off_t;
-
-#define SYS_open 2
-#define SYS_close 3
-#define SYS_fstat 5
-#define SYS_mmap 9
-#define SYS_munmap 11
-#define SYS_ftruncate 77
-#define SYS_io_uring_setup 425
-#define SYS_io_uring_enter 426
-
-#define O_RDWR 2
-#define O_WRONLY 1
-#define O_CREAT 0100
-#define O_APPEND 02000
-
-#define PROT_READ 0x1
-#define PROT_WRITE 0x2
-#define MAP_SHARED 0x1
-
-#define IORING_OP_WRITEV 2
-#define IORING_ENTER_GETEVENTS 0x01
-
-#define PAGE_SIZE 4096
 
 struct stat {
 	unsigned long st_dev;

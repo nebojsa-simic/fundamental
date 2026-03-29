@@ -1,29 +1,13 @@
 #include "fileWrite.h"
 #include "fileAdaptive.h"
+#include "syscall_nums.h"
 
 #include <stdint.h>
-#include <stddef.h>
-
 #include <stddef.h>
 
 typedef long ssize_t;
 typedef unsigned long size_t;
 typedef long off_t;
-
-#define SYS_write 1
-#define SYS_open 2
-#define SYS_close 3
-#define SYS_fstat 5
-#define SYS_mmap 9
-#define SYS_munmap 11
-#define SYS_ftruncate 77
-
-#define O_RDWR 2
-#define O_CREAT 0100
-
-#define PROT_READ 0x1
-#define PROT_WRITE 0x2
-#define MAP_SHARED 0x1
 
 struct stat {
 	unsigned long st_dev;
@@ -44,8 +28,6 @@ struct stat {
 	unsigned long st_ctime_nsec;
 	unsigned long __unused[3];
 };
-
-#define PAGE_SIZE 4096
 
 static inline long syscall1(long n, long a1)
 {
@@ -116,14 +98,16 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 	uint64_t bytes = state->parameters.bytes_to_write;
 	AsyncStatus final_status = ASYNC_COMPLETED;
 
-	if (state->file_descriptor < 0) {
+	if (!state->fd_valid) {
 		int fd = (int)syscall3(SYS_open, (long)state->parameters.file_path,
 							   O_RDWR | O_CREAT, 0644);
 		if (fd < 0) {
 			result->error = fun_error_result(-fd, "Failed to open/create file");
-			return ASYNC_ERROR;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
 		}
 		state->file_descriptor = fd;
+		state->fd_valid = true;
 		return ASYNC_PENDING;
 	}
 
@@ -136,6 +120,13 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		}
 
 		state->original_file_size = file_stat.st_size;
+
+		if (state->parameters.offset >
+			UINT64_MAX - state->parameters.bytes_to_write) {
+			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
+		}
 		uint64_t required_size =
 			state->parameters.offset + state->parameters.bytes_to_write;
 
@@ -151,13 +142,21 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
-	if (!state->mapped_address) {
+	if (!state->mmap_valid) {
 		uint64_t granularity = PAGE_SIZE;
 		state->adjusted_offset =
 			(state->parameters.offset / granularity) * granularity;
+		uint64_t intra_page_offset =
+			state->parameters.offset - state->adjusted_offset;
+
+		if (state->parameters.bytes_to_write >
+			UINT64_MAX - intra_page_offset) {
+			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
+		}
 		uint64_t view_size =
-			state->parameters.bytes_to_write +
-			(state->parameters.offset - state->adjusted_offset);
+			state->parameters.bytes_to_write + intra_page_offset;
 
 		void *mapped = sys_mmap(NULL, view_size, PROT_READ | PROT_WRITE,
 								MAP_SHARED, state->file_descriptor,
@@ -169,6 +168,7 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 			goto cleanup;
 		}
 		state->mapped_address = mapped;
+		state->mmap_valid = true;
 		return ASYNC_PENDING;
 	}
 
@@ -178,13 +178,13 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 					state->parameters.bytes_to_write);
 
 cleanup:
-	if (state->mapped_address && state->mapped_address != (void *)-1) {
+	if (state->mmap_valid) {
 		uint64_t view_size =
 			state->parameters.bytes_to_write +
 			(state->parameters.offset - state->adjusted_offset);
 		sys_munmap(state->mapped_address, view_size);
 	}
-	if (state->file_descriptor >= 0)
+	if (state->fd_valid)
 		syscall1(SYS_close, state->file_descriptor);
 	fun_memory_free((Memory *)&state);
 	if (final_status == ASYNC_COMPLETED)

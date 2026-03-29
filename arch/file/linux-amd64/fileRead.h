@@ -8,7 +8,9 @@
 typedef struct {
 	Read parameters;
 	int file_descriptor;
+	bool fd_valid;
 	void *mapped_address;
+	bool mmap_valid;
 	uint64_t adjusted_offset;
 } MMapState;
 

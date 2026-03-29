@@ -1,20 +1,10 @@
 #include "fundamental/file/file.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/error/error.h"
+#include "syscall_nums.h"
 
 #include <stdint.h>
 #include <stddef.h>
-
-#include <stddef.h>
-
-#define SYS_open 2
-#define SYS_close 3
-#define SYS_flock 73
-
-#define LOCK_SH 1
-#define LOCK_EX 2
-#define LOCK_UN 8
-#define LOCK_NB 4
 
 static inline long syscall1(long n, long a1)
 {
@@ -35,10 +25,6 @@ static inline long syscall2(long n, long a1, long a2)
 						 : "rcx", "r11", "memory");
 	return ret;
 }
-
-#define O_RDONLY 0
-#define O_WRONLY 1
-#define O_RDWR 2
 
 ErrorResult fun_lock_file(String filePath, FileLockHandle *outLockHandle)
 {
