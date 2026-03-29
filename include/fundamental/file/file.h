@@ -108,9 +108,16 @@ typedef struct FileLockHandle {
 } FileLockHandle;
 
 /*
- * Lock a file for exclusive access.
+ * Lock a file for exclusive access (blocks up to 5 seconds by default).
  */
 ErrorResult fun_lock_file(String filePath, FileLockHandle *outLockHandle);
+
+/*
+ * Lock a file for exclusive access with an explicit timeout in milliseconds.
+ * Returns ERROR_RESULT_LOCK_TIMEOUT if the lock cannot be acquired in time.
+ */
+ErrorResult fun_file_lock_with_timeout(String filePath, uint32_t timeout_ms,
+									   FileLockHandle *outLockHandle);
 
 /*
  * Unlock a previously locked file.

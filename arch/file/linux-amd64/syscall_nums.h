@@ -18,6 +18,7 @@
 #define SYS_open 2
 #define SYS_close 3
 #define SYS_fstat 5
+#define SYS_nanosleep 35
 #define SYS_lseek 62
 #define SYS_mmap 9
 #define SYS_mprotect 10
@@ -213,5 +214,18 @@
 #define IN_UNMOUNT 0x00002000
 #define IN_Q_OVERFLOW 0x00004000
 #define IN_IGNORED 0x00008000
+
+/* ============================================================================
+ * Time Syscalls
+ * ============================================================================ */
+#define SYS_clock_gettime 228
+#define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 1
+
+/* ============================================================================
+ * Error Numbers
+ * ============================================================================ */
+#define EAGAIN 11
+#define EWOULDBLOCK 11
 
 #endif /* FUNDAMENTAL_FILE_SYSCALL_NUMS_LINUX_AMD64_H */

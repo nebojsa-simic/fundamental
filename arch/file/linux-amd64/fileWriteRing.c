@@ -172,8 +172,12 @@ static AsyncStatus poll_ring_write(AsyncResult *result)
 		return ASYNC_PENDING;
 	}
 
+	if (state->cqe_consumed)
+		goto cleanup;
+
 	struct io_uring_cqe *cqe = (struct io_uring_cqe *)state->cq_ring;
 	if (cqe->user_data == 1) {
+		state->cqe_consumed = true;
 		if (cqe->res < 0) {
 			result->error =
 				fun_error_result(-cqe->res, "io_uring write failed");

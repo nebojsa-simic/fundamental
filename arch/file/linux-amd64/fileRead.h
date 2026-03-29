@@ -25,6 +25,7 @@ typedef struct {
 	bool ring_initialized;
 	bool file_opened;
 	bool io_submitted;
+	bool cqe_consumed;
 	void *mapped_buffer;
 } RingReadState;
 
