@@ -178,13 +178,12 @@ static AsyncStatus poll_io_ring(AsyncResult *result)
 	}
 
 cleanup:
-	if (state->cq_ring && state->cq_ring != (void *)-1)
+	if (state->ring_initialized) {
 		syscall2(SYS_munmap, (long)state->cq_ring, sizeof(struct io_uring_cqe));
-	if (state->sq_ring && state->sq_ring != (void *)-1)
 		syscall2(SYS_munmap, (long)state->sq_ring, sizeof(struct io_uring_sqe));
-	if (state->ring_fd >= 0)
 		syscall1(SYS_close, state->ring_fd);
-	if (state->file_fd >= 0)
+	}
+	if (state->file_opened)
 		syscall1(SYS_close, state->file_fd);
 	fun_memory_free((Memory *)&state);
 	if (final_status == ASYNC_COMPLETED)

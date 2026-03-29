@@ -170,6 +170,12 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 			goto cleanup;
 		}
 		uint64_t append_offset = file_stat.st_size;
+		if (state->parameters.bytes_to_append >
+			UINT64_MAX - append_offset) {
+			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
+		}
 		uint64_t new_size = append_offset + state->parameters.bytes_to_append;
 		if (syscall2(SYS_ftruncate, state->file_descriptor, (long)new_size) <
 			0) {
@@ -179,8 +185,15 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 		}
 		/* store alignment info for the mmap step */
 		state->aligned_offset = (append_offset / PAGE_SIZE) * PAGE_SIZE;
-		state->view_size = state->parameters.bytes_to_append +
-						   (append_offset - state->aligned_offset);
+		uint64_t intra_page_offset = append_offset - state->aligned_offset;
+		if (state->parameters.bytes_to_append >
+			UINT64_MAX - intra_page_offset) {
+			result->error = ERROR_RESULT_INTEGER_OVERFLOW;
+			final_status = ASYNC_ERROR;
+			goto cleanup;
+		}
+		state->view_size =
+			state->parameters.bytes_to_append + intra_page_offset;
 		state->file_extended = true;
 		return ASYNC_PENDING;
 	}
@@ -208,10 +221,10 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 					state->parameters.bytes_to_append);
 
 cleanup:
-	if (state->mapped_address && state->mapped_address != (void *)-1)
+	if (state->mapped)
 		syscall2(SYS_munmap, (long)state->mapped_address,
 				 (long)state->view_size);
-	if (state->file_descriptor >= 0)
+	if (state->file_opened)
 		syscall1(SYS_close, state->file_descriptor);
 	fun_memory_free((Memory *)&state);
 	if (final_status == ASYNC_COMPLETED)
@@ -335,13 +348,12 @@ static AsyncStatus poll_ring_append(AsyncResult *result)
 	}
 
 cleanup:
-	if (state->cq_ring && state->cq_ring != (void *)-1)
+	if (state->ring_initialized) {
 		syscall2(SYS_munmap, (long)state->cq_ring, sizeof(struct io_uring_cqe));
-	if (state->sq_ring && state->sq_ring != (void *)-1)
 		syscall2(SYS_munmap, (long)state->sq_ring, sizeof(struct io_uring_sqe));
-	if (state->ring_fd >= 0)
 		syscall1(SYS_close, state->ring_fd);
-	if (state->file_fd >= 0)
+	}
+	if (state->file_opened)
 		syscall1(SYS_close, state->file_fd);
 	fun_memory_free((Memory *)&state);
 	if (final_status == ASYNC_COMPLETED)

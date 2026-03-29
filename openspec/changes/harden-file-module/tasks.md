@@ -6,7 +6,7 @@
 - [ ] 1.4 Implement `check_overflow_mul(uint64_t a, uint64_t b, uint64_t *result)`
 - [x] 1.5 Update `fileReadMmap.c` to use overflow checks on view_size calculation
 - [x] 1.6 Update `fileWriteMmap.c` to use overflow checks on required_size calculation
-- [ ] 1.7 Update `fileAppend.c` to use overflow checks on all size calculations
+- [x] 1.7 Update `fileAppend.c` to use overflow checks on all size calculations
 - [ ] 1.8 Add overflow check tests in `tests/file_overflow/`
 
 ## 2. Resource State Tracking
@@ -16,8 +16,8 @@
 - [ ] 2.3 Add `cqe_consumed` flag to ring-based state structs
 - [x] 2.4 Update `fileReadMmap.c` cleanup to check flags before close/unmap
 - [x] 2.5 Update `fileWriteMmap.c` cleanup to check flags before close/unmap
-- [ ] 2.6 Update `fileReadRing.c` cleanup to check flags
-- [ ] 2.7 Update `fileWriteRing.c` cleanup to check flags
+- [x] 2.6 Update `fileReadRing.c` cleanup to check flags
+- [x] 2.7 Update `fileWriteRing.c` cleanup to check flags
 - [ ] 2.8 Add tests: force error at each allocation point, verify no double-free
 
 ## 3. io_uring CQE Consumption
