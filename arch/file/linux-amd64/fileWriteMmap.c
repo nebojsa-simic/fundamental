@@ -176,6 +176,22 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 	fun_memory_copy(state->parameters.input, write_location,
 					state->parameters.bytes_to_write);
 
+	if (state->parameters.durability_mode == FILE_DURABILITY_SYNC) {
+		uint64_t view_size =
+			state->parameters.bytes_to_write +
+			(state->parameters.offset - state->adjusted_offset);
+		if (syscall3(SYS_msync, (long)state->mapped_address, (long)view_size,
+					 MS_SYNC) < 0) {
+			result->error = fun_error_result(1, "msync failed");
+			final_status = ASYNC_ERROR;
+		}
+	} else if (state->parameters.durability_mode == FILE_DURABILITY_FULL) {
+		if (syscall1(SYS_fsync, state->file_descriptor) < 0) {
+			result->error = fun_error_result(1, "fsync failed");
+			final_status = ASYNC_ERROR;
+		}
+	}
+
 cleanup:
 	if (state->mmap_valid) {
 		uint64_t view_size =

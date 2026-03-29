@@ -15,6 +15,23 @@ typedef enum {
 	FILE_MODE_RING_BASED,
 } FileMode;
 
+/*
+ * Controls how writes are flushed to storage.
+ *
+ * FILE_DURABILITY_ASYNC  - Default. Data lands in page cache; fastest but
+ *                          may be lost on crash before OS flushes to disk.
+ * FILE_DURABILITY_SYNC   - Calls msync(MS_SYNC) after mmap write, or
+ *                          fsync() after append. Data on disk when call
+ *                          returns; moderate overhead.
+ * FILE_DURABILITY_FULL   - Calls fsync() after write. Data and metadata
+ *                          guaranteed on disk; slowest but safest.
+ */
+typedef enum {
+	FILE_DURABILITY_ASYNC = 0, /* default - page cache only */
+	FILE_DURABILITY_SYNC, /* msync/fsync after write */
+	FILE_DURABILITY_FULL, /* fsync after write (data + metadata) */
+} FileDurabilityMode;
+
 // Per-handle EMA state for adaptive mode switching.
 // Zero-initialise before first use; pass NULL to disable tracking.
 typedef struct {
@@ -38,6 +55,7 @@ typedef struct Write {
 	uint64_t bytes_to_write; // REQUIRED - Exact bytes to write
 	uint64_t offset; // OPTIONAL - Default 0
 	FileMode mode; // OPTIONAL - Default AUTO
+	FileDurabilityMode durability_mode; // OPTIONAL - Default ASYNC
 	FileAdaptiveState *adaptive; // OPTIONAL - Pass to enable adaptive switching
 } Write;
 
@@ -46,6 +64,7 @@ typedef struct Append {
 	Memory input; // REQUIRED - Data to append
 	uint64_t bytes_to_append; // REQUIRED - Exact bytes to append
 	FileMode mode; // OPTIONAL - Default AUTO
+	FileDurabilityMode durability_mode; // OPTIONAL - Default ASYNC
 	FileAdaptiveState *adaptive; // OPTIONAL - Pass to enable adaptive switching
 } Append;
 

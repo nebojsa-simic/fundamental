@@ -23,6 +23,7 @@
 #define SYS_mmap 9
 #define SYS_mprotect 10
 #define SYS_munmap 11
+#define SYS_msync 26
 #define SYS_fcntl 72
 #define SYS_flock 73
 #define SYS_fsync 74

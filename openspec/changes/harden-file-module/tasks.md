@@ -76,14 +76,14 @@
 
 ## 8. Durability Modes
 
-- [ ] 8.1 Define `FileDurabilityMode` enum (ASYNC, SYNC, FULL)
-- [ ] 8.2 Add `durability_mode` field to `FileWriteParameters`
-- [ ] 8.3 Add `durability_mode` field to `FileAppendParameters`
-- [ ] 8.4 Update `fileWriteMmap.c` to call `msync(MS_SYNC)` for SYNC mode
-- [ ] 8.5 Update `fileWriteMmap.c` to call `fsync()` for FULL mode
-- [ ] 8.6 Update `fileAppend.c` to call `fsync()` for SYNC/FULL modes
-- [ ] 8.7 Add `#include <sys/mman.h>` for `msync()` constants
-- [ ] 8.8 Default to `FILE_DURABILITY_ASYNC` for backward compatibility
+- [x] 8.1 Define `FileDurabilityMode` enum (ASYNC, SYNC, FULL)
+- [x] 8.2 Add `durability_mode` field to `FileWriteParameters`
+- [x] 8.3 Add `durability_mode` field to `FileAppendParameters`
+- [x] 8.4 Update `fileWriteMmap.c` to call `msync(MS_SYNC)` for SYNC mode
+- [x] 8.5 Update `fileWriteMmap.c` to call `fsync()` for FULL mode
+- [x] 8.6 Update `fileAppend.c` to call `fsync()` for SYNC/FULL modes
+- [x] 8.7 Add `#include <sys/mman.h>` for `msync()` constants
+- [x] 8.8 Default to `FILE_DURABILITY_ASYNC` for backward compatibility
 - [ ] 8.9 Add tests: crash simulation, verify data persistence per mode
 
 ## 9. Syscall Headers

@@ -219,6 +219,14 @@ static AsyncStatus poll_mmap_append(AsyncResult *result)
 	fun_memory_copy(state->parameters.input, write_ptr,
 					state->parameters.bytes_to_append);
 
+	if (state->parameters.durability_mode == FILE_DURABILITY_SYNC ||
+		state->parameters.durability_mode == FILE_DURABILITY_FULL) {
+		if (syscall1(SYS_fsync, state->file_descriptor) < 0) {
+			result->error = fun_error_result(1, "fsync failed");
+			final_status = ASYNC_ERROR;
+		}
+	}
+
 cleanup:
 	if (state->mapped)
 		syscall2(SYS_munmap, (long)state->mapped_address,
