@@ -4,15 +4,62 @@
 
 Add configurable timeout to file lock acquisition to prevent indefinite blocking and deadlocks.
 
-## Requirements
+## ADDED Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| LT-01 | Lock operations accept `timeout_ms` parameter | MUST |
-| LT-02 | Use non-blocking lock with retry loop | MUST |
-| LT-03 | Return `ERROR_RESULT_LOCK_TIMEOUT` on timeout | MUST |
-| LT-04 | Default timeout of 5000ms if not specified | SHOULD |
-| LT-05 | Exponential backoff between retries | SHOULD |
+### Requirement: Timeout Parameter
+
+Lock operations SHALL accept a `timeout_ms` parameter.
+
+#### Scenario: Custom timeout
+- **WHEN** `fun_acquire_file_lock` is called with `timeout_ms`
+- **THEN** lock acquisition waits up to `timeout_ms` milliseconds
+- **THEN** returns error if lock not acquired within timeout
+
+#### Scenario: Default timeout
+- **WHEN** `fun_acquire_file_lock` is called without explicit timeout
+- **THEN** default timeout of 5000ms is used
+- **THEN** behavior is consistent with explicit timeout
+
+### Requirement: Non-Blocking Lock with Retry
+
+Lock acquisition SHALL use non-blocking lock with retry loop.
+
+#### Scenario: Non-blocking attempt
+- **WHEN** attempting to acquire lock
+- **THEN** first attempt uses `LOCK_EX | LOCK_NB`
+- **THEN** returns immediately if lock unavailable
+
+#### Scenario: Retry loop
+- **WHEN** non-blocking lock fails with EAGAIN/EWOULDBLOCK
+- **THEN** retry after waiting `LOCK_RETRY_INTERVAL_MS`
+- **THEN** continue until timeout expires or lock acquired
+
+### Requirement: Timeout Error
+
+Timeout SHALL return `ERROR_RESULT_LOCK_TIMEOUT`.
+
+#### Scenario: Timeout expires
+- **WHEN** timeout_ms elapses without acquiring lock
+- **THEN** async result status is `ASYNC_ERROR`
+- **THEN** error code is `ERROR_RESULT_LOCK_TIMEOUT`
+
+### Requirement: Monotonic Time Tracking
+
+Timeout SHALL use monotonic time source.
+
+#### Scenario: Monotonic clock
+- **WHEN** tracking elapsed time
+- **THEN** `clock_gettime(CLOCK_MONOTONIC)` is used
+- **THEN** system clock changes do not affect timeout
+
+### Requirement: Error Code Definition
+
+The error code `ERROR_RESULT_LOCK_TIMEOUT` SHALL be defined.
+
+#### Scenario: Lock timeout error
+- **WHEN** lock acquisition times out
+- **THEN** error code `ERROR_RESULT_LOCK_TIMEOUT` is returned
+- **THEN** error code value is 15 (as defined in error.h)
 
 ## Implementation
 

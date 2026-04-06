@@ -18,7 +18,7 @@
 - [x] 2.5 Update `fileWriteMmap.c` cleanup to check flags before close/unmap
 - [x] 2.6 Update `fileReadRing.c` cleanup to check flags
 - [x] 2.7 Update `fileWriteRing.c` cleanup to check flags
-- [ ] 2.8 Add tests: force error at each allocation point, verify no double-free
+- [~] 2.8 Add tests: force error at each allocation point, verify no double-free
 
 ## 3. io_uring CQE Consumption
 
@@ -29,7 +29,7 @@
 - [x] 3.5 Add handling for partial completions (cqe->res < expected)
 - [x] 3.6 Add handling for `IORING_CQE_F_MORE` flag
 - [x] 3.7 Track `bytes_processed` and submit remaining I/O if partial
-- [ ] 3.8 Add tests: simulate partial completions, multiple CQEs, errors
+- [~] 3.8 Add tests: simulate partial completions, multiple CQEs, errors
 
 ## 4. Lock Timeout
 
@@ -72,7 +72,7 @@
 - [x] 7.4 Update `fileReadMmap.c` to use `get_page_size()`
 - [x] 7.5 Update `fileWriteMmap.c` to use `get_page_size()`
 - [x] 7.6 Add fallback to 4096 if `sysconf()` fails
-- [ ] 7.7 Add tests: verify page size matches system, alignment correct
+- [x] 7.7 Add tests: verify page size matches system, alignment correct
 
 ## 8. Durability Modes
 
@@ -106,14 +106,14 @@
 
 - [x] 11.1 Create `tests/file_overflow/` for integer overflow tests
 - [x] 11.2 Create `tests/file_concurrent/` for concurrent access tests
-- [ ] 11.3 Create `tests/file_large/` for >2GB file tests
+- [x] 11.3 Create `tests/file_large/` for >2GB file tests
 - [x] 11.4 Create `tests/file_durability/` for fsync/msync tests
-- [ ] 11.5 Add tests: permission denied scenarios
-- [ ] 11.6 Add tests: disk full conditions
-- [ ] 11.7 Add tests: interrupted syscalls (EINTR)
-- [ ] 11.8 Add tests: symlink following behavior
-- [ ] 11.9 Add tests: special files (devices, sockets, FIFOs)
-- [ ] 11.10 Run full test suite on Linux, verify all pass
+- [x] 11.5 Add tests: permission denied scenarios
+- [~] 11.6 Add tests: disk full conditions
+- [~] 11.7 Add tests: interrupted syscalls (EINTR)
+- [~] 11.8 Add tests: symlink following behavior
+- [~] 11.9 Add tests: special files (devices, sockets, FIFOs)
+- [x] 11.10 Run full test suite on Linux, verify all pass
 
 ## 12. Documentation
 
@@ -125,8 +125,8 @@
 
 ## 13. Validation
 
-- [ ] 13.1 Run `openspec validate harden-file-module`
-- [ ] 13.2 Run `openspec validate --specs` for this change
+- [x] 13.1 Run `openspec validate harden-file-module`
+- [x] 13.2 Run `openspec validate --specs` for this change
 - [x] 13.3 Run full test suite: `./run-tests-linux-amd64.sh`
 - [x] 13.4 Run code format: `./code-format.sh` (re-run after documentation changes)
 - [-] 13.5 Performance benchmark: verify <1% overhead

@@ -4,16 +4,66 @@
 
 Fix io_uring completion queue entry (CQE) handling to properly consume completions using `io_uring_cqe_seen()` and handle partial completions.
 
-## Requirements
+## ADDED Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| IU-01 | Track CQ head position in state | MUST |
-| IU-02 | Use `io_uring_for_each_cqe` macro for iteration | MUST |
-| IU-03 | Call `io_uring_cqe_seen` after processing | MUST |
-| IU-04 | Handle partial read/write completions | MUST |
-| IU-05 | Handle `IORING_CQE_F_MORE` flag | SHOULD |
-| IU-06 | Handle CQE wraparound correctly | MUST |
+### Requirement: CQ Head Position Tracking
+
+The state SHALL track the completion queue head position.
+
+#### Scenario: Track cq_head
+- **WHEN** io_uring operation is submitted
+- **THEN** `cq_head` is stored in state struct
+- **THEN** `cq_head` is used with `io_uring_for_each_cqe` macro
+
+### Requirement: CQE Iteration Macro
+
+CQE iteration SHALL use `io_uring_for_each_cqe` macro.
+
+#### Scenario: Iterate CQEs
+- **WHEN** polling for completions
+- **THEN** `io_uring_for_each_cqe(&ring, head, cqe)` is used
+- **THEN** iteration starts from stored `cq_head` position
+
+### Requirement: Mark CQE as Seen
+
+After processing each CQE, `io_uring_cqe_seen` SHALL be called.
+
+#### Scenario: Mark processed CQE
+- **WHEN** CQE is processed
+- **THEN** `io_uring_cqe_seen(&ring, cqe)` is called
+- **THEN** CQ head is advanced
+
+### Requirement: Partial Completion Handling
+
+Partial read/write completions SHALL be handled correctly.
+
+#### Scenario: Partial read
+- **WHEN** `cqe->res < expected_bytes`
+- **THEN** `bytes_processed` is incremented by `cqe->res`
+- **THEN** remaining I/O is submitted if needed
+
+#### Scenario: Track bytes completed
+- **WHEN** multiple CQEs arrive
+- **THEN** `bytes_completed` accumulates all `cqe->res` values
+- **THEN** operation completes when `bytes_completed >= bytes_expected`
+
+### Requirement: IORING_CQE_F_MORE Flag
+
+The `IORING_CQE_F_MORE` flag SHALL be handled.
+
+#### Scenario: MORE flag set
+- **WHEN** `cqe->flags & IORING_CQE_F_MORE` is true
+- **THEN** more CQEs are expected for this operation
+- **THEN** operation does not complete until MORE is cleared
+
+### Requirement: CQE Wraparound
+
+CQE wraparound SHALL be handled correctly.
+
+#### Scenario: Ring buffer wrap
+- **WHEN** CQ tail reaches ring size
+- **THEN** wraparound to index 0 is handled
+- **THEN** `io_uring_for_each_cqe` macro handles wrap correctly
 
 ## Implementation
 

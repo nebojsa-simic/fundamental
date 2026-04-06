@@ -4,15 +4,77 @@
 
 Add explicit validity flags for each resource (file descriptor, mapped address, etc.) to prevent double-free and double-close errors in error paths.
 
-## Requirements
+## ADDED Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| RS-01 | Each resource has a `_valid` boolean flag | MUST |
-| RS-02 | Cleanup functions check `_valid` before free/close | MUST |
-| RS-03 | Set `_valid = true` immediately after successful allocation | MUST |
-| RS-04 | Set `_valid = false` after successful free/close | MUST |
-| RS-05 | Initialize all `_valid` flags to false in state init | MUST |
+### Requirement: Resource Validity Flags
+
+Each resource SHALL have a `_valid` boolean flag to track its state.
+
+#### Scenario: File descriptor validity
+- **WHEN** file descriptor is allocated successfully
+- **THEN** `file_descriptor_valid` is set to `true`
+- **THEN** cleanup checks flag before calling `close()`
+
+#### Scenario: Mapped address validity
+- **WHEN** memory mapping is created successfully
+- **THEN** `mapped_address_valid` is set to `true`
+- **THEN** cleanup checks flag before calling `munmap()`
+
+### Requirement: Cleanup Flag Checks
+
+Cleanup functions SHALL check `_valid` flags before freeing resources.
+
+#### Scenario: Check before close
+- **WHEN** cleanup function is called
+- **THEN** `file_descriptor_valid` is checked
+- **THEN** `close()` is only called if flag is `true`
+
+#### Scenario: Check before unmap
+- **WHEN** cleanup function is called
+- **THEN** `mapped_address_valid` is checked
+- **THEN** `munmap()` is only called if flag is `true`
+
+#### Scenario: No double-free
+- **WHEN** cleanup is called twice
+- **THEN** second call is a no-op (flags already `false`)
+- **THEN** no crash or double-free occurs
+
+### Requirement: Flag Set After Allocation
+
+Validity flags SHALL be set immediately after successful allocation.
+
+#### Scenario: Set after open
+- **WHEN** `open()` syscall succeeds
+- **THEN** `file_descriptor_valid = true` is set immediately
+- **THEN** flag is set before any other operations
+
+#### Scenario: Set after mmap
+- **WHEN** `mmap()` syscall succeeds
+- **THEN** `mapped_address_valid = true` is set immediately
+- **THEN** flag is set before returning to caller
+
+### Requirement: Flag Clear After Free
+
+Validity flags SHALL be cleared after successful free/close.
+
+#### Scenario: Clear after close
+- **WHEN** `close()` syscall completes
+- **THEN** `file_descriptor_valid = false` is set
+- **THEN** file descriptor value is set to `-1`
+
+#### Scenario: Clear after munmap
+- **WHEN** `munmap()` syscall completes
+- **THEN** `mapped_address_valid = false` is set
+- **THEN** mapped address is set to `NULL`
+
+### Requirement: Initialize Flags to False
+
+All validity flags SHALL be initialized to `false` in state initialization.
+
+#### Scenario: State zero-initialization
+- **WHEN** state struct is created
+- **THEN** all `_valid` flags are initialized to `false`
+- **THEN** cleanup is safe to call even if allocation never happened
 
 ## Implementation
 

@@ -4,15 +4,53 @@
 
 Add overflow validation to all arithmetic operations involving sizes, offsets, and counts to prevent buffer overflows and memory corruption.
 
-## Requirements
+## ADDED Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| IO-01 | Check for overflow in `offset + bytes_to_read` calculations | MUST |
-| IO-02 | Check for overflow in `current_size + bytes_to_write` calculations | MUST |
-| IO-03 | Check for overflow in view size calculations | MUST |
-| IO-04 | Return `ERROR_RESULT_INTEGER_OVERFLOW` on overflow | MUST |
-| IO-05 | Use portable overflow check (no compiler builtins required) | SHOULD |
+### Requirement: Overflow Check for Addition
+
+All addition operations involving sizes and offsets SHALL check for overflow.
+
+#### Scenario: offset + bytes_to_read overflow
+- **WHEN** calculating `offset + bytes_to_read`
+- **THEN** overflow is detected using `a > UINT64_MAX - b`
+- **THEN** operation returns `ASYNC_ERROR` with `ERROR_RESULT_INTEGER_OVERFLOW`
+
+#### Scenario: current_size + bytes_to_write overflow
+- **WHEN** calculating `current_size + bytes_to_write`
+- **THEN** overflow is detected before addition
+- **THEN** operation returns error if overflow would occur
+
+### Requirement: Overflow Check for Multiplication
+
+Multiplication operations SHALL check for overflow.
+
+#### Scenario: view size calculation
+- **WHEN** calculating view size as multiplication
+- **THEN** overflow is detected using `a > UINT64_MAX / b`
+- **THEN** operation returns error if overflow detected
+
+### Requirement: Portable Overflow Detection
+
+Overflow detection SHALL use portable C code without compiler builtins.
+
+#### Scenario: Portable add check
+- **WHEN** checking `would_overflow_add(a, b)`
+- **THEN** implementation uses `a > UINT64_MAX - b`
+- **THEN** works on all C17 compilers
+
+#### Scenario: Portable mul check
+- **WHEN** checking `would_overflow_mul(a, b)`
+- **THEN** implementation uses `a > UINT64_MAX / b` (for non-zero)
+- **THEN** works on all C17 compilers
+
+### Requirement: Error Code Definition
+
+The error code `ERROR_RESULT_INTEGER_OVERFLOW` SHALL be defined.
+
+#### Scenario: Overflow error returned
+- **WHEN** overflow is detected
+- **THEN** async result status is `ASYNC_ERROR`
+- **THEN** error code is `ERROR_RESULT_INTEGER_OVERFLOW`
 
 ## Implementation
 
