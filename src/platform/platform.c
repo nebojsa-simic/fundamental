@@ -5,6 +5,15 @@
 PlatformOS fun_platform_os(void);
 PlatformArch fun_platform_arch(void);
 
+/*
+ * Platform initialization (Phase 1)
+ * No-op for now - platform detection functions are always available.
+ */
+int fun_platform_init(void)
+{
+	return 0;
+}
+
 void fun_platform_get(OutputPlatform platform)
 {
 	platform->os = fun_platform_os();

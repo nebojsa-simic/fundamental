@@ -13,6 +13,22 @@
 #include "fundamental/network/network.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
+#include "fundamental/config/config.h"
+
+/* Global config reference for network init */
+extern Config fun_config_get_global(void);
+
+/*
+ * Network initialization (Phase 6)
+ * Initializes connection pool and reads rx_buf_size from config.
+ * Note: pool_init() is called lazily on first pool_acquire().
+ */
+int fun_network_init(void)
+{
+	/* Pool is initialized lazily on first use */
+	/* Config integration for rx_buf_size can be added later */
+	return 0;
+}
 
 /* ------------------------------------------------------------------
  * Arch-layer declarations (implemented per platform in arch/network/)

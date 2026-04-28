@@ -14,6 +14,26 @@
 #include "fundamental/string/string.h"
 #include "fundamental/filesystem/filesystem.h"
 
+/* Global config instance for fun_config_init() */
+static Config g_config;
+static bool g_config_initialized = false;
+
+/*
+ * Config initialization (Phase 4)
+ * Loads configuration with app name "fundamental".
+ * Silent operation - MUST NOT call logging.
+ */
+int fun_config_init(void)
+{
+	ConfigResult result = fun_config_load("fundamental", 0, NULL);
+	if (fun_error_is_ok(result.error)) {
+		g_config = result.value;
+		g_config_initialized = true;
+		return 0;
+	}
+	return -1;
+}
+
 /* ------------------------------------------------------------------
  * Platform functions (implemented in arch/config/{platform}/env.c)
  * ------------------------------------------------------------------ */

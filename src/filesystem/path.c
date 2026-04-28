@@ -392,3 +392,12 @@ ErrorResult fun_filesystem_get_working_directory(OutputString output)
 
 	return ERROR_RESULT_NO_ERROR;
 }
+
+/*
+ * Filesystem initialization (Phase 3)
+ * No-op for now - path functions are always available.
+ */
+int fun_filesystem_init(void)
+{
+	return 0;
+}
