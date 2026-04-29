@@ -1,10 +1,12 @@
 ---
 name: Config module QA status
-description: QA findings for the add-config-module implementation — test commands, known issues, and accepted pre-existing warnings
+description: QA findings for the add-config-module implementation — test commands, 36/36 pass, pre-existing warnings inventory
 type: project
 ---
 
 Config module was implemented and verified clean on 2026-03-14. README.md documentation updated 2026-03-14 (task 21.8). Full suite re-run confirmed clean on 2026-03-14 after README changes — ready to archive.
+
+**2026-04-29 UPDATE:** Fixed Windows mock environment support. Config tests now pass 36/36 on Windows (were failing to build due to missing fun_arch_set_envp).
 
 **Test command:** `pwsh -Command "& C:\Users\nsimi\workspaces-win\fundamental\tests\config\build-windows-amd64.bat"` then `pwsh -Command "& C:\Users\nsimi\workspaces-win\fundamental\tests\config\test.exe"`
 **Full suite:** `pwsh -Command "& C:\Users\nsimi\workspaces-win\fundamental\run-tests-windows-amd64.bat"`
