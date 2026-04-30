@@ -18,18 +18,6 @@
 /* Global config reference for network init */
 extern Config fun_config_get_global(void);
 
-/*
- * Network initialization (Phase 6)
- * Initializes connection pool and reads rx_buf_size from config.
- * Note: pool_init() is called lazily on first pool_acquire().
- */
-int fun_network_init(void)
-{
-	/* Pool is initialized lazily on first use */
-	/* Config integration for rx_buf_size can be added later */
-	return 0;
-}
-
 /* ------------------------------------------------------------------
  * Arch-layer declarations (implemented per platform in arch/network/)
  * ------------------------------------------------------------------ */
@@ -436,6 +424,29 @@ struct TcpNetworkConnection_s {
 static struct TcpNetworkConnection_s conn_pool[NETWORK_POOL_SIZE];
 static int pool_ready = 0;
 static size_t g_rx_buf_size = NETWORK_RX_BUF_DEFAULT;
+
+/* Forward declaration */
+static void pool_init(void);
+
+/*
+ * Network initialization (Phase 6)
+ * Initializes connection pool and reads rx_buf_size from config.
+ */
+int fun_network_init(void)
+{
+	/* Read rx_buf_size from [network] config section */
+	Config global_config = fun_config_get_global();
+	int64_tResult rx_size_result = fun_config_get_int_or_default(
+		&global_config, "network.rx_buf_size", NETWORK_RX_BUF_DEFAULT);
+
+	if (fun_error_is_ok(rx_size_result.error)) {
+		g_rx_buf_size = (size_t)rx_size_result.value;
+	}
+
+	/* Initialize connection pool */
+	pool_init();
+	return 0;
+}
 
 static void pool_init(void)
 {

@@ -19,6 +19,16 @@ static Config g_config;
 static bool g_config_initialized = false;
 
 /*
+ * Get the global config instance.
+ * Returns a copy of the global config struct.
+ * Only valid after fun_config_init() has been called.
+ */
+Config fun_config_get_global(void)
+{
+	return g_config;
+}
+
+/*
  * Config initialization (Phase 4)
  * Loads configuration with app name "fundamental".
  * Silent operation - MUST NOT call logging.

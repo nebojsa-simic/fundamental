@@ -28,16 +28,16 @@
 
 ## 5. Module Integration: Logging
 
-- [ ] 5.1 Update logging module to use centralized `fun_startup_run()` for init
-- [ ] 5.2 Register logging init at `STARTUP_PHASE_LOGGING`
-- [ ] 5.3 Logging init reads `[logging]` from already-loaded config
-- [ ] 5.4 Remove any module-specific `__attribute__((constructor))` from logging
+- [x] 5.1 Update logging module to use centralized `fun_startup_run()` for init
+- [x] 5.2 Register logging init at `STARTUP_PHASE_LOGGING`
+- [x] 5.3 Logging init reads `[logging]` from already-loaded config
+- [x] 5.4 Remove any module-specific `__attribute__((constructor))` from logging
 
 ## 6. Module Integration: Network
 
 - [x] 6.1 Update network module to use centralized `fun_startup_run()` for init
 - [x] 6.2 Register network init at `STARTUP_PHASE_NETWORK`
-- [ ] 6.3 Network init reads `[network] rx_buf_size` from config
+- [x] 6.3 Network init reads `[network] rx_buf_size` from config
 - [x] 6.4 Remove lazy `pool_init()` call pattern, use centralized init instead
 
 ## 7. Testing
