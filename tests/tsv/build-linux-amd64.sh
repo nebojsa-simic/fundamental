@@ -16,7 +16,7 @@ SOURCES=(
     "$PROJECT_ROOT/src/tsv/tsv.c"
     "$PROJECT_ROOT/src/string/stringOperations.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"
-    "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
+    "$PROJECT_ROOT/arch/memory/windows-amd64/memory.c"
 )
 
 # Build

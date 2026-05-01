@@ -16,16 +16,16 @@ SOURCES=(
     "$PROJECT_ROOT/src/config/config.c"
     "$PROJECT_ROOT/src/config/iniParser.c"
     "$PROJECT_ROOT/src/config/cliParser.c"
-    "$PROJECT_ROOT/arch/config/linux-amd64/env.c"
-    "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
+    "$PROJECT_ROOT/arch/config/windows-amd64/env.c"
+    "$PROJECT_ROOT/arch/memory/windows-amd64/memory.c"
     "$PROJECT_ROOT/src/hashmap/hashmap.c"
     "$PROJECT_ROOT/src/string/stringOperations.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"
     "$PROJECT_ROOT/src/filesystem/path.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/path.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/file_exists.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/path.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/file_exists.c"
     "$PROJECT_ROOT/src/filesystem/file_exists.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/directory.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/directory.c"
 )
 
 # Build

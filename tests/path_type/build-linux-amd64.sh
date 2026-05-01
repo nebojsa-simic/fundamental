@@ -18,11 +18,11 @@ CFLAGS="-Wall -Wextra -I${INCLUDE_DIR}"
 COMMON_SRCS="\
 ${SRC_DIR}/filesystem/path.c \
 ${SRC_DIR}/filesystem/directory.c \
-${ARCH_DIR}/memory/linux-amd64/memory.c \
+${ARCH_DIR}/memory/windows-amd64/memory.c \
 ${SRC_DIR}/string/stringOperations.c \
 ${SRC_DIR}/string/stringValidation.c \
-${ARCH_DIR}/filesystem/linux-amd64/directory.c \
-${ARCH_DIR}/filesystem/linux-amd64/path.c"
+${ARCH_DIR}/filesystem/windows-amd64/directory.c \
+${ARCH_DIR}/filesystem/windows-amd64/path.c"
 
 # Compile test_path_conversion.c
 echo "Compiling test_path_conversion.c..."

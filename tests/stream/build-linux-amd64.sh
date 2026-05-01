@@ -13,21 +13,21 @@ gcc \
     ../../src/stream/streamFile.c \
     ../../src/stream/streamLifecycle_linux.c \
     ../../src/stream/streamFlow.c \
-    ../../arch/stream/linux-amd64/streamOpen.c \
-    ../../arch/stream/linux-amd64/streamRead.c \
-    ../../arch/stream/linux-amd64/streamWrite.c \
-    ../../arch/file/linux-amd64/fileReadMmap.c \
-    ../../arch/file/linux-amd64/fileRead.c \
-    ../../arch/file/linux-amd64/fileReadRing.c \
-    ../../arch/memory/linux-amd64/memory.c \
+    ../../arch/stream/windows-amd64/streamOpen.c \
+    ../../arch/stream/windows-amd64/streamRead.c \
+    ../../arch/stream/windows-amd64/streamWrite.c \
+    ../../arch/file/windows-amd64/fileReadMmap.c \
+    ../../arch/file/windows-amd64/fileRead.c \
+    ../../arch/file/windows-amd64/fileReadRing.c \
+    ../../arch/memory/windows-amd64/memory.c \
     ../../src/string/stringOperations.c \
     ../../src/string/stringConversion.c \
     ../../src/string/stringTemplate.c \
     ../../src/async/async.c \
-    ../../arch/async/linux-amd64/async.c \
+    ../../arch/async/windows-amd64/async.c \
     -o test 
 
-strip --strip-unneeded test
+strip --strip-unneeded test.exe
 
 echo "Stream module tests built successfully!"
 echo "All tests including write functionality are now included."

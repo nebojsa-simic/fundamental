@@ -14,10 +14,10 @@ CFLAGS="-I$PROJECT_ROOT/include -Wall -Wextra -g -O0"
 SOURCES=(
     "$SCRIPT_DIR/test_network.c"
     "$PROJECT_ROOT/src/network/network.c"
-    "$PROJECT_ROOT/arch/network/linux-amd64/network.c"
+    "$PROJECT_ROOT/arch/network/windows-amd64/network.c"
     "$PROJECT_ROOT/src/async/async.c"
-    "$PROJECT_ROOT/arch/async/linux-amd64/async.c"
-    "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
+    "$PROJECT_ROOT/arch/async/windows-amd64/async.c"
+    "$PROJECT_ROOT/arch/memory/windows-amd64/memory.c"
     "$PROJECT_ROOT/src/string/stringOperations.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"
 )

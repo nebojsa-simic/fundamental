@@ -17,9 +17,9 @@ CFLAGS="-I$PROJECT_ROOT/include -Wall -Wextra -g -O0"
 SOURCES="
     $SCRIPT_DIR/test_platform.c
     $PROJECT_ROOT/src/platform/platform.c
-    $PROJECT_ROOT/arch/platform/linux-amd64/platform.c
+    $PROJECT_ROOT/arch/platform/windows-amd64/platform.c
     $PROJECT_ROOT/src/string/stringOperations.c
-    $PROJECT_ROOT/arch/memory/linux-amd64/memory.c
+    $PROJECT_ROOT/arch/memory/windows-amd64/memory.c
 "
 
 # Build

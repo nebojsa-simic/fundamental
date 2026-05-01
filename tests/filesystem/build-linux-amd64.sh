@@ -8,7 +8,7 @@ PROJECT_ROOT="$SCRIPT_DIR/../.."
 
 # Compiler flags
 CC=gcc
-CFLAGS="-I$PROJECT_ROOT/include -I$PROJECT_ROOT/arch/filesystem/linux-amd64 -Wall -Wextra -g -O0"
+CFLAGS="-I$PROJECT_ROOT/include -I$PROJECT_ROOT/arch/filesystem/windows-amd64 -Wall -Wextra -g -O0"
 
 # Source files
 SOURCES=(
@@ -19,11 +19,11 @@ SOURCES=(
     "$PROJECT_ROOT/src/filesystem/path.c"
     "$PROJECT_ROOT/src/filesystem/walk.c"
     "$PROJECT_ROOT/src/tsv/tsv.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/directory.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/file_exists.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/file_size.c"
-    "$PROJECT_ROOT/arch/filesystem/linux-amd64/path.c"
-    "$PROJECT_ROOT/arch/memory/linux-amd64/memory.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/directory.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/file_exists.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/file_size.c"
+    "$PROJECT_ROOT/arch/filesystem/windows-amd64/path.c"
+    "$PROJECT_ROOT/arch/memory/windows-amd64/memory.c"
     "$PROJECT_ROOT/src/string/stringValidation.c"
     "$PROJECT_ROOT/src/string/stringOperations.c"
 )

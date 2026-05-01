@@ -4,9 +4,9 @@ gcc \
     -I ../../include \
     test.c \
     ../../src/array/array.c \
-    ../../arch/memory/linux-amd64/memory.c \
+    ../../arch/memory/windows-amd64/memory.c \
     ../../src/async/async.c \
-    ../../arch/async/linux-amd64/async.c \
-    -o test
+    ../../arch/async/windows-amd64/async.c \
+    -o test.exe
 
-strip --strip-unneeded test
+strip --strip-unneeded test.exe

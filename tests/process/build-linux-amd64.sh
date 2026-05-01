@@ -4,13 +4,13 @@ gcc \
     --std=c17 -Os \
     -I ../../include \
     test_process.c \
-    ../../arch/memory/linux-amd64/memory.c \
+    ../../arch/memory/windows-amd64/memory.c \
     ../../src/async/async.c \
-    ../../arch/async/linux-amd64/async.c \
+    ../../arch/async/windows-amd64/async.c \
     ../../src/process/process.c \
-    ../../arch/process/linux-amd64/process.c \
-    ../../arch/config/linux-amd64/env.c \
+    ../../arch/process/windows-amd64/process.c \
+    ../../arch/config/windows-amd64/env.c \
     ../../src/string/stringOperations.c \
-    -o test
+    -o test.exe
 
-strip --strip-unneeded test
+strip --strip-unneeded test.exe

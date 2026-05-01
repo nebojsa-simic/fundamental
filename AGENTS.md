@@ -69,6 +69,28 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
 - Validate entire architecture: `openspec validate --all`
 - Check change status: `openspec validate <change-id>`
 
+### OpenSpec CLI Priority Rule
+
+**CRITICAL**: Before manually implementing any OpenSpec workflow steps:
+
+1. **Check for built-in CLI commands first**:
+   ```bash
+   openspec --help                    # Discover all available commands
+   openspec <command> --help          # Get command-specific options
+   ```
+
+2. **Prefer CLI commands over manual implementation**:
+   - `openspec archive <change>` - Archives changes and syncs specs automatically (DO NOT implement manually)
+   - `openspec status --change <name>` - Check artifact completion status
+   - `openspec instructions apply --change <name>` - Get implementation guidance
+   - `openspec validate <change>` - Validate changes and specs
+
+3. **Manual implementation is ONLY needed when**:
+   - No CLI command exists for the operation
+   - The CLI explicitly delegates to manual steps
+
+**Why this matters**: Skills describe the *workflow*, but the CLI may automate it. Always discover commands before implementing manually.
+
 ---
 
 ## AI Agent Skills
