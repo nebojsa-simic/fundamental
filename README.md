@@ -25,7 +25,9 @@ fundamental/
 │   ├── console/               # Console I/O per platform
 │   ├── file/                  # File I/O implementations per platform
 │   ├── filesystem/            # Filesystem operations per platform
+│   ├── logging/               # Logging implementations per platform
 │   ├── memory/                # Memory management per architecture
+│   ├── shutdown/              # Shutdown signal handling per platform
 │   ├── startup/               # Platform startup/entry point
 │   └── stream/                # Stream I/O per platform
 ├── include/                   # Public API headers
@@ -38,9 +40,13 @@ fundamental/
 │   ├── file/                  # File I/O interface
 │   ├── filesystem/            # Filesystem operations interface
 │   ├── hashmap/               # Hash map interface
+│   ├── logging/               # Logging system interface
 │   ├── memory/                # Memory management interface
+│   ├── network/               # Networking (TCP/UDP) interface
 │   ├── rbtree/                # Red-black tree interface
 │   ├── set/                   # Set data structure interface
+│   ├── shutdown/              # Shutdown framework interface
+│   ├── startup/               # Startup framework interface
 │   ├── stream/                # Stream I/O interface
 │   └── string/                # String operations interface
 ├── src/                       # Core implementations
@@ -50,11 +56,16 @@ fundamental/
 │   ├── console/               # Console output implementation
 │   ├── filesystem/            # Path and directory operations
 │   ├── hashmap/               # Hash map implementation
+│   ├── logging/               # Logging system implementation
+│   ├── network/               # Network TCP/UDP implementation
+│   ├── platform/              # Platform detection and info
 │   ├── rbtree/                # Red-black tree implementation
 │   ├── set/                   # Set implementation
-│   ├── startup/               # Cross-platform entry point
+│   ├── shutdown/              # Shutdown framework implementation
+│   ├── startup/               # Startup framework implementation
 │   ├── stream/                # Stream lifecycle and file operations
-│   └── string/                # String operations (conversion, templating, validation)
+│   ├── string/                # String operations (conversion, templating, validation)
+│   └── tsv/                   # TSV parsing and handling
 └── tests/                     # Unit tests for all modules
     ├── async/                 # Async and process spawn tests
     ├── collections/           # Array tests
@@ -153,7 +164,59 @@ fundamental/
 - Environment variables transformed: `"database.host"` → `MYAPP_DATABASE_HOST`
 - Cross-platform: Linux (`getenv`/`readlink`) and Windows (`GetEnvironmentVariableA`/`GetModuleFileNameA`)
 
+### **Logging System**
+- Centralized logging with configurable log levels (TRACE, DEBUG, INFO, WARN, ERROR)
+- Template-based log messages with type-safe parameter substitution
+- Multiple output targets: console and file (configurable at compile-time and runtime)
+- Automatic timestamps, source file, and line number in log output
+- Zero-overhead when disabled: compile-time level filtering compiles to `((void)0)`
+- Runtime configuration via `fun.ini` `[logging]` section
+- Circular dependency prevention: config module cannot call logging functions
+
+### **Startup Framework**
+- Ordered initialization phases for library modules
+- Phases: Platform → Memory → Filesystem → Config → Logging → Network → Other
+- Fail-fast error handling with verbose tracing option (`-DFUNDAMENTAL_STARTUP_VERBOSE=1`)
+- Automatic execution via `__main()` at program startup
+- Modules register init functions via `FUNDAMENTAL_STARTUP_REGISTER(phase, function)`
+- Prevents circular dependencies through enforced phase ordering
+
+### **Shutdown Framework**
+- Structured shutdown coordination with cleanup functions
+- Executes cleanup in reverse initialization order
+- Shutdown types: NORMAL, ABNORMAL, EXTERNAL, EMERGENCY
+- Phases mirror startup: APP → NETWORK → LOGGING → CONFIG → FILESYSTEM → MEMORY → PLATFORM
+- Idempotent and race-condition protected with atomic flags
+- Register cleanup with `FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function)`
+
+### **Networking**
+- Asynchronous TCP/UDP interface with non-blocking operations
+- TCP: connect, send, receive_exact, close with connection pooling
+- UDP: fire-and-forget datagram send
+- Address parsing and formatting for IPv4/IPv6
+- All operations return `AsyncResult` for async await pattern
+- Configurable buffer sizes via config module
+
 ## Quick Start
+
+### **Working Demos Available**
+
+See [`demos/`](demos/) for **tested, working examples**:
+
+```bash
+cd demos/console
+.\build-windows-amd64.bat
+.\demo.exe
+
+cd demos/logging
+.\build-windows-amd64.bat
+.\demo.exe
+```
+
+Each demo includes:
+- Complete source code that compiles on first try
+- Build scripts for Windows and Linux
+- Documented dependencies
 
 ### Basic String Operations
 
@@ -480,6 +543,101 @@ app.name = "My Application"
 **Environment variable** `MYAPP_DATABASE_HOST` overrides INI `database.host`.
 **CLI argument** `--config:database.host=prod.db.example.com` overrides all.
 
+### Logging System
+
+```c
+#include "logging/logging.h"
+
+// Log at different levels with template parameters
+StringTemplateParam params[] = {
+    {"user_id", {.intValue = 42}},
+    {"ip", {.stringValue = "192.168.1.1"}}
+};
+
+log_info("User #{user_id} from ${ip} logged in", params, 2);
+log_debug("Processing request", NULL, 0);
+log_error("Connection failed to ${host}", 
+    (StringTemplateParam[]){{"host", {.stringValue = "db.example.com"}}}, 1);
+
+// Compile-time configuration (define before including logging.h)
+// #define FUNDAMENTAL_LOG_LEVEL LOG_LEVEL_DEBUG
+// #define FUNDAMENTAL_LOG_OUTPUT_CONSOLE 1
+// #define FUNDAMENTAL_LOG_OUTPUT_FILE 1
+// #define FUNDAMENTAL_LOG_FILE_PATH "/tmp/app.log"
+
+// Runtime configuration via fun.ini [logging] section:
+// [logging]
+// level = INFO
+// output_console = 1
+// output_file = 1
+// file_path = /var/log/myapp.log
+```
+
+### Startup and Shutdown Framework
+
+```c
+#include "startup/startup.h"
+#include "shutdown/shutdown.h"
+
+// Register initialization function at phase 7 (other modules)
+static void my_module_init(void)
+{
+    // Module initialization code
+    // Runs after platform, memory, filesystem, config, logging, network
+}
+
+FUNDAMENTAL_STARTUP_REGISTER(STARTUP_PHASE_OTHER, my_module_init);
+
+// Register cleanup function for shutdown
+static void my_module_cleanup(void)
+{
+    // Cleanup code runs in reverse order during shutdown
+}
+
+FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_APP, my_module_cleanup);
+
+// Startup runs automatically via __main()
+// To trigger shutdown:
+fun_shutdown_run(SHUTDOWN_NORMAL, 0);  // Executes all registered cleanups
+```
+
+### Networking - TCP Client
+
+```c
+#include "network/network.h"
+
+// Parse address string
+NetworkAddressResult addr_result = fun_network_address_parse("127.0.0.1:8080");
+if (fun_error_is_ok(addr_result.error)) {
+    NetworkAddress addr = addr_result.value;
+    
+    // Connect to server
+    TcpNetworkConnection conn;
+    AsyncResult connect_result = fun_network_tcp_connect(addr, &conn);
+    fun_async_await(&connect_result, 5000);  // 5 second timeout
+    
+    if (connect_result.status == ASYNC_COMPLETED) {
+        // Send data
+        const char *message = "Hello, server!";
+        AsyncResult send_result = fun_network_tcp_send(conn, message, 14);
+        fun_async_await(&send_result, 5000);
+        
+        // Receive exactly 100 bytes
+        char buffer[100];
+        NetworkBuffer response = { .data = buffer, .length = 0 };
+        AsyncResult recv_result = fun_network_tcp_receive_exact(conn, &response, 100);
+        fun_async_await(&recv_result, 5000);
+        
+        // Close connection
+        fun_network_tcp_close(conn);
+    }
+}
+
+// UDP send (fire-and-forget)
+const char *udp_data = "UDP message";
+fun_network_udp_send(addr, udp_data, 11);
+```
+
 ---
 
 ## AI Agent Skills
@@ -498,6 +656,9 @@ This project includes specialized skills for AI coding agents (Opencode, Claude 
 | **[Collections]**(.opencode/skills/fundamental-collections.md) | Arrays, hashmaps, sets, red-black trees |
 | **[Async]**(.opencode/skills/fundamental-async.md) | Await results, poll status, spawn processes |
 | **[Config]**(.opencode/skills/fundamental-config.md) | Load configuration, cascade sources, get values |
+| **[Logging]**(.opencode/skills/fundamental-logging.md) | Configure logging, log at different levels, template messages |
+| **[Network]**(.opencode/skills/fundamental-network.md) | TCP connect/send/receive, UDP send |
+| **[Startup/Shutdown]**(.opencode/skills/fundamental-lifecycle.md) | Register init/cleanup functions, manage lifecycle |
 | **[Index]**(.opencode/skills/fundamental-skills-index.md) | Central index with cross-references |
 
 ### Using Skills
@@ -638,10 +799,13 @@ MIT License
 | Module | Capabilities | Status |
 |--------|-------------|--------|
 | **Configuration** | Cascading config from CLI, env, INI files | Complete |
+| **Logging** | Centralized logging with levels, timestamps, multiple outputs | Complete |
+| **Startup Framework** | Ordered initialization phases with fail-fast | Complete |
+| **Shutdown Framework** | Coordinated cleanup in reverse init order | Complete |
+| **Networking** | TCP/UDP async socket API | Complete (TCP/UDP basic) |
 | **Time/Date** | `fun_time_now()`, `fun_time_sleep()`, timestamp formatting | Proposed |
 | **Random Numbers** | PRNG with seeding, `fun_random_u32/u64()`, bounded ranges | Proposed |
 | **Sorting** | Generic array sorting, binary search, comparison functions | Proposed |
-| **Networking** | Socket API, TCP/UDP, HTTP client | Proposed |
 | **Threading** | Thread creation, mutex/locks, atomic operations | Proposed |
 
 All planned modules will follow the same design principles: zero stdlib dependencies, explicit error handling, caller-allocated memory, and cross-platform support.
@@ -655,6 +819,8 @@ All planned modules will follow the same design principles: zero stdlib dependen
 - [ ] Advanced stream features (seeking, buffering strategies)
 - [ ] Additional collection types (linked lists, queues, stacks)
 - [ ] `fun_memory_compare()` - Memory comparison function to replace memcmp (needed for collections)
+- [ ] HTTP client built on networking module
+- [ ] TSV parsing module (in progress)
 
 ## Building Without Stdlib (Zero-Stdlib Mode)
 
