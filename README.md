@@ -6,6 +6,168 @@ A simple replacement for the C standard library.
 
 The Fundamental Library is a complete reimplementation of standard C library functionality without dependencies on the standard C library. It follows a kernel-style architecture with platform-specific optimizations and explicit error handling throughout.
 
+## Quick Start
+
+### **Working Demos Available**
+
+See [`demos/`](demos/) for **tested, working examples**:
+
+```bash
+cd demos/console
+.\build-windows-amd64.bat
+.\demo.exe
+
+cd demos/logging
+.\build-windows-amd64.bat
+.\demo.exe
+```
+
+Each demo includes:
+- Complete source code that compiles on first try
+- Build scripts for Windows and Linux
+- Documented dependencies
+
+### Basic String Operations
+
+```c
+#include "string/string.h"
+#include "memory/memory.h"
+
+// Caller allocates output buffer
+char output[256];
+String source = "Hello, World!";
+
+// Copy string
+fun_string_copy(source, output);
+
+// Get length
+StringLength len = fun_string_length(source);
+
+// Convert integer to string
+fun_string_from_int(42, 10, output);
+```
+
+### Memory Management
+
+```c
+#include "memory/memory.h"
+
+// Allocate memory
+MemoryResult result = fun_memory_allocate(1024);
+if (fun_error_is_error(result.error)) {
+    // Handle allocation failure
+    return;
+}
+
+Memory buffer = result.value;
+
+// Use buffer...
+
+// Free memory (caller responsibility)
+voidResult free_result = fun_memory_free(&buffer);
+```
+
+### String Templates
+
+```c
+#include "string/string.h"
+
+char output[512];
+
+// Template prefixes: ${string} #{int} %{double} *{pointer}
+String template = "Hello ${name}, you have #{age} messages";
+
+StringTemplateParam params[] = {
+    { "name", { .stringValue = "Alice" } },
+    { "age", { .intValue = 42 } }
+};
+
+fun_string_template(template, params, 2, output);
+// Result: "Hello Alice, you have 42 messages"
+```
+
+### Async File Operations
+
+```c
+#include "file/file.h"
+
+char buffer[2048];
+Memory output = { .ptr = buffer, .size = sizeof(buffer) };
+
+Read read_params = {
+    .file_path = "/path/to/file.txt",
+    .output = output,
+    .bytes_to_read = 2048,
+    .mode = FILE_MODE_AUTO
+};
+
+AsyncResult read_result = fun_file_read(&read_params);
+fun_async_await(&read_result, 5000);  // Wait up to 5 seconds
+
+if (read_result.status == ASYNC_COMPLETED) {
+    // File contents in buffer
+}
+```
+
+### Logging
+
+```c
+#define FUNDAMENTAL_LOG_LEVEL LOG_LEVEL_DEBUG
+#define FUNDAMENTAL_LOG_OUTPUT_CONSOLE 1
+
+#include "logging/logging.h"
+
+log_info("Application started", NULL, 0);
+
+StringTemplateParam params[] = {
+    { "user", { .stringValue = "Alice" } },
+    { "count", { .intValue = 42 } }
+};
+log_info("User ${user} processed #{count} items", params, 2);
+
+log_error("Failed to connect to ${host}",
+    (StringTemplateParam[]){{"host", {.stringValue = "db.example.com"}}}, 1);
+```
+
+### Console Output
+
+```c
+#include "console/console.h"
+
+fun_console_write_line("Hello, World!");
+fun_console_write("No newline...");
+fun_console_write("...combined\n");
+fun_console_flush();
+```
+
+### Networking - TCP Client
+
+```c
+#include "network/network.h"
+
+// Parse address
+NetworkAddressResult addr_result = fun_network_address_parse("127.0.0.1:8080");
+if (fun_error_is_ok(addr_result.error)) {
+    // Connect
+    TcpNetworkConnection conn;
+    AsyncResult result = fun_network_tcp_connect(addr_result.value, &conn);
+    fun_async_await(&result, 5000);
+    
+    // Send
+    const char *msg = "Hello";
+    fun_network_tcp_send(conn, msg, 5);
+    
+    // Receive
+    char buf[100];
+    NetworkBuffer response = { .data = buf, .length = 0 };
+    fun_network_tcp_receive_exact(conn, &response, 100);
+    
+    fun_network_tcp_close(conn);
+}
+```
+
+---
+
 ## Design Principles
 
 - **No C standard library dependencies** - Complete standalone implementation
@@ -196,447 +358,6 @@ fundamental/
 - Address parsing and formatting for IPv4/IPv6
 - All operations return `AsyncResult` for async await pattern
 - Configurable buffer sizes via config module
-
-## Quick Start
-
-### **Working Demos Available**
-
-See [`demos/`](demos/) for **tested, working examples**:
-
-```bash
-cd demos/console
-.\build-windows-amd64.bat
-.\demo.exe
-
-cd demos/logging
-.\build-windows-amd64.bat
-.\demo.exe
-```
-
-Each demo includes:
-- Complete source code that compiles on first try
-- Build scripts for Windows and Linux
-- Documented dependencies
-
-### Basic String Operations
-
-```c
-#include "string/string.h"
-#include "memory/memory.h"
-
-// Caller allocates output buffer
-char output[256];
-String source = "Hello, World!";
-
-// Copy string
-fun_string_copy(source, output);
-
-// Get length
-StringLength len = fun_string_length(source);
-
-// Convert integer to string
-fun_string_from_int(42, 10, output);
-```
-
-### Memory Management
-
-```c
-#include "memory/memory.h"
-
-// Allocate memory
-MemoryResult result = fun_memory_allocate(1024);
-if (fun_error_is_error(result.error)) {
-    // Handle allocation failure
-    return;
-}
-
-Memory buffer = result.value;
-
-// Use buffer...
-
-// Free memory (caller responsibility)
-voidResult free_result = fun_memory_free(&buffer);
-```
-
-### String Templates
-
-```c
-#include "string/string.h"
-
-char output[512];
-
-// Template prefixes: ${string} #{int} %{double} *{pointer}
-String template = "Hello ${name}, you have #{age} messages";
-
-StringTemplateParam params[] = {
-    { "name", { .stringValue = "Alice" } },
-    { "age", { .intValue = 42 } }
-};
-
-fun_string_template(template, params, 2, output);
-// Result: "Hello Alice, you have 42 messages"
-```
-
-### Async File Operations
-
-```c
-#include "file/file.h"
-
-char buffer[2048];
-Memory output = { .ptr = buffer, .size = sizeof(buffer) };
-
-Read read_params = {
-    .file_path = "/path/to/file.txt",
-    .output = output,
-    .bytes_to_read = 2048,
-    .mode = FILE_MODE_AUTO
-};
-
-AsyncResult result = fun_read_file_in_memory(read_params);
-fun_async_await(&result);
-
-if (result.status == ASYNC_COMPLETED) {
-    // File read successfully
-}
-```
-
-### File Write with Durability Guarantee
-
-```c
-#include "file/file.h"
-#include "memory/memory.h"
-
-const char *data = "critical record";
-size_t len = 15;
-
-MemoryResult buf = fun_memory_allocate(len);
-memcpy(buf.value, data, len);
-
-/* FILE_DURABILITY_FULL: fsync() ensures data and metadata reach disk */
-Write params = {
-    .file_path       = "/data/journal.log",
-    .input           = buf.value,
-    .bytes_to_write  = len,
-    .offset          = 0,
-    .mode            = FILE_MODE_MMAP,
-    .durability_mode = FILE_DURABILITY_FULL,
-};
-
-AsyncResult result = fun_write_memory_to_file(params);
-fun_async_await(&result, -1);
-fun_memory_free(&buf.value);
-
-if (result.status == ASYNC_COMPLETED) {
-    /* guaranteed on disk */
-}
-```
-
-| Mode | Guarantee | Use when |
-|------|-----------|----------|
-| `FILE_DURABILITY_ASYNC` | Page cache only | Performance-critical, loss acceptable |
-| `FILE_DURABILITY_SYNC` | `msync`/`fsync` after write | Data must survive process crash |
-| `FILE_DURABILITY_FULL` | `fsync` data + metadata | Data must survive power loss |
-
-### Stream I/O
-
-```c
-#include "stream/stream.h"
-
-// Allocate buffer for stream
-MemoryResult mem_result = fun_memory_allocate(4096);
-if (fun_error_is_ok(mem_result.error)) {
-    // Open file for reading
-    AsyncResult open_result = fun_stream_create_file_read(
-        "/path/to/file.txt",
-        mem_result.value,
-        4096,
-        FILE_MODE_STANDARD
-    );
-    fun_async_await(&open_result);
-    
-    FileStream *stream = (FileStream *)open_result.state;
-    
-    // Read from stream
-    uint64_t bytes_read;
-    AsyncResult read_result = fun_stream_read(stream, &bytes_read);
-    fun_async_await(&read_result);
-    
-    // Check if more data available
-    while (fun_stream_can_read(stream)) {
-        read_result = fun_stream_read(stream, &bytes_read);
-        fun_async_await(&read_result);
-        // Process buffer contents...
-    }
-    
-    // Close and destroy
-    fun_stream_destroy(stream);
-    fun_memory_free(&mem_result.value);
-}
-```
-
-### Console Output
-
-```c
-#include "console/console.h"
-
-// Line-buffered output (auto-flush on newline)
-fun_console_write_line("Hello, World!");
-
-// Buffered output without newline
-fun_console_write("Processing: ");
-fun_console_write("50%");
-fun_console_flush();  // Force output
-
-// Error output (unbuffered, immediate)
-fun_console_error_line("An error occurred!");
-```
-
-### Filesystem Operations
-
-```c
-#include "filesystem/filesystem.h"
-
-// Create directory with parents
-ErrorResult mkdir_result = fun_filesystem_create_directory("/tmp/test/nested");
-
-// List directory contents
-char output[4096];
-ErrorResult list_result = fun_filesystem_list_directory("/tmp", output);
-
-// Path utilities
-char path[512];
-fun_path_join("/home/user", "documents", path);
-fun_path_normalize("/home/user/../user/./docs", path);
-fun_path_get_filename("/home/user/file.txt", path);
-```
-
-### Collections - Dynamic Arrays
-
-```c
-#include "array/array.h"
-
-// Define type-safe array operations for int
-DEFINE_ARRAY_TYPE(int)
-
-// Create array with initial capacity
-intArrayResult create_result = fun_array_int_create(16);
-if (fun_error_is_ok(create_result.error)) {
-    intArray array = create_result.value;
-    
-    // Push elements
-    fun_array_int_push(&array, 42);
-    fun_array_int_push(&array, 100);
-    
-    // Get element
-    int value = fun_array_int_get(&array, 0);
-    
-    // Get size
-    size_t count = fun_array_int_size(&array);
-    
-    // Destroy when done
-    fun_array_int_destroy(&array);
-}
-```
-
-### Collections - Hash Maps
-
-```c
-#include "hashmap/hashmap.h"
-
-// Define type-safe hashmap for int keys and int values
-// For other types, use DEFINE_HASHMAP_TYPE(KeyType, ValueType)
-DEFINE_HASHMAP_TYPE(int, int)
-
-// Create hashmap
-intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-if (fun_error_is_ok(create_result.error)) {
-    intintHashMap map = create_result.value;
-    
-    // Insert key-value pairs
-    fun_hashmap_int_int_put(&map, 1, 42);
-    fun_hashmap_int_int_put(&map, 2, 100);
-    
-    // Retrieve value
-    int value = fun_hashmap_int_int_get(&map, 1);  // value = 42
-    
-    // Check if key exists
-    bool contains;
-    fun_hashmap_int_int_contains(&map, 1, &contains);
-    
-    // Destroy when done
-    fun_hashmap_int_int_destroy(&map);
-}
-```
-
-### Async Process Spawn
-
-```c
-#include "async/async.h"
-
-// Spawn process
-const char *args[] = { "echo", "Hello from subprocess", NULL };
-AsyncResult result = fun_async_process_spawn("echo", args, NULL);
-
-// Wait for completion
-fun_async_await(&result);
-
-// Get output
-size_t out_len;
-const char *stdout_data = fun_process_get_stdout(&result, &out_len);
-
-// Get exit code
-int exit_code = fun_process_get_exit_code(&result);
-
-// Clean up
-fun_process_free(&result);
-```
-
-### Configuration Management
-
-```c
-#include "config/config.h"
-
-// Load config (cascades: CLI args → env vars → myapp.ini)
-ConfigResult cfg_result = fun_config_load("myapp", argc, argv);
-if (fun_error_is_error(cfg_result.error)) {
-    fun_console_error_line("Failed to load config");
-    return 1;
-}
-Config config = cfg_result.value;
-
-// Get a required string value
-StringResult host_result = fun_config_get_string(&config, "database.host");
-if (fun_error_is_error(host_result.error)) {
-    fun_console_error_line("database.host is required");
-    fun_config_destroy(&config);
-    return 1;
-}
-// host_result.value is a char* pointing into config's internal buffers
-
-// Get an optional integer with a default
-int64_tResult port_result = fun_config_get_int_or_default(&config, "database.port", 5432);
-int64_t port = port_result.value;
-
-// Get an optional boolean with a default
-boolResult debug_result = fun_config_get_bool_or_default(&config, "debug", false);
-bool debug = debug_result.value;
-
-// Check existence without type conversion
-boolResult has_result = fun_config_has(&config, "some.key");
-if (has_result.value) {
-    // key exists in any source
-}
-
-// Cleanup (frees all internal memory)
-fun_config_destroy(&config);
-```
-
-**INI file format** (`myapp.ini` in same directory as executable):
-```ini
-; comment lines start with ; or #
-database.host = localhost
-database.port = 5432
-debug = false
-app.name = "My Application"
-```
-
-**Environment variable** `MYAPP_DATABASE_HOST` overrides INI `database.host`.
-**CLI argument** `--config:database.host=prod.db.example.com` overrides all.
-
-### Logging System
-
-```c
-#include "logging/logging.h"
-
-// Log at different levels with template parameters
-StringTemplateParam params[] = {
-    {"user_id", {.intValue = 42}},
-    {"ip", {.stringValue = "192.168.1.1"}}
-};
-
-log_info("User #{user_id} from ${ip} logged in", params, 2);
-log_debug("Processing request", NULL, 0);
-log_error("Connection failed to ${host}", 
-    (StringTemplateParam[]){{"host", {.stringValue = "db.example.com"}}}, 1);
-
-// Compile-time configuration (define before including logging.h)
-// #define FUNDAMENTAL_LOG_LEVEL LOG_LEVEL_DEBUG
-// #define FUNDAMENTAL_LOG_OUTPUT_CONSOLE 1
-// #define FUNDAMENTAL_LOG_OUTPUT_FILE 1
-// #define FUNDAMENTAL_LOG_FILE_PATH "/tmp/app.log"
-
-// Runtime configuration via fun.ini [logging] section:
-// [logging]
-// level = INFO
-// output_console = 1
-// output_file = 1
-// file_path = /var/log/myapp.log
-```
-
-### Startup and Shutdown Framework
-
-```c
-#include "startup/startup.h"
-#include "shutdown/shutdown.h"
-
-// Register initialization function at phase 7 (other modules)
-static void my_module_init(void)
-{
-    // Module initialization code
-    // Runs after platform, memory, filesystem, config, logging, network
-}
-
-FUNDAMENTAL_STARTUP_REGISTER(STARTUP_PHASE_OTHER, my_module_init);
-
-// Register cleanup function for shutdown
-static void my_module_cleanup(void)
-{
-    // Cleanup code runs in reverse order during shutdown
-}
-
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_APP, my_module_cleanup);
-
-// Startup runs automatically via __main()
-// To trigger shutdown:
-fun_shutdown_run(SHUTDOWN_NORMAL, 0);  // Executes all registered cleanups
-```
-
-### Networking - TCP Client
-
-```c
-#include "network/network.h"
-
-// Parse address string
-NetworkAddressResult addr_result = fun_network_address_parse("127.0.0.1:8080");
-if (fun_error_is_ok(addr_result.error)) {
-    NetworkAddress addr = addr_result.value;
-    
-    // Connect to server
-    TcpNetworkConnection conn;
-    AsyncResult connect_result = fun_network_tcp_connect(addr, &conn);
-    fun_async_await(&connect_result, 5000);  // 5 second timeout
-    
-    if (connect_result.status == ASYNC_COMPLETED) {
-        // Send data
-        const char *message = "Hello, server!";
-        AsyncResult send_result = fun_network_tcp_send(conn, message, 14);
-        fun_async_await(&send_result, 5000);
-        
-        // Receive exactly 100 bytes
-        char buffer[100];
-        NetworkBuffer response = { .data = buffer, .length = 0 };
-        AsyncResult recv_result = fun_network_tcp_receive_exact(conn, &response, 100);
-        fun_async_await(&recv_result, 5000);
-        
-        // Close connection
-        fun_network_tcp_close(conn);
-    }
-}
-
-// UDP send (fire-and-forget)
-const char *udp_data = "UDP message";
-fun_network_udp_send(addr, udp_data, 11);
-```
 
 ---
 
