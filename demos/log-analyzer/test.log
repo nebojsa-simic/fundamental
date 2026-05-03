@@ -1,1 +1,117 @@
-[2024-01-15 10:30:45] [INFO] Test
+[2024-01-15 08:00:01] [INFO] Application server starting up
+[2024-01-15 08:00:02] [DEBUG] Loading configuration from config.yaml
+[2024-01-15 08:00:02] [DEBUG] Configuration loaded successfully
+[2024-01-15 08:00:03] [INFO] Initializing database connection pool
+[2024-01-15 08:00:03] [DEBUG] Pool size: 10 connections
+[2024-01-15 08:00:04] [INFO] Database connection established
+[2024-01-15 08:00:04] [TRACE] Connection string: postgresql://localhost:5432/appdb
+[2024-01-15 08:00:05] [INFO] Starting HTTP server on port 8080
+[2024-01-15 08:00:05] [DEBUG] TLS enabled: true
+[2024-01-15 08:00:06] [INFO] Server ready to accept connections
+[2024-01-15 08:00:10] [DEBUG] Incoming request: GET /api/health
+[2024-01-15 08:00:10] [INFO] Health check passed
+[2024-01-15 08:00:15] [DEBUG] Incoming request: POST /api/users
+[2024-01-15 08:00:15] [TRACE] Request body: {"name": "John", "email": "john@example.com"}
+[2024-01-15 08:00:16] [INFO] User created successfully: id=12345
+[2024-01-15 08:00:20] [DEBUG] Incoming request: GET /api/users/12345
+[2024-01-15 08:00:20] [INFO] User retrieved: id=12345
+[2024-01-15 08:00:25] [WARN] Slow query detected: 250ms for SELECT * FROM users
+[2024-01-15 08:00:26] [DEBUG] Query optimization suggested: add index on users.email
+[2024-01-15 08:00:30] [ERROR] Failed to connect to external API: timeout after 30s
+[2024-01-15 08:00:30] [WARN] Retrying external API connection (attempt 1/3)
+[2024-01-15 08:00:31] [ERROR] External API connection failed again
+[2024-01-15 08:00:31] [WARN] Retrying external API connection (attempt 2/3)
+[2024-01-15 08:00:32] [INFO] External API connection restored
+[2024-01-15 08:00:35] [DEBUG] Cache hit ratio: 85%
+[2024-01-15 08:00:40] [INFO] Processing batch job: email_notifications
+[2024-01-15 08:00:41] [DEBUG] Found 150 pending notifications
+[2024-01-15 08:00:45] [INFO] Sent 50 notifications
+[2024-01-15 08:00:50] [INFO] Sent 100 notifications
+[2024-01-15 08:00:55] [INFO] Sent 150 notifications
+[2024-01-15 08:00:55] [INFO] Batch job completed: email_notifications
+[2024-01-15 08:01:00] [DEBUG] Memory usage: 256MB / 1024MB
+[2024-01-15 08:01:05] [WARN] Memory usage above 75% threshold
+[2024-01-15 08:01:10] [DEBUG] Running garbage collection
+[2024-01-15 08:01:11] [INFO] GC completed: freed 128MB
+[2024-01-15 08:01:15] [DEBUG] Memory usage: 128MB / 1024MB
+[2024-01-15 08:01:20] [ERROR] Invalid request format: missing required field 'user_id'
+[2024-01-15 08:01:20] [DEBUG] Request validation failed for endpoint: /api/orders
+[2024-01-15 08:01:25] [INFO] User login: user_id=67890
+[2024-01-15 08:01:26] [TRACE] Session token generated: abc123xyz
+[2024-01-15 08:01:30] [DEBUG] Incoming request: PUT /api/users/67890
+[2024-01-15 08:01:30] [INFO] User profile updated
+[2024-01-15 08:01:35] [WARN] Rate limit approaching for IP: 192.168.1.100
+[2024-01-15 08:01:40] [ERROR] Rate limit exceeded for IP: 192.168.1.100
+[2024-01-15 08:01:40] [INFO] IP blocked for 60 seconds: 192.168.1.100
+[2024-01-15 08:01:45] [DEBUG] Active connections: 45
+[2024-01-15 08:01:50] [INFO] Scheduled task started: cleanup_temp_files
+[2024-01-15 08:01:55] [DEBUG] Found 23 temporary files older than 24 hours
+[2024-01-15 08:02:00] [INFO] Deleted 23 temporary files, freed 45MB
+[2024-01-15 08:02:05] [TRACE] System metrics: cpu=15%, disk_io=23%, network=8%
+[2024-01-15 08:02:10] [DEBUG] Database connection pool: 8/10 active
+[2024-01-15 08:02:15] [INFO] Webhook delivered successfully: endpoint=https://partner.com/hook
+[2024-01-15 08:02:20] [WARN] Webhook retry needed: endpoint=https://slow-service.com/callback
+[2024-01-15 08:02:25] [ERROR] Webhook failed after 3 retries: endpoint=https://down-service.com/api
+[2024-01-15 08:02:25] [DEBUG] Webhook queued for later retry
+[2024-01-15 08:02:30] [INFO] API request completed: 200 OK in 45ms
+[2024-01-15 08:02:35] [DEBUG] Response cache stored for key: users_list_page_1
+[2024-01-15 08:02:40] [INFO] File uploaded: filename=report.pdf, size=2.5MB
+[2024-01-15 08:02:45] [TRACE] File stored at: /storage/uploads/2024/01/report_abc123.pdf
+[2024-01-15 08:02:50] [DEBUG] Antivirus scan completed: clean
+[2024-01-15 08:02:55] [INFO] Export job started: format=CSV, records=50000
+[2024-01-15 08:03:00] [DEBUG] Export progress: 25% (12500/50000)
+[2024-01-15 08:03:05] [DEBUG] Export progress: 50% (25000/50000)
+[2024-01-15 08:03:10] [DEBUG] Export progress: 75% (37500/50000)
+[2024-01-15 08:03:15] [INFO] Export completed: file=export_20240115.csv, size=15MB
+[2024-01-15 08:03:20] [WARN] Disk space below 20%: 18GB remaining
+[2024-01-15 08:03:25] [DEBUG] Rotating log files
+[2024-01-15 08:03:26] [INFO] Log rotation completed: archived 5 files
+[2024-01-15 08:03:30] [ERROR] Payment processing failed: transaction_id=TXN789012
+[2024-01-15 08:03:30] [DEBUG] Error details: insufficient funds
+[2024-01-15 08:03:31] [INFO] Customer notified of payment failure: customer_id=54321
+[2024-01-15 08:03:35] [DEBUG] Incoming request: DELETE /api/sessions/old
+[2024-01-15 08:03:36] [INFO] Cleaned up 234 expired sessions
+[2024-01-15 08:03:40] [TRACE] SSL certificate valid for 45 more days
+[2024-01-15 08:03:45] [INFO] Backup job started: type=incremental
+[2024-01-15 08:03:50] [DEBUG] Backup progress: 33%
+[2024-01-15 08:03:55] [DEBUG] Backup progress: 66%
+[2024-01-15 08:04:00] [DEBUG] Backup progress: 100%
+[2024-01-15 08:04:01] [INFO] Backup completed successfully: size=1.2GB
+[2024-01-15 08:04:05] [WARN] High CPU usage detected: 85%
+[2024-01-15 08:04:10] [DEBUG] Top process by CPU: worker_pool_3 (45%)
+[2024-01-15 08:04:15] [INFO] Auto-scaling triggered: adding 2 worker instances
+[2024-01-15 08:04:20] [DEBUG] New worker instances online: worker_pool_11, worker_pool_12
+[2024-01-15 08:04:25] [INFO] Load balanced across 12 workers
+[2024-01-15 08:04:30] [TRACE] Queue depth: 15 pending tasks
+[2024-01-15 08:04:35] [DEBUG] Task completed: image_resize job_id=IMG001
+[2024-01-15 08:04:40] [DEBUG] Task completed: pdf_generate job_id=PDF002
+[2024-01-15 08:04:45] [INFO] Queue empty, scaling down workers
+[2024-01-15 08:04:50] [DEBUG] Removed 2 idle workers: worker_pool_11, worker_pool_12
+[2024-01-15 08:04:55] [INFO] System operating normally
+[2024-01-15 08:05:00] [DEBUG] Heartbeat sent to monitoring service
+[2024-01-15 08:05:05] [INFO] Uptime: 24 hours, 5 minutes
+[2024-01-15 08:05:10] [TRACE] Request statistics: total=15234, avg_latency=32ms, p99=125ms
+[2024-01-15 08:05:15] [DEBUG] Error rate: 0.02% (3 errors in last hour)
+[2024-01-15 08:05:20] [INFO] Daily report generated: metrics_summary_20240115.pdf
+[2024-01-15 08:05:25] [WARN] Upcoming maintenance window in 2 hours
+[2024-01-15 08:05:30] [INFO] Maintenance notification sent to all users
+[2024-01-15 08:05:35] [DEBUG] Feature flag updated: new_dashboard=true for beta_users
+[2024-01-15 08:05:40] [INFO] A/B test started: checkout_flow_v2
+[2024-01-15 08:05:45] [DEBUG] Test group assignment: 50% control, 50% variant
+[2024-01-15 08:05:50] [TRACE] Analytics event tracked: page_view /dashboard
+[2024-01-15 08:05:55] [INFO] Session analytics synced to data warehouse
+[2024-01-15 08:06:00] [DEBUG] Connection pool health: all connections healthy
+[2024-01-15 08:06:05] [INFO] Application status: healthy
+[2024-01-15 08:06:10] [ERROR] Unexpected error in background worker: NullPointerException
+[2024-01-15 08:06:10] [DEBUG] Stack trace logged to error_log.txt
+[2024-01-15 08:06:11] [WARN] Background worker restarting
+[2024-01-15 08:06:15] [INFO] Background worker recovered successfully
+[2024-01-15 08:06:20] [DEBUG] Memory pool usage: heap=45%, stack=12%, native=23%
+[2024-01-15 08:06:25] [INFO] Cache invalidation completed for key pattern: user_*
+[2024-01-15 08:06:30] [TRACE] CDN purge requested for 15 assets
+[2024-01-15 08:06:35] [INFO] CDN cache cleared successfully
+[2024-01-15 08:06:40] [DEBUG] Incoming WebSocket connection from 192.168.1.50
+[2024-01-15 08:06:45] [INFO] WebSocket subscribed to channel: notifications_user_67890
+[2024-01-15 08:06:50] [DEBUG] Push notification sent: new_message_received
+[2024-01-15 08:06:55] [INFO] Real-time sync completed with 234 connected clients
+[2024-01-15 08:07:00] [TRACE] Server timestamp: 2024-01-15T08:07:00.000Z
