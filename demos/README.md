@@ -1,5 +1,23 @@
 # Fundamental Library - Demo Applications
 
+## 🤖 AI Agents: Load the fundamental-expert Skill First
+
+**Before creating or modifying any demo:**
+
+```
+/fundamental-expert
+```
+
+The skill provides:
+- ✅ Working code patterns for all modules
+- ✅ Correct build script templates with all source files
+- ✅ API function names and signatures
+- ✅ Common mistakes to avoid
+
+**This is faster than trial-and-error!**
+
+---
+
 ## ⚠️ Before Building Any Demo
 
 **Run the validator first:**

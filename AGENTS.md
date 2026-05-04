@@ -1,19 +1,48 @@
 # AGENTS.md - Fundamental Library Development Guide
 
+## 🤖 AI Agents: Use the fundamental-expert Skill
+
+**Before writing ANY demo or test code:**
+
+```
+/fundamental-expert
+```
+
+This skill provides:
+- ✅ **Correct API patterns** - Knows exact function names and signatures
+- ✅ **Build script templates** - Has all source file locations
+- ✅ **Common pitfalls** - Warns about mistakes before you make them
+- ✅ **Working examples** - Copy-paste patterns for every module
+
+**The skill was created from the codebase and knows:**
+- All module interfaces and implementations
+- Platform-specific source locations (`arch/*/`)
+- Correct async/streaming patterns
+- Memory management requirements
+
+**Using the skill prevents:**
+- ❌ Wrong function names (e.g., `fun_file_read()` vs `fun_read_file_in_memory()`)
+- ❌ Missing source files in build scripts
+- ❌ Stdlib dependencies in library code
+- ❌ Memory leaks from un-freed allocations
+
+---
+
 ## ⚠️ CRITICAL: Before Writing Demo/Test Code
 
 **MUST complete ALL steps before writing code:**
 
-1. **Read the header** - `cat include/fundamental/<module>/<module>.h` - find exact function names
-2. **Copy test build patterns** - `cat tests/<module>/build-windows-amd64.bat` - exact source files
-3. **Verify source locations** - `ls src/<module>/` AND `ls arch/<module>/<platform>/`
-4. **String is typedef** - `typedef const char *String` - just pass `"text"` directly
-5. **File I/O is async** - `fun_read_file_in_memory(Read)` NOT `fun_file_read()`
-6. **File sources in arch/** - `arch/file/<platform>/fileRead*.c` NOT `src/file/`
-7. **Write minimal first** - Compile before adding features
-8. **Build immediately** - No features until clean compile
-9. **Test both platforms** - Windows AND Linux
-10. **Run validator** - `../../demos/validate-demo.bat` before committing
+1. **Load the skill** - `/fundamental-expert` and ask for patterns
+2. **Read the header** - `cat include/fundamental/<module>/<module>.h` - find exact function names
+3. **Copy test build patterns** - `cat tests/<module>/build-windows-amd64.bat` - exact source files
+4. **Verify source locations** - `ls src/<module>/` AND `ls arch/<module>/<platform>/`
+5. **String is typedef** - `typedef const char *String` - just pass `"text"` directly
+6. **File I/O is async** - `fun_read_file_in_memory(Read)` NOT `fun_file_read()`
+7. **File sources in arch/** - `arch/file/<platform>/fileRead*.c` NOT `src/file/`
+8. **Write minimal first** - Compile before adding features
+9. **Build immediately** - No features until clean compile
+10. **Test both platforms** - Windows AND Linux
+11. **Run validator** - `../../demos/validate-demo.bat` before committing
 
 **Skipping these steps guarantees wasted time.**
 
