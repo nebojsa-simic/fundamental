@@ -125,24 +125,6 @@ static void parse_chunk(char *buffer, uint64_t bytes_read, LogStats *stats,
 	}
 }
 
-static void print_level(const char *name, int64_t count, char *num_buf,
-						size_t buf_size)
-{
-	const size_t NAME_WIDTH = 8;
-
-	fun_console_write("  ");
-	fun_console_write(name);
-
-	size_t name_len = fun_string_length(name);
-	for (size_t i = name_len; i < NAME_WIDTH; i++) {
-		fun_console_write(" ");
-	}
-	fun_console_write(": ");
-
-	fun_string_from_int(count, 10, num_buf, buf_size);
-	fun_console_write_line(num_buf);
-}
-
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
@@ -205,29 +187,51 @@ int main(int argc, char **argv)
 	fun_stream_destroy(stream);
 	fun_memory_free(&buffer);
 
+	char output[512];
+
+	StringTemplateParam params[] = {
+		{ "info", { .intValue = stats.info } },
+		{ "warn", { .intValue = stats.warn } },
+		{ "error", { .intValue = stats.error } },
+		{ "debug", { .intValue = stats.debug } },
+		{ "trace", { .intValue = stats.trace } },
+		{ "total", { .intValue = stats.total_lines } },
+		{ "malformed", { .intValue = stats.malformed_lines } }
+	};
+
 	fun_console_write_line("=== Log Analyzer Results ===");
 	fun_console_write_line("");
 
-	char num_buf[32];
+	String template_levels = "Log Levels:\n"
+							 "  INFO:    #{info}\n"
+							 "  WARN:    #{warn}\n"
+							 "  ERROR:   #{error}\n"
+							 "  DEBUG:   #{debug}\n"
+							 "  TRACE:   #{trace}";
 
-	fun_console_write_line("Log Levels:");
-	print_level("INFO", stats.info, num_buf, sizeof(num_buf));
-	print_level("WARN", stats.warn, num_buf, sizeof(num_buf));
-	print_level("ERROR", stats.error, num_buf, sizeof(num_buf));
-	print_level("DEBUG", stats.debug, num_buf, sizeof(num_buf));
-	print_level("TRACE", stats.trace, num_buf, sizeof(num_buf));
+	fun_string_template(template_levels, params, 7, output, sizeof(output));
+	fun_console_write_line(output);
 
 	if (stats.unknown > 0) {
-		print_level("UNKNOWN", stats.unknown, num_buf, sizeof(num_buf));
+		StringTemplateParam unknown_param = { "unknown",
+											  { .intValue = stats.unknown } };
+		String template_unknown = "  UNKNOWN: #{unknown}";
+		fun_string_template(template_unknown, &unknown_param, 1, output,
+							sizeof(output));
+		fun_console_write_line(output);
 	}
 
-	fun_console_write_line("");
-	fun_console_write_line("Statistics:");
-	print_level("Total", stats.total_lines, num_buf, sizeof(num_buf));
+	String template_stats = "\nStatistics:\n"
+							"  Total:     #{total}";
+
+	fun_string_template(template_stats, params, 7, output, sizeof(output));
+	fun_console_write_line(output);
 
 	if (stats.malformed_lines > 0) {
-		print_level("Malformed", stats.malformed_lines, num_buf,
-					sizeof(num_buf));
+		String template_malformed = "  Malformed: #{malformed}";
+		fun_string_template(template_malformed, params, 7, output,
+							sizeof(output));
+		fun_console_write_line(output);
 	}
 
 	return 0;
