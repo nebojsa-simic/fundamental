@@ -125,6 +125,24 @@ static void parse_chunk(char *buffer, uint64_t bytes_read, LogStats *stats,
 	}
 }
 
+static void print_level(const char *name, int64_t count, char *num_buf,
+						size_t buf_size)
+{
+	const size_t NAME_WIDTH = 8;
+
+	fun_console_write("  ");
+	fun_console_write(name);
+
+	size_t name_len = fun_string_length(name);
+	for (size_t i = name_len; i < NAME_WIDTH; i++) {
+		fun_console_write(" ");
+	}
+	fun_console_write(": ");
+
+	fun_string_from_int(count, 10, num_buf, buf_size);
+	fun_console_write_line(num_buf);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
@@ -193,44 +211,23 @@ int main(int argc, char **argv)
 	char num_buf[32];
 
 	fun_console_write_line("Log Levels:");
-	fun_console_write("  INFO:    ");
-	fun_string_from_int(stats.info, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
-
-	fun_console_write("  WARN:    ");
-	fun_string_from_int(stats.warn, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
-
-	fun_console_write("  ERROR:   ");
-	fun_string_from_int(stats.error, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
-
-	fun_console_write("  DEBUG:   ");
-	fun_string_from_int(stats.debug, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
-
-	fun_console_write("  TRACE:   ");
-	fun_string_from_int(stats.trace, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
+	print_level("INFO", stats.info, num_buf, sizeof(num_buf));
+	print_level("WARN", stats.warn, num_buf, sizeof(num_buf));
+	print_level("ERROR", stats.error, num_buf, sizeof(num_buf));
+	print_level("DEBUG", stats.debug, num_buf, sizeof(num_buf));
+	print_level("TRACE", stats.trace, num_buf, sizeof(num_buf));
 
 	if (stats.unknown > 0) {
-		fun_console_write("  UNKNOWN: ");
-		fun_string_from_int(stats.unknown, 10, num_buf, sizeof(num_buf));
-		fun_console_write_line(num_buf);
+		print_level("UNKNOWN", stats.unknown, num_buf, sizeof(num_buf));
 	}
 
 	fun_console_write_line("");
 	fun_console_write_line("Statistics:");
-
-	fun_console_write("  Total lines:     ");
-	fun_string_from_int(stats.total_lines, 10, num_buf, sizeof(num_buf));
-	fun_console_write_line(num_buf);
+	print_level("Total", stats.total_lines, num_buf, sizeof(num_buf));
 
 	if (stats.malformed_lines > 0) {
-		fun_console_write("  Malformed lines: ");
-		fun_string_from_int(stats.malformed_lines, 10, num_buf,
-							sizeof(num_buf));
-		fun_console_write_line(num_buf);
+		print_level("Malformed", stats.malformed_lines, num_buf,
+					sizeof(num_buf));
 	}
 
 	return 0;
