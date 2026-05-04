@@ -147,10 +147,6 @@ int main(int argc, char **argv)
 	}
 	Memory buffer = buffer_result.value;
 
-	FileStream stream = { 0 };
-	stream.buffer = buffer;
-	stream.buffer_size = CHUNK_SIZE;
-
 	AsyncResult open_result = fun_stream_create_file_read(
 		file_path, buffer, CHUNK_SIZE, FILE_MODE_AUTO);
 	fun_async_await(&open_result, -1);
@@ -162,13 +158,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	FileStream *stream = (FileStream *)open_result.state;
+
 	LogStats stats = { 0 };
 	char carry_over[8192] = { 0 };
 	uint64_t carry_len = 0;
 
-	while (!fun_stream_is_end_of_stream(&stream)) {
+	while (!fun_stream_is_end_of_stream(stream)) {
 		uint64_t bytes_read = 0;
-		AsyncResult read_result = fun_stream_read(&stream, &bytes_read);
+		AsyncResult read_result = fun_stream_read(stream, &bytes_read);
 		fun_async_await(&read_result, -1);
 
 		if (fun_error_is_error(read_result.error)) {
@@ -186,7 +184,7 @@ int main(int argc, char **argv)
 		parse_log_line(carry_over, &stats);
 	}
 
-	fun_stream_destroy(&stream);
+	fun_stream_destroy(stream);
 	fun_memory_free(&buffer);
 
 	fun_console_write_line("=== Log Analyzer Results ===");
