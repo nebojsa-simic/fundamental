@@ -1,6 +1,9 @@
 #include "fundamental/shutdown/shutdown.h"
 #include "fundamental/arch/atomic.h"
 
+/* Declare platform-specific exit function (implemented in platform arch/ layers) */
+extern void platform_shutdown_exit(int exit_code);
+
 /* Structure to hold registered shutdown function for each phase */
 typedef struct {
 	int phase;
@@ -77,6 +80,3 @@ void shutdown_register_cleanup(int phase, void (*handler)(void))
 		shutdown_entries[pos].valid = 1;
 	}
 }
-
-/* Declare platform-specific exit function (implemented in platform arch/ layers) */
-extern void platform_shutdown_exit(int exit_code);

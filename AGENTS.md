@@ -1,5 +1,22 @@
 # AGENTS.md - Fundamental Library Development Guide
 
+## ⚠️ CRITICAL: Before Writing Demo/Test Code
+
+**MUST complete ALL steps before writing code:**
+
+1. **Read the header** - `cat include/fundamental/<module>/<module>.h` - find exact function names
+2. **Copy test build patterns** - `cat tests/<module>/build-windows-amd64.bat` - exact source files
+3. **Verify source locations** - `ls src/<module>/` AND `ls arch/<module>/<platform>/`
+4. **String is typedef** - `typedef const char *String` - just pass `"text"` directly
+5. **File I/O is async** - `fun_read_file_in_memory(Read)` NOT `fun_file_read()`
+6. **File sources in arch/** - `arch/file/<platform>/fileRead*.c` NOT `src/file/`
+7. **Write minimal first** - Compile before adding features
+8. **Build immediately** - No features until clean compile
+9. **Test both platforms** - Windows AND Linux
+10. **Run validator** - `../../demos/validate-demo.bat` before committing
+
+**Skipping these steps guarantees wasted time.**
+
 ## Build Commands
 
 ### Full Test Suite
@@ -90,6 +107,62 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
    - The CLI explicitly delegates to manual steps
 
 **Why this matters**: Skills describe the *workflow*, but the CLI may automate it. Always discover commands before implementing manually.
+
+### OpenSpec CLI Error Handling
+
+**When the CLI reports warnings or errors:**
+
+1. **DO NOT bypass the CLI** - Never manually move directories, edit OpenSpec files, or run git commands to "fix" what the CLI is handling
+2. **Read the error carefully** - The CLI will tell you exactly what needs fixing (e.g., missing sections, incomplete tasks)
+3. **Fix the underlying issue** - Update the spec/tasks/proposal as the error indicates
+4. **Re-run the CLI command** - Let the CLI complete the operation after fixes are applied
+
+**Explicitly Forbidden:**
+- ❌ `mv openspec/changes/<name> openspec/changes/archive/` - Use `openspec archive <name>` instead
+- ❌ `git add openspec/...` for OpenSpec changes - The CLI handles commits
+- ❌ `git commit -m "Archive..."` for OpenSpec archives - The CLI handles commits
+- ❌ Manually editing tasks.md to mark tasks complete just to satisfy archive - Fix actual implementation
+
+**If the CLI fails repeatedly:**
+1. Document the exact error message
+2. Ask the user for guidance before attempting workarounds
+3. The CLI is the source of truth - if it says something is wrong, it is wrong
+
+### OpenSpec Archive Checklist
+
+Before archiving a change, verify:
+
+- [ ] All tasks in `tasks.md` are marked complete (`- [x]`)
+- [ ] All artifacts show status `done` in `openspec status --change <name>`
+- [ ] Delta specs are synced (run sync if prompted)
+- [ ] **Run `openspec archive <name>` and let it handle everything**
+
+**After running `openspec archive`:**
+- The CLI will move the directory to `openspec/changes/archive/`
+- The CLI will sync specs to `openspec/specs/`
+- The CLI will commit the changes
+- **DO NOT** run `git add` or `git commit` for OpenSpec archive operations
+
+### OpenSpec Archive: Never Do This
+
+**The following actions are explicitly forbidden when archiving OpenSpec changes:**
+
+| ❌ Forbidden | ✅ Correct Approach |
+|-------------|-------------------|
+| `mv openspec/changes/<name> openspec/changes/archive/` | `openspec archive <name>` |
+| `git add openspec/changes/archive/` | CLI handles this automatically |
+| `git commit -m "Archive..."` | CLI handles this automatically |
+| Manually editing tasks.md checkboxes | Fix actual implementation, then run CLI |
+| Bypassing CLI validation errors | Fix the reported issues, then retry CLI |
+| Running archive twice to "force" it | Ask user for guidance if CLI fails |
+
+**If `openspec archive` reports errors:**
+1. Read the error message - it tells you exactly what's wrong
+2. Fix the underlying issue (incomplete tasks, missing spec sections, etc.)
+3. Re-run `openspec archive <name>`
+4. If it still fails, ask the user - do NOT attempt manual workarounds
+
+**Remember:** The CLI is the source of truth. If validation fails, something is genuinely incomplete.
 
 ---
 
