@@ -25,6 +25,19 @@ __attribute__((weak)) int fun_memory_init(void)
 }
 
 /*
+ * Memory deinitialization (Shutdown Phase 2) - weak default implementation
+ * Memory subsystem doesn't require cleanup on most platforms.
+ * Can be overridden by platform-specific implementation if needed.
+ */
+__attribute__((weak)) void memory_deinit(void)
+{
+	/* Memory layer has no cleanup required */
+}
+
+/* Register memory shutdown handler */
+FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_MEMORY, memory_deinit);
+
+/*
  * Logging initialization (Phase 5) - stub implementation
  * Logging module not yet implemented - returns success.
  */
@@ -97,6 +110,10 @@ void fun_startup_run(void)
 		/* Network failure is non-fatal for non-network apps */
 		STARTUP_TRACE("Network init failed - continuing without network");
 	}
+
+	/* Install signal handlers after all initialization */
+	STARTUP_TRACE("Installing signal handlers");
+	fun_signals_install_handlers();
 
 	STARTUP_TRACE("Startup complete");
 }

@@ -19,6 +19,21 @@ static Config g_config;
 static bool g_config_initialized = false;
 
 /*
+ * Config deinitialization (Shutdown Phase 4)
+ * Destroys the global config instance, freeing all allocations.
+ */
+static void config_deinit(void)
+{
+	if (g_config_initialized) {
+		fun_config_destroy(&g_config);
+		g_config_initialized = false;
+	}
+}
+
+/* Register config shutdown handler */
+FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_CONFIG, config_deinit);
+
+/*
  * Get the global config instance.
  * Returns a copy of the global config struct.
  * Only valid after fun_config_init() has been called.

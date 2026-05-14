@@ -1,9 +1,22 @@
 #include "fundamental/platform/platform.h"
 #include "fundamental/string/string.h"
+#include "fundamental/shutdown/shutdown.h"
 
 // Arch-layer functions - implemented per platform in arch/platform/<platform>/
 PlatformOS fun_platform_os(void);
 PlatformArch fun_platform_arch(void);
+
+/*
+ * Platform deinitialization (Shutdown Phase 1)
+ * No-op for now - platform detection functions don't require cleanup.
+ */
+static void platform_deinit(void)
+{
+	/* Platform layer has no cleanup required */
+}
+
+/* Register platform shutdown handler */
+FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_PLATFORM, platform_deinit);
 
 /*
  * Platform initialization (Phase 1)
