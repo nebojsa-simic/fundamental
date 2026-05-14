@@ -3,6 +3,12 @@ REM Log Analyzer Demo - Build Script
 REM Dependencies: file (read), string, console, hashmap, memory, async
 
 gcc --std=c17 -Os -I ../../include demo.c ^
+    ../../src/stream/streamFile.c ^
+    ../../src/stream/streamFlow.c ^
+    ../../src/stream/streamLifecycle.c ^
+    ../../arch/stream/windows-amd64/streamOpen.c ^
+    ../../arch/stream/windows-amd64/streamRead.c ^
+    ../../arch/stream/windows-amd64/streamWrite.c ^
     ../../arch/file/windows-amd64/fileRead.c ^
     ../../arch/file/windows-amd64/fileReadMmap.c ^
     ../../arch/file/windows-amd64/fileReadRing.c ^

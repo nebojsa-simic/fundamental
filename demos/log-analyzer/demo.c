@@ -127,14 +127,14 @@ static void parse_chunk(char *buffer, uint64_t bytes_read, LogStats *stats,
 
 int main(int argc, char **argv)
 {
-	if (argc < 2) {
+	if (argc < 2 || fun_string_compare(argv[1], "--help") == 0) {
 		fun_console_write_line("=== Log Analyzer Demo ===");
 		fun_console_write_line("Usage: demo.exe <logfile>");
 		fun_console_write_line("");
 		fun_console_write_line(
 			"Analyzes log files and counts entries by level.");
 		fun_console_write_line("Supports format: [TIMESTAMP] [LEVEL] message");
-		return 1;
+		return (argc < 2) ? 1 : 0;
 	}
 
 	String file_path = argv[1];
