@@ -61,6 +61,10 @@ void fun_shutdown_run(fun_shutdown_type type, int exit_code);
  * Macro for registering cleanup functions for the shutdown sequence.
  *
  * Functions registered with this macro will be called during the shutdown
+/*
+ * Macro for registering cleanup functions for the shutdown sequence.
+ *
+ * Functions registered with this macro will be called during the shutdown
  * sequence in reverse order of initialization phases (APP, NETWORK, FILE, etc.)
  *
  * Usage:
@@ -73,8 +77,8 @@ void fun_shutdown_run(fun_shutdown_type type, int exit_code);
 #define FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function) \
 	static void __attribute__((constructor))                   \
 		shutdown_##cleanup_function##_reg(void) {              \
-		(void)phase;                                           \
-		(void)cleanup_function;                                \
+		extern void shutdown_register_cleanup(int, void (*)(void)); \
+		shutdown_register_cleanup(phase, cleanup_function);    \
 	}
 
 #endif // LIBRARY_SHUTDOWN_H

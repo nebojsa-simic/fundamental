@@ -12,6 +12,8 @@ gcc --std=c17 -Os -I ../../include demo.c ^
     ../../src/config/iniParser.c ^
     ../../src/config/cliParser.c ^
     ../../src/hashmap/hashmap.c ^
+    ../../src/async/async.c ^
+    ../../arch/async/windows-amd64/async.c ^
     ../../src/console/console.c ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringConversion.c ^
