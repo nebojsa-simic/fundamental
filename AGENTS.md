@@ -86,6 +86,7 @@ Current test directories:
 - `process_spawn/` - Process execution
 - `rbtree/` - Red-black trees
 - `set/` - Set operations
+- `shutdown/` - Shutdown framework and signal handling
 - `stream/` - Stream I/O
 - `string*/` - String operations (conversion, operations, template)
 - `file*/` - File I/O (read, write, append, lock)
@@ -213,6 +214,7 @@ Skills are located in `.opencode/skills/` and cover these domains:
 | **Collections** | `fundamental-collections.md` | Arrays, hashmaps, sets, red-black trees |
 | **Async** | `fundamental-async.md` | Await results, poll status, spawn processes |
 | **Config** | `fundamental-config.md` | Load configuration, cascade sources, get values |
+| **Shutdown** | `fundamental-shutdown.md` | Graceful shutdown, cleanup handlers, Ctrl+C handling |
 | **Index** | `fundamental-skills-index.md` | Central index with cross-references |
 
 ### Using Skills
@@ -233,6 +235,17 @@ Agent workflow:
 2. Load fundamental-memory.md for buffer allocation
 3. Load fundamental-string.md for string parsing or templating
 4. Combine patterns into working code
+```
+
+**Shutdown Workflow:**
+```
+User: "Handle Ctrl+C gracefully and save state"
+
+Agent workflow:
+1. Load fundamental-shutdown.md for cleanup handler pattern
+2. Load fundamental-file-io.md for state file writing
+3. Register cleanup BEFORE fun_startup_run()
+4. Use FILE_DURABILITY_SYNC in cleanup for data safety
 ```
 
 ### Skill Format
