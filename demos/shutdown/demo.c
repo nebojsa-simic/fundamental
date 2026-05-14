@@ -1,5 +1,6 @@
 /*
  * Shutdown Framework Demo
+ * Demonstrates graceful shutdown with cleanup on Ctrl+C
  */
 
 #include "fundamental/shutdown/shutdown.h"
@@ -31,10 +32,11 @@ static void app_cleanup(void)
 	}
 }
 
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_APP, app_cleanup);
-
 int main(void)
 {
+	/* Register cleanup BEFORE startup */
+	shutdown_register_cleanup(SHUTDOWN_PHASE_APP, app_cleanup);
+	
 	fun_startup_run();
 
 	fun_console_write_line("=== Shutdown Framework Demo ===");

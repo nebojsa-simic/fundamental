@@ -15,30 +15,27 @@ static int shutdown_entry_count = 0;
 static int shutdown_started = 0;
 
 static void execute_shutdown_phases(fun_shutdown_type type, int exit_code);
-static void execute_shutdown_phase(int phase);
 
 void fun_shutdown_run(fun_shutdown_type type, int exit_code)
 {
-	int expected = 0;
-	if (!fun_atomic_compare_and_swap(&shutdown_started, &expected, 1)) {
+	/* Check if shutdown already started */
+	if (shutdown_started) {
 		return;
 	}
+	shutdown_started = 1;
+	
 	execute_shutdown_phases(type, exit_code);
 	platform_shutdown_exit(exit_code);
 }
 
 static void execute_shutdown_phases(fun_shutdown_type type, int exit_code)
 {
+	/* Execute phase 99 (APP) first, then lower phases */
 	for (int phase = 99; phase >= 1; phase--) {
-		execute_shutdown_phase(phase);
-	}
-}
-
-static void execute_shutdown_phase(int phase)
-{
-	for (int i = 0; i < shutdown_entry_count; i++) {
-		if (shutdown_entries[i].valid && shutdown_entries[i].phase == phase) {
-			shutdown_entries[i].func();
+		for (int i = 0; i < shutdown_entry_count; i++) {
+			if (shutdown_entries[i].valid && shutdown_entries[i].phase == phase) {
+				shutdown_entries[i].func();
+			}
 		}
 	}
 }
