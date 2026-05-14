@@ -1,84 +1,25 @@
-#ifndef LIBRARY_SHUTDOWN_H
-#define LIBRARY_SHUTDOWN_H
-
-#include <stdbool.h>
+#pragma once
 #include <stdint.h>
-#include <stddef.h>
 
-#include "../error/error.h"
+typedef enum {
+	SHUTDOWN_NORMAL = 0,
+	SHUTDOWN_ABNORMAL = 1,
+	SHUTDOWN_EXTERNAL = 2,
+	SHUTDOWN_EMERGENCY = 3,
+} fun_shutdown_type;
 
-/*
- * Shutdown Framework
- *
- * Provides structured shutdown coordination for applications using the
- * Fundamental Library. Registers cleanup functions to run in reverse
- * order from initialization phases during application termination.
- *
- * Usage example:
- *   void my_cleanup_function(void) { ... }
- *   
- *   // Register cleanup at application-specific phase
- *   FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_APP, my_cleanup_function);
- *
- *   // Trigger shutdown sequence - cleanup functions execute and process exits
- *   fun_shutdown_run(SHUTDOWN_NORMAL, 0);
- */
-
-/* Phase constants - match startup framework */
-/* Note: These must match STARTUP phase constants for symmetry */
 #define SHUTDOWN_PHASE_PLATFORM 1
 #define SHUTDOWN_PHASE_MEMORY 2
 #define SHUTDOWN_PHASE_FILESYSTEM 3
 #define SHUTDOWN_PHASE_CONFIG 4
-#define SHUTDOWN_PHASE_LOGGING 5
-#define SHUTDOWN_PHASE_NETWORK 6
+#define SHUTDOWN_PHASE_NETWORK 5
 #define SHUTDOWN_PHASE_APP 99
 
-/* Shutdown types - categorize different shutdown scenarios */
-typedef enum {
-	SHUTDOWN_NORMAL, /* Normal termination requested */
-	SHUTDOWN_ABNORMAL, /* Abnormal condition, cleanup before exit */
-	SHUTDOWN_EXTERNAL, /* External signal/termination request */
-	SHUTDOWN_EMERGENCY /* System integrity violation, Immediate halt */
-} fun_shutdown_type;
-
-/*
- * Execute shutdown sequence with specified type and exit code.
- *
- * This function implements a clean shutdown by executing all registered
- * cleanup functions in reverse initialization order. The exit_code parameter
- * determines the final process exit status.
- *
- * The function is idempotent - safe to call multiple times in sequence,
- * and protected against race conditions with atomic flags.
- *
- * @param type          Shutdown category dictating execution details
- * @param exit_code     Process exit status to return after cleanup
- */
 void fun_shutdown_run(fun_shutdown_type type, int exit_code);
+void shutdown_register_cleanup(int phase, void (*handler)(void));
 
-/*
- * Macro for registering cleanup functions for the shutdown sequence.
- *
- * Functions registered with this macro will be called during the shutdown
-/*
- * Macro for registering cleanup functions for the shutdown sequence.
- *
- * Functions registered with this macro will be called during the shutdown
- * sequence in reverse order of initialization phases (APP, NETWORK, FILE, etc.)
- *
- * Usage:
- *   static void my_module_deinit(void) { ... }
- *   FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_MY_MODULE, my_module_deinit);
- *
- * @param phase            Phase constant (SHUTDOWN_PHASE_*)
- * @param cleanup_function Function to call during shutdown sequence
- */
 #define FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function) \
-	static void __attribute__((constructor))                   \
+	__attribute__((constructor(101))) static void              \
 		shutdown_##cleanup_function##_reg(void) {              \
-		extern void shutdown_register_cleanup(int, void (*)(void)); \
 		shutdown_register_cleanup(phase, cleanup_function);    \
 	}
-
-#endif // LIBRARY_SHUTDOWN_H
