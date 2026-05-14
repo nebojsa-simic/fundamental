@@ -412,4 +412,3 @@ static void filesystem_deinit(void)
 }
 
 /* Register filesystem shutdown handler */
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_FILESYSTEM, filesystem_deinit);

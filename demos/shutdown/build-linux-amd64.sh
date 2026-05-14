@@ -1,9 +1,10 @@
 #!/bin/bash
 # Shutdown Framework Demo - Build Script
-# Dependencies: shutdown, console, memory, file, string, async
+# Dependencies: shutdown, console, memory, file, string, async, startup
 
 gcc --std=c17 -Os -I ../../include demo.c \
     ../../src/shutdown/shutdown.c \
+    ../../src/startup/startup.c \
     ../../src/console/console.c \
     ../../src/string/stringOperations.c \
     ../../src/string/stringConversion.c \

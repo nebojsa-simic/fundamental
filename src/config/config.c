@@ -31,7 +31,6 @@ static void config_deinit(void)
 }
 
 /* Register config shutdown handler */
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_CONFIG, config_deinit);
 
 /*
  * Get the global config instance.

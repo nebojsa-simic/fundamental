@@ -15,6 +15,13 @@
 #include "fundamental/file/file.h"
 #include "fundamental/string/string.h"
 #include "fundamental/async/async.h"
+#include "fundamental/startup/startup.h"
+
+/* Stub for network init (not needed for this demo) */
+int fun_network_init(void)
+{
+	return 0;
+}
 
 static const char *CLEANUP_FILE = "shutdown_cleanup.txt";
 static int cleanup_ran = 0;
@@ -57,6 +64,9 @@ FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_APP, app_cleanup);
 
 int main(void)
 {
+	/* Initialize startup framework (installs signal handlers) */
+	fun_startup_run();
+
 	fun_console_write_line("=== Shutdown Framework Demo ===");
 	fun_console_write_line("");
 	fun_console_write_line("This demo waits 10 seconds.");

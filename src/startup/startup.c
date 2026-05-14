@@ -14,6 +14,9 @@ extern int fun_config_init(void);
 extern int fun_logging_init(void);
 extern int fun_network_init(void);
 
+/* Signal handler installation (implemented in arch/signals/) */
+extern void fun_signals_install_handlers(void);
+
 /*
  * Memory initialization (Phase 2) - weak default implementation
  * Memory subsystem doesn't require initialization on most platforms.
@@ -23,19 +26,6 @@ __attribute__((weak)) int fun_memory_init(void)
 {
 	return 0;
 }
-
-/*
- * Memory deinitialization (Shutdown Phase 2) - weak default implementation
- * Memory subsystem doesn't require cleanup on most platforms.
- * Can be overridden by platform-specific implementation if needed.
- */
-__attribute__((weak)) void memory_deinit(void)
-{
-	/* Memory layer has no cleanup required */
-}
-
-/* Register memory shutdown handler */
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_MEMORY, memory_deinit);
 
 /*
  * Logging initialization (Phase 5) - stub implementation

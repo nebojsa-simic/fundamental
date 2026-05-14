@@ -16,7 +16,6 @@ static void platform_deinit(void)
 }
 
 /* Register platform shutdown handler */
-FUNDAMENTAL_SHUTDOWN_REGISTER(SHUTDOWN_PHASE_PLATFORM, platform_deinit);
 
 /*
  * Platform initialization (Phase 1)

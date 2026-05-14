@@ -70,11 +70,11 @@ void fun_shutdown_run(fun_shutdown_type type, int exit_code);
  * @param phase            Phase constant (SHUTDOWN_PHASE_*)
  * @param cleanup_function Function to call during shutdown sequence
  */
-#define FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function)     \
-	static void __attribute__((constructor))                       \
-	shutdown_##cleanup_function##_registration(void)               \
-	{                                                              \
-		/* Registration would happen here in the implementation */ \
+#define FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function) \
+	static void __attribute__((constructor))                   \
+		shutdown_##cleanup_function##_reg(void) {              \
+		(void)phase;                                           \
+		(void)cleanup_function;                                \
 	}
 
 #endif // LIBRARY_SHUTDOWN_H
