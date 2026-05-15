@@ -786,6 +786,29 @@ voidResult fun_network_tcp_close(TcpNetworkConnection conn)
 	return result;
 }
 
+TcpNetworkConnection fun_network_tcp_register_connection(intptr_t accepted_fd)
+{
+	struct TcpNetworkConnection_s *conn = pool_acquire();
+	if (!conn)
+		return (TcpNetworkConnection)0;
+
+	conn->fd = accepted_fd;
+
+	MemoryResult mr = fun_memory_allocate(g_rx_buf_size);
+	if (fun_error_is_error(mr.error)) {
+		pool_release(conn);
+		return (TcpNetworkConnection)0;
+	}
+
+	conn->rx_buf = mr.value;
+	conn->rx_cap = g_rx_buf_size;
+	conn->rx_head = 0;
+	conn->rx_len = 0;
+	conn->op_type = CONN_OP_NONE;
+
+	return (TcpNetworkConnection)conn;
+}
+
 AsyncResult fun_network_udp_send(NetworkAddress addr, const void *data,
 								 size_t length)
 {

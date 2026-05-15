@@ -1,0 +1,33 @@
+@ECHO OFF
+
+set PROJECT_ROOT=..\..
+
+gcc ^
+    --std=c17 -Os ^
+    -I %PROJECT_ROOT%/include ^
+    test.c ^
+    %PROJECT_ROOT%/src/network/server/server.c ^
+    %PROJECT_ROOT%/src/network/network.c ^
+    %PROJECT_ROOT%/arch/network/windows-amd64/network.c ^
+    %PROJECT_ROOT%/arch/network/server/windows-amd64/server.c ^
+    %PROJECT_ROOT%/src/async/async.c ^
+    %PROJECT_ROOT%/arch/async/windows-amd64/async.c ^
+    %PROJECT_ROOT%/src/config/config.c ^
+    %PROJECT_ROOT%/src/config/iniParser.c ^
+    %PROJECT_ROOT%/src/config/cliParser.c ^
+    %PROJECT_ROOT%/arch/config/windows-amd64/env.c ^
+    %PROJECT_ROOT%/src/filesystem/path.c ^
+    %PROJECT_ROOT%/src/filesystem/file_exists.c ^
+    %PROJECT_ROOT%/src/filesystem/directory.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/path.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/file_exists.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/directory.c ^
+    %PROJECT_ROOT%/src/hashmap/hashmap.c ^
+    %PROJECT_ROOT%/arch/memory/windows-amd64/memory.c ^
+    %PROJECT_ROOT%/src/string/stringConversion.c ^
+    %PROJECT_ROOT%/src/string/stringOperations.c ^
+    %PROJECT_ROOT%/src/string/stringValidation.c ^
+    -lws2_32 ^
+    -o test.exe
+
+strip --strip-unneeded test.exe

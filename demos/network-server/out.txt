@@ -1,0 +1,7 @@
+broker on 127.0.0.1:8080
+client connected
+client disconnected
+client connected
+client disconnected
+client connected
+client disconnected
