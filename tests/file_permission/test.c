@@ -23,6 +23,7 @@ static void print_test_result(const char *test_name)
 
 static void delete_test_file(const char *path)
 {
+	chmod(path, 0666);
 	unlink(path);
 }
 
@@ -51,6 +52,7 @@ static void test_read_nonexistent_file(void)
 
 static void test_read_file_no_permission(void)
 {
+	delete_test_file(TEST_FILE_PATH);
 	int fd = open(TEST_FILE_PATH, O_CREAT | O_WRONLY, 0000);
 	assert(fd >= 0);
 	close(fd);
@@ -78,6 +80,7 @@ static void test_read_file_no_permission(void)
 
 static void test_write_to_readonly_file(void)
 {
+	delete_test_file(TEST_READ_ONLY_PATH);
 	int fd = open(TEST_READ_ONLY_PATH, O_CREAT | O_WRONLY, 0444);
 	assert(fd >= 0);
 	close(fd);

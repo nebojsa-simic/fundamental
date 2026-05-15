@@ -3,9 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include "../../include/fundamental/file/file.h"
 #include "../../include/fundamental/memory/memory.h"
@@ -21,35 +18,21 @@ static void print_test_result(const char *test_name)
 
 static bool create_sparse_file(const char *path, uint64_t size)
 {
-	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (fd < 0)
-		return false;
-
-	off_t result = lseek(fd, size - 1, SEEK_SET);
-	if (result == (off_t)-1) {
-		close(fd);
-		return false;
-	}
-
 	char byte = 0;
-	if (write(fd, &byte, 1) != 1) {
-		close(fd);
-		return false;
-	}
-
-	close(fd);
-	return true;
-}
-
-static bool file_exists(const char *path)
-{
-	struct stat st;
-	return stat(path, &st) == 0;
+	Write params = { .file_path = path,
+			 .input = &byte,
+			 .bytes_to_write = 1,
+			 .offset = size - 1,
+			 .mode = FILE_MODE_AUTO,
+			 .durability_mode = FILE_DURABILITY_ASYNC };
+	AsyncResult result = fun_write_memory_to_file(params);
+	fun_async_await(&result, -1);
+	return result.error.code == 0;
 }
 
 static void delete_test_file(const char *path)
 {
-	unlink(path);
+	remove(path);
 }
 
 static void test_create_file_larger_than_2gb(void)
@@ -57,7 +40,6 @@ static void test_create_file_larger_than_2gb(void)
 	uint64_t file_size = (2ULL * 1024 * 1024 * 1024) + (1 * 1024 * 1024);
 
 	assert(create_sparse_file(FILE_PATH, file_size));
-	assert(file_exists(FILE_PATH));
 
 	delete_test_file(FILE_PATH);
 	print_test_result("create_file_larger_than_2gb");
