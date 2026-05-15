@@ -54,6 +54,6 @@
 ## 8. Validation
 
 - [x] 8.1 Run `run-tests-windows-amd64.bat` — all sync tests pass
-- [ ] 8.2 Run `./run-tests-linux-amd64.sh` — all sync tests pass (requires Linux)
+- [x] 8.2 Run `./run-tests-linux-amd64.sh` — all sync tests pass (requires Linux)
 - [x] 8.3 Run `code-format.bat` — clang-format passes on all new files
 - [x] 8.4 Run `openspec validate sync` — all specs validated
