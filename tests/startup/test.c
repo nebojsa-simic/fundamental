@@ -158,3 +158,8 @@ int cli_main(int argc, const char **argv)
 		return 1;
 	}
 }
+
+int main(int argc, char **argv)
+{
+	return cli_main(argc, (const char **)argv);
+}

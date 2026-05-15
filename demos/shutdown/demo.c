@@ -11,13 +11,17 @@
 #include "fundamental/async/async.h"
 #include "fundamental/startup/startup.h"
 
-int fun_network_init(void) { return 0; }
+int fun_network_init(void)
+{
+	return 0;
+}
 
 static const char *CLEANUP_FILE = "shutdown_cleanup.txt";
 
 static void app_cleanup(void)
 {
-	const char *content = "Shutdown framework demo: cleanup function executed!\n";
+	const char *content =
+		"Shutdown framework demo: cleanup function executed!\n";
 	Write params = { .file_path = CLEANUP_FILE,
 					 .input = (Memory)content,
 					 .bytes_to_write = fun_string_length(content),
@@ -36,7 +40,7 @@ int main(void)
 {
 	/* Register cleanup BEFORE startup */
 	shutdown_register_cleanup(SHUTDOWN_PHASE_APP, app_cleanup);
-	
+
 	fun_startup_run();
 
 	fun_console_write_line("=== Shutdown Framework Demo ===");
@@ -46,9 +50,11 @@ int main(void)
 	for (int i = 10; i > 0; i--) {
 		char msg[128];
 		StringTemplateParam params[] = { { "seconds", { .intValue = i } } };
-		fun_string_template("#{seconds} seconds remaining...", params, 1, msg, sizeof(msg));
+		fun_string_template("#{seconds} seconds remaining...", params, 1, msg,
+							sizeof(msg));
 		fun_console_write_line(msg);
-		for (volatile int j = 0; j < 100000000; j++);
+		for (volatile int j = 0; j < 100000000; j++)
+			;
 	}
 
 	fun_console_write_line("Timeout - normal exit");

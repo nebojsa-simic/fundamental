@@ -5,14 +5,9 @@
 #include <string.h>
 #include <stdbool.h>
 
-#ifdef _WIN32
-#include <io.h>
-#include <sys/stat.h>
-#else
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
-#endif
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define RED_CROSS "\033[0;31m✗\033[0m"
@@ -199,7 +194,7 @@ static void test_fun_filesystem_remove_directory(void)
 
 	// Clean start using platform API
 	rmdir(test_path);
-	mkdir("test_output");
+	mkdir("test_output", 0755);
 
 	// Create and verify it succeeded
 	ErrorResult create_result = fun_filesystem_create_directory(path);

@@ -45,19 +45,21 @@
  * Shutdown type - indicates why shutdown is occurring
  */
 typedef enum {
-	SHUTDOWN_NORMAL = 0,     /**< Normal program exit */
-	SHUTDOWN_ABNORMAL = 1,   /**< Crash or error */
-	SHUTDOWN_EXTERNAL = 2,   /**< External signal (Ctrl+C, SIGTERM) */
-	SHUTDOWN_EMERGENCY = 3,  /**< System shutdown/logoff */
+	SHUTDOWN_NORMAL = 0, /**< Normal program exit */
+	SHUTDOWN_ABNORMAL = 1, /**< Crash or error */
+	SHUTDOWN_EXTERNAL = 2, /**< External signal (Ctrl+C, SIGTERM) */
+	SHUTDOWN_EMERGENCY = 3, /**< System shutdown/logoff */
 } fun_shutdown_type;
 
 /** Shutdown phase constants - cleanup executes in reverse order */
-#define SHUTDOWN_PHASE_PLATFORM 1    /**< Platform layer cleanup (first to init, last to cleanup) */
-#define SHUTDOWN_PHASE_MEMORY 2      /**< Memory layer cleanup */
-#define SHUTDOWN_PHASE_FILESYSTEM 3  /**< Filesystem layer cleanup */
-#define SHUTDOWN_PHASE_CONFIG 4      /**< Configuration layer cleanup */
-#define SHUTDOWN_PHASE_NETWORK 5     /**< Network layer cleanup */
-#define SHUTDOWN_PHASE_APP 99        /**< Application cleanup (last to init, first to cleanup) */
+#define SHUTDOWN_PHASE_PLATFORM \
+	1 /**< Platform layer cleanup (first to init, last to cleanup) */
+#define SHUTDOWN_PHASE_MEMORY 2 /**< Memory layer cleanup */
+#define SHUTDOWN_PHASE_FILESYSTEM 3 /**< Filesystem layer cleanup */
+#define SHUTDOWN_PHASE_CONFIG 4 /**< Configuration layer cleanup */
+#define SHUTDOWN_PHASE_NETWORK 5 /**< Network layer cleanup */
+#define SHUTDOWN_PHASE_APP \
+	99 /**< Application cleanup (last to init, first to cleanup) */
 
 /**
  * Run shutdown sequence

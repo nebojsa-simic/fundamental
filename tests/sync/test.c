@@ -1,5 +1,7 @@
+#define _POSIX_C_SOURCE 199309L
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "fundamental/sync/sync.h"
 

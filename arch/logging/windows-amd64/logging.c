@@ -29,14 +29,14 @@ typedef struct {
 } SYSTEMTIME;
 
 /* Windows API function declarations */
-__declspec(dllimport) void __stdcall
-GetSystemTimePreciseAsFileTime(FILETIME *lpFileTime);
-__declspec(dllimport) int __stdcall
-QueryPerformanceCounter(long long *lpPerformanceCount);
-__declspec(dllimport) int __stdcall
-QueryPerformanceFrequency(long long *lpFrequency);
-__declspec(dllimport) void __stdcall
-FileTimeToSystemTime(const FILETIME *lpFileTime, SYSTEMTIME *lpSystemTime);
+__declspec(dllimport) void __stdcall GetSystemTimePreciseAsFileTime(
+	FILETIME *lpFileTime);
+__declspec(dllimport) int __stdcall QueryPerformanceCounter(
+	long long *lpPerformanceCount);
+__declspec(dllimport) int __stdcall QueryPerformanceFrequency(
+	long long *lpFrequency);
+__declspec(dllimport) void __stdcall FileTimeToSystemTime(
+	const FILETIME *lpFileTime, SYSTEMTIME *lpSystemTime);
 
 /* Static storage for hybrid timestamp calculation */
 static uint64_t g_base_wall_sec = 0;

@@ -1,8 +1,8 @@
 #!/bin/sh
 gcc \
     --std=c17 -Os \
-    -I ../../../include \
+    -I ../../include \
     test.c \
-    -o test.exe
+    -o test
 
-strip --strip-unneeded test.exe
+strip --strip-unneeded test

@@ -161,7 +161,7 @@ AsyncStatus poll_mmap_write(AsyncResult *result)
 		void *mapped = sys_mmap(NULL, view_size, PROT_READ | PROT_WRITE,
 								MAP_SHARED, state->file_descriptor,
 								(off_t)state->adjusted_offset);
-		if (mapped == (void *)-1) {
+		if ((long)mapped < 0 && (long)mapped >= -4095) {
 			result->error =
 				fun_error_result(1, "Failed to mmap file for write");
 			final_status = ASYNC_ERROR;

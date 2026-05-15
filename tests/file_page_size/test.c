@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "../../../arch/file/linux-amd64/page_size.h"
+#include "../../arch/file/linux-amd64/page_size.h"
 
 #define GREEN_CHECK "\033[0;32m\342\234\223\033[0m"
 
