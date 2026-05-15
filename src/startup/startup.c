@@ -37,6 +37,15 @@ __attribute__((weak)) int fun_logging_init(void)
 }
 
 /*
+ * Network initialization (Phase 6) - weak default implementation
+ * Network subsystem is optional in many applications.
+ */
+__attribute__((weak)) int fun_network_init(void)
+{
+	return 0;
+}
+
+/*
  * Error handler - prints diagnostic and aborts
  */
 static void startup_fatal(const char *message)

@@ -1,6 +1,4 @@
 @echo off
-gcc ^
-    --std=c17 -Os ^
-    -I ..\..\..\include ^
-    test.c ^
-    -o test.exe
+REM sysconf(_SC_PAGESIZE) is Linux-only.
+echo file_page_size tests are Linux-only.
+exit /b 0

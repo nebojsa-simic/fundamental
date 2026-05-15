@@ -14,7 +14,8 @@ REM Source files
 set SOURCES=^
     %SCRIPT_DIR%test.c ^
     %PROJECT_ROOT%\src\startup\startup.c ^
-    %PROJECT_ROOT%\arch\startup\windows-amd64\windows.c ^
+    %PROJECT_ROOT%\src\shutdown\shutdown.c ^
+    %PROJECT_ROOT%\arch\signals\windows-amd64\signal.c ^
     %PROJECT_ROOT%\src\platform\platform.c ^
     %PROJECT_ROOT%\arch\platform\windows-amd64\platform.c ^
     %PROJECT_ROOT%\src\filesystem\path.c ^
@@ -41,7 +42,7 @@ set SOURCES=^
 
 REM Build
 echo Building startup tests...
-gcc %CFLAGS% %SOURCES% -lws2_32 -o %SCRIPT_DIR%test.exe
+gcc %CFLAGS% %SOURCES% -lws2_32 -lkernel32 -o %SCRIPT_DIR%test.exe
 
 if %ERRORLEVEL% neq 0 (
     echo Build failed!
