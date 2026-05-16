@@ -9,18 +9,21 @@
 ```
 
 This skill provides:
+
 - ✅ **Correct API patterns** - Knows exact function names and signatures
 - ✅ **Build script templates** - Has all source file locations
 - ✅ **Common pitfalls** - Warns about mistakes before you make them
 - ✅ **Working examples** - Copy-paste patterns for every module
 
 **The skill was created from the codebase and knows:**
+
 - All module interfaces and implementations
 - Platform-specific source locations (`arch/*/`)
 - Correct async/streaming patterns
 - Memory management requirements
 
 **Using the skill prevents:**
+
 - ❌ Wrong function names (e.g., `fun_file_read()` vs `fun_read_file_in_memory()`)
 - ❌ Missing source files in build scripts
 - ❌ Stdlib dependencies in library code
@@ -49,24 +52,29 @@ This skill provides:
 ## Build Commands
 
 ### Full Test Suite
+
 - **Windows**: `run-tests-windows-amd64.bat` - Run all tests by iterating through `tests\*` directories
 - **Linux**: `./run-tests-linux-amd64.sh` - Run all tests by iterating through `tests/*/` directories
 
 ### Individual Component Builds
+
 - **Windows**: Navigate to specific test directory and run: `.\build-windows-amd64.bat`
 - **Linux**: Navigate to specific test directory and run: `./build-linux-amd64.sh`
 - Individual test executables are named `test.exe` (Windows) or `test` (Linux)
 
 ### Running Individual Tests
+
 - Each test directory contains its own build script
 - Execute test after successful build: `.\test.exe` (Windows) or `./test` (Linux)
 
 ## Lint Commands
+
 - **Windows**: `code-format.bat` - Runs `clang-format -i -style=file` on all `.c` and `.h` files
 - **Linux**: `./code-format.sh` - Unix equivalent using bash script
 - Code formatter uses `.clang-format` configuration (based on Linux kernel style)
 
 ## Test Commands
+
 - Individual tests: Run specific `test.exe` (Windows) or `test` (Linux) in each component's test directory
 - Batch testing (Windows): Execute `run-tests-windows-amd64.bat` to run all test suites sequentially
 - Batch testing (Linux): Execute `./run-tests-linux-amd64.sh` to run all test suites sequentially
@@ -76,7 +84,9 @@ This skill provides:
   - Return exit code for failure
 
 ### Test Modules
+
 Current test directories:
+
 - `async/` - Async operations and process spawn
 - `collections/` - Dynamic arrays
 - `console/` - Console I/O
@@ -92,7 +102,9 @@ Current test directories:
 - `file*/` - File I/O (read, write, append, lock)
 
 ## OpenSpec Workflow
+
 This project uses OpenSpec for specifications and change management:
+
 - Specifications stored as Markdown in `openspec/specs/`
 - Changes managed in `openspec/changes/` with corresponding artifacts:
   - `proposal.md` - Change proposals and justification
@@ -103,15 +115,18 @@ This project uses OpenSpec for specifications and change management:
 - Run validation across all specs: `openspec validate --specs`
 - Run validation across all changes: `openspec validate --changes`
 
-### OpenSpec Skill-Based Commands:
+### OpenSpec Skill-Based Commands
+
 AI agents can use specialized OpenSpec skills for guided workflow assistance:
+
 - `openspec-propose` - Propose a new change with all artifacts generated in one step. Use when describing what to build and get a complete proposal with design, specs, and implementation tasks.
 - `openspec-explore` - Enter exploration mode - a thinking partner for investigating problems, clarifying requirements, and exploring solutions before implementation.
 - `openspec-apply-change` - Implement tasks from an OpenSpec change. Use when implementing, continuing, or working through implementation tasks.
 - `openspec-archive-change` - Archive a completed change in the experimental workflow. Use when finalizing and archiving changes after implementation completion.
 
-### OpenSpec Command Examples:
-- List all available changes: `openspec list` 
+### OpenSpec Command Examples
+
+- List all available changes: `openspec list`
 - Validate specific module: `openspec validate memory` or `openspec validate async`
 - Validate entire architecture: `openspec validate --all`
 - Check change status: `openspec validate <change-id>`
@@ -121,6 +136,7 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
 **CRITICAL**: Before manually implementing any OpenSpec workflow steps:
 
 1. **Check for built-in CLI commands first**:
+
    ```bash
    openspec --help                    # Discover all available commands
    openspec <command> --help          # Get command-specific options
@@ -148,12 +164,14 @@ AI agents can use specialized OpenSpec skills for guided workflow assistance:
 4. **Re-run the CLI command** - Let the CLI complete the operation after fixes are applied
 
 **Explicitly Forbidden:**
+
 - ❌ `mv openspec/changes/<name> openspec/changes/archive/` - Use `openspec archive <name>` instead
 - ❌ `git add openspec/...` for OpenSpec changes - The CLI handles commits
 - ❌ `git commit -m "Archive..."` for OpenSpec archives - The CLI handles commits
 - ❌ Manually editing tasks.md to mark tasks complete just to satisfy archive - Fix actual implementation
 
 **If the CLI fails repeatedly:**
+
 1. Document the exact error message
 2. Ask the user for guidance before attempting workarounds
 3. The CLI is the source of truth - if it says something is wrong, it is wrong
@@ -168,6 +186,7 @@ Before archiving a change, verify:
 - [ ] **Run `openspec archive <name>` and let it handle everything**
 
 **After running `openspec archive`:**
+
 - The CLI will move the directory to `openspec/changes/archive/`
 - The CLI will sync specs to `openspec/specs/`
 - The CLI will commit the changes
@@ -187,6 +206,7 @@ Before archiving a change, verify:
 | Running archive twice to "force" it | Ask user for guidance if CLI fails |
 
 **If `openspec archive` reports errors:**
+
 1. Read the error message - it tells you exactly what's wrong
 2. Fix the underlying issue (incomplete tasks, missing spec sections, etc.)
 3. Re-run `openspec archive <name>`
@@ -227,6 +247,7 @@ Skills are located in `.opencode/skills/` and cover these domains:
 4. **Adapt to context**: Modify paths, sizes, error handling as needed
 
 **Example Workflow:**
+
 ```
 User: "Read a config file and parse it"
 
@@ -238,6 +259,7 @@ Agent workflow:
 ```
 
 **Shutdown Workflow:**
+
 ```
 User: "Handle Ctrl+C gracefully and save state"
 
@@ -251,6 +273,7 @@ Agent workflow:
 ### Skill Format
 
 All skills follow this structure:
+
 - **Quick Reference** - Table of common tasks and functions
 - **Task Examples** - Copy-paste code with full error handling
 - **Key Points** - Important notes and gotchas
@@ -259,6 +282,7 @@ All skills follow this structure:
 ### Design Principles
 
 Skills reinforce Fundamental Library patterns:
+
 - **Allocate → Operate → Check Error → Use → Cleanup** - Consistent flow in all examples
 - **Error handling mandatory** - Every example shows error checking
 - **Memory safety** - Every allocation has corresponding free
@@ -267,6 +291,7 @@ Skills reinforce Fundamental Library patterns:
 ### For Users
 
 Skills can serve as:
+
 - **Usage examples** - See how to use library functions correctly
 - **Learning resource** - Understand library patterns and conventions
 - **Quick reference** - Look up common operations without reading headers
@@ -274,11 +299,13 @@ Skills can serve as:
 ## Code Style Guidelines
 
 ### Import Standards
+
 - Include headers as: `#include "..."` (no angle brackets except for system headers)
 - Order: local includes first, then external dependencies
 - Headers should use guards: `#ifndef LIBRARY_*_H ...`
 
 ### Formatting Patterns
+
 - Code formatting: Use `clang-format` with configuration from this repo's `.clang-format`
 - Indentation: 4 spaces (soft tabs), tab width 4
 - Column limit: 80 characters
@@ -286,6 +313,7 @@ Skills can serve as:
 - Braces: K&R style with custom formatting
 
 ### Type Conventions
+
 - Types start with uppercase: `Memory`, `String`, `FileStream`
 - Function parameters use: `typedef` for custom types, `typedef struct` for compound types
 - Error types follow `ErrorResult` pattern with `code` and `message` fields
@@ -293,25 +321,29 @@ Skills can serve as:
 - Define result types with: `DEFINE_RESULT_TYPE(TypeName)` macro
 
 ### Naming Conventions
+
 - All functions start with prefix: `fun_*`
 - Functions are fully descriptive: `fun_stream_create_file_read` not abbreviated
 - Variables are descriptive and readable
 - Constants are uppercase with underscores: `ERROR_VALUE`
 
 ### Error Handling Patterns
+
 - All error-prone functions return types from `CanReturnError()` macro family
 - Check errors with: `fun_error_is_error(result.error)` and `fun_error_is_ok(result.error)`
 - Explicit error condition checks in all functions that can fail
 - Error codes are positive integers with `ERROR_CODE_*` constants
 - Memory failures return with specific memory error codes
 
-### Memory Management 
+### Memory Management
+
 - Caller-allocated memory pattern: functions don't allocate internal memory unless for temporary use
 - Allocation managed with: `fun_memory_allocate()` and related functions
 - All allocated memory must be freed with: `fun_memory_free()`
 - No dynamic allocation in user-facing structures except by design
 
 ### Architecture Principles
+
 - Cross-platform compatibility: No OS-specific logic in library code (only in `/arch` directory)
 - Functions must work identically on all platforms
 - Platform abstractions go through architecture-specific implementations in `arch/*/` directories  
@@ -319,12 +351,14 @@ Skills can serve as:
 - Implementation code in `src/*/` directories
 
 ### Async Pattern
+
 - Async operations follow `AsyncResult`/`AsyncStatus` pattern for non-blocking operations
 - Use `fun_async_await(&result)` for blocking wait
 - Status values: `ASYNC_PENDING`, `ASYNC_COMPLETED`, `ASYNC_ERROR`
 - Functions return immediately as `AsyncResult` which can be polled later
 
 ### Test Organization
+
 - Test directories follow: `tests/component_name/` structure
 - Each directory should have platform-specific build scripts:
   - Windows: `build-windows-amd64.bat`

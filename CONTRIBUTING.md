@@ -46,10 +46,8 @@ We *love* bug reports. I'm not even kidding.
 
 ## Use a Consistent Coding Style
 
-* Please use `clang-format` for consistency
+- Please use `clang-format` for consistency
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under its MIT License.
-
-

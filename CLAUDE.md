@@ -7,14 +7,17 @@ Zero-stdlib C library for cross-platform CLI applications. Complete reimplementa
 ## Build Commands
 
 ### Full Test Suite
+
 - **Windows**: `run-tests-windows-amd64.bat`
 - **Linux**: `./run-tests-linux-amd64.sh`
 
 ### Individual Component
+
 - Navigate to `tests/<component>/` and run `build-windows-amd64.bat` (or `build-linux-amd64.sh`)
 - Test executables: `test.exe` (Windows) or `test` (Linux)
 
 ### Code Formatting
+
 - **Windows**: `code-format.bat` (runs `clang-format -i -style=file` on all `.c` and `.h` files)
 - **Linux**: `./code-format.sh`
 - Config: `.clang-format` (Linux kernel style, 4-space indent, 80-col limit)
@@ -24,6 +27,7 @@ Zero-stdlib C library for cross-platform CLI applications. Complete reimplementa
 Every new module requires all of the following. Do not consider a module done until every item is complete.
 
 **In this repo (`fundamental/`):**
+
 - [ ] `include/<module>/<module>.h` — public API header (types, `DEFINE_RESULT_TYPE`, function declarations)
 - [ ] `src/<module>/<module>.c` — core implementation, no `#ifdef`, calls arch-layer functions for anything platform-specific
 - [ ] `arch/<module>/windows-amd64/<module>.c` — Windows AMD64 arch implementation
@@ -38,6 +42,7 @@ Every new module requires all of the following. Do not consider a module done un
 - [ ] `CLAUDE.md` — add row to Modules table and Skills table
 
 **In `fundamental-cli/` (after vendoring):**
+
 - [ ] Run `vendor-fundamental.bat` to copy latest sources into `vendor/fundamental/` (xcopy does not delete removed files — manually remove any stale files from `vendor/fundamental/` after vendoring)
 - [ ] `build-windows-amd64.bat` — add `src/<module>/<module>.c` and `arch/<module>/windows-amd64/<module>.c`
 - [ ] `build-linux-amd64.sh` — add `src/<module>/<module>.c` and `arch/<module>/linux-amd64/<module>.c`
@@ -95,6 +100,7 @@ Platform-specific code goes ONLY in `arch/`. Never put OS-specific logic in `src
 ## Test Organization
 
 Each test directory under `tests/` has:
+
 - Platform build scripts (`build-windows-amd64.bat`, `build-linux-amd64.sh`)
 - Test binary (`test.exe` / `test`)
 - Tests validate both success and error conditions
@@ -105,6 +111,7 @@ Test modules: async, collections, console, filesystem, hashmap, memory, network,
 ## OpenSpec Workflow
 
 This project uses OpenSpec for change management:
+
 - `openspec/specs/` - Capability specifications (Gherkin)
 - `openspec/changes/` - Active changes with artifacts (proposal, design, tasks, specs)
 - Commands: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-archive`
@@ -134,6 +141,7 @@ Specialized skills in `.opencode/skills/` provide copy-paste examples for common
 ## Common Patterns
 
 ### Error Handling
+
 ```c
 MemoryResult result = fun_memory_allocate(1024);
 if (fun_error_is_error(result.error)) {
@@ -145,6 +153,7 @@ voidResult free_result = fun_memory_free(&buffer);
 ```
 
 ### Async I/O
+
 ```c
 AsyncResult result = fun_read_file_in_memory(params);
 fun_async_await(&result);
@@ -152,6 +161,7 @@ if (result.status == ASYNC_COMPLETED) { /* success */ }
 ```
 
 ### String Templates
+
 ```c
 // Prefixes: ${string} #{int} %{double} *{pointer}
 StringTemplateParam params[] = {

@@ -23,6 +23,7 @@ cd demos/logging
 ```
 
 Each demo includes:
+
 - Complete source code that compiles on first try
 - Build scripts for Windows and Linux
 - Documented dependencies
@@ -247,18 +248,21 @@ fundamental/
 ## Features
 
 ### **Error Handling System**
+
 - Comprehensive result types for all operations
 - Explicit error propagation without exceptions
 - Standardized error codes and messages
 - `DEFINE_RESULT_TYPE()` macro for custom result types
 
 ### **Memory Management**
+
 - Direct syscall-based allocation (Linux)
 - Platform-specific optimized implementations
 - Caller-controlled allocation patterns
 - Operations: allocate, reallocate, free, fill, copy, size query
 
 ### **String Operations**
+
 - Complete string manipulation suite
 - Template system with type-safe parameter substitution
 - Conversion utilities (int, double, pointer to string)
@@ -267,6 +271,7 @@ fundamental/
 - Validation and comparison functions
 
 ### **Async File I/O**
+
 - Multiple I/O strategies: standard, memory-mapped, ring-based, direct
 - Platform-optimized implementations
 - Non-blocking read, write, append operations
@@ -276,6 +281,7 @@ fundamental/
 - **Robustness**: integer overflow protection on all size/offset calculations, runtime page-size detection, proper io_uring CQE consumption with partial-transfer handling
 
 ### **Stream Module**
+
 - Asynchronous buffered file I/O
 - Read, write, and append modes
 - Flow control with `can_read()` and `can_write()` checks
@@ -283,18 +289,21 @@ fundamental/
 - Caller-allocated buffers with automatic management
 
 ### **Filesystem Operations**
+
 - Directory creation (recursive with parent creation)
 - Directory removal and listing
 - Path utilities: join, normalize, get parent, get filename
 - Platform-independent path separator handling
 
 ### **Console I/O**
+
 - Line-buffered stdout output (512-byte buffer)
 - Unbuffered stderr output
 - Explicit flush control
 - Automatic newline handling
 
 ### **Collections Module**
+
 - **Dynamic Arrays**: Type-safe vectors with automatic growth, capacity management
 - **Hash Maps**: Associative key-value storage with configurable hash functions
 - **Red-Black Trees**: Self-balancing ordered trees with O(log n) operations
@@ -303,6 +312,7 @@ fundamental/
 - Memory-safe operations with comprehensive error handling
 
 ### **Async Process Spawn**
+
 - Asynchronous process execution
 - Stdout/stderr capture with configurable buffer sizes
 - Process termination and exit code retrieval
@@ -310,6 +320,7 @@ fundamental/
 - Non-blocking wait with `fun_async_await()`
 
 ### **Architecture Support**
+
 - Linux AMD64 (implemented)
 - Windows AMD64 (implemented)
 - Darwin ARM64 (planned)
@@ -317,6 +328,7 @@ fundamental/
 - Extensible architecture system with platform abstractions in `arch/*/`
 
 ### **Configuration Management**
+
 - Cascading configuration from CLI arguments, environment variables, and INI files
 - Priority cascade: `--config:key=value` → `APPNAME_KEY` env vars → `{app}.ini` file
 - Type-safe accessors: `fun_config_get_string()`, `fun_config_get_int()`, `fun_config_get_bool()`
@@ -327,6 +339,7 @@ fundamental/
 - Cross-platform: Linux (`getenv`/`readlink`) and Windows (`GetEnvironmentVariableA`/`GetModuleFileNameA`)
 
 ### **Logging System**
+
 - Centralized logging with configurable log levels (TRACE, DEBUG, INFO, WARN, ERROR)
 - Template-based log messages with type-safe parameter substitution
 - Multiple output targets: console and file (configurable at compile-time and runtime)
@@ -336,6 +349,7 @@ fundamental/
 - Circular dependency prevention: config module cannot call logging functions
 
 ### **Startup Framework**
+
 - Ordered initialization phases for library modules
 - Phases: Platform → Memory → Filesystem → Config → Logging → Network → Other
 - Fail-fast error handling with verbose tracing option (`-DFUNDAMENTAL_STARTUP_VERBOSE=1`)
@@ -344,6 +358,7 @@ fundamental/
 - Prevents circular dependencies through enforced phase ordering
 
 ### **Shutdown Framework**
+
 - Structured shutdown coordination with cleanup functions
 - Executes cleanup in reverse initialization order
 - Shutdown types: NORMAL, ABNORMAL, EXTERNAL, EMERGENCY
@@ -352,6 +367,7 @@ fundamental/
 - Register cleanup with `FUNDAMENTAL_SHUTDOWN_REGISTER(phase, cleanup_function)`
 
 ### **Networking**
+
 - Asynchronous TCP/UDP interface with non-blocking operations
 - TCP: connect, send, receive_exact, close with connection pooling
 - UDP: fire-and-forget datagram send
@@ -392,6 +408,7 @@ This project includes specialized skills for AI coding agents (Opencode, Claude 
 4. **Adapt to context**: Modify paths, sizes, error handling as needed
 
 **Example Workflow:**
+
 ```
 User: "Read a config file and parse it"
 
@@ -405,6 +422,7 @@ Agent workflow:
 ### Skill Design Principles
 
 All skills follow these patterns:
+
 - **Allocate → Operate → Check Error → Use → Cleanup** - Consistent flow
 - **Error handling mandatory** - Every example shows error checking
 - **Memory safety** - Every allocation has corresponding free
@@ -425,11 +443,13 @@ For more details, see the [Skills Index](.opencode/skills/fundamental-skills-ind
 #### Windows
 
 **Full Test Suite:**
+
 ```batch
 run-tests-windows-amd64.bat
 ```
 
 **Individual Component:**
+
 ```batch
 cd tests\memory
 .\build-windows-amd64.bat
@@ -437,6 +457,7 @@ cd tests\memory
 ```
 
 **Code Formatting:**
+
 ```batch
 code-format.bat
 ```
@@ -444,6 +465,7 @@ code-format.bat
 #### Linux
 
 **Individual Component:**
+
 ```bash
 cd tests/memory
 ./build-linux-amd64.sh
@@ -451,6 +473,7 @@ cd tests/memory
 ```
 
 **Code Formatting:**
+
 ```bash
 ./code-format.sh
 ```
@@ -458,6 +481,7 @@ cd tests/memory
 ### Test Organization
 
 Each module has its own test directory under `tests/`:
+
 - Navigate to test directory
 - Run platform-specific build script (`build-windows-amd64.bat` or `build-linux-amd64.sh`)
 - Execute `test.exe` (Windows) or `./test` (Linux)
@@ -466,6 +490,7 @@ Each module has its own test directory under `tests/`:
 ### Architecture-Specific Builds
 
 Platform-specific code is isolated in `arch/<module>/<platform>/`:
+
 - `linux-amd64/` - Linux x86_64 implementations
 - `windows-amd64/` - Windows x86_64 implementations
 
@@ -548,6 +573,7 @@ All planned modules will follow the same design principles: zero stdlib dependen
 To compile with `-nostdlib` flag for true zero-stdlib binaries:
 
 ### Windows (MinGW)
+
 ```batch
 gcc -nostdlib -fno-builtin -mno-stack-arg-probe ^
     -Wl,--subsystem,console ^
@@ -556,11 +582,13 @@ gcc -nostdlib -fno-builtin -mno-stack-arg-probe ^
 ```
 
 **Important flags:**
+
 - `-mno-stack-arg-probe` - Disables ___chkstk_ms calls (stack probing)
 - `-lntdll` - Provides low-level Windows runtime (NtCreateFile, etc.)
 - `-lkernel32` - Windows API (CreateFile, etc.)
 
 ### Linux
+
 ```bash
 gcc -nostdlib -fno-builtin -static \
     your_code.c \
