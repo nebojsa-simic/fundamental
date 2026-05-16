@@ -107,6 +107,64 @@ Documented 2026-05-16 during Linux bring-up. Tests passed ~80% in batch mode; re
 
 **Why wrong:** Replaced with `__atomic_store_n`/`__atomic_load_n` (RELEASE/ACQUIRE). Pass rate unchanged. The `volatile` + clone syscall barrier (between parent's store and child's first read) is sufficient on x86-64.
 
-### 10.6 Current state
+### 10.6 Condvar/mutex futex interaction race (initially suspected)
 
-Three confirmed fixes (clone asm, FUTEX_WAIT in join, clear_tid init) produce ~82% pass rate in batch, 100% with terminal I/O. The residual 18% is a nanosecond-level race in the condvar/mutex futex interaction that could not be isolated via static analysis. Assembly, atomics, and mutex ordering all verified correct. Hardware tracing (Intel PT) would be needed to go further.
+**Initial assessment (2026-05-16):** "The residual 18% is a nanosecond-level race in the condvar/mutex futex interaction that could not be isolated via static analysis."
+
+**Resolution (2026-05-16):** The condvar and mutex implementations were verified correct. The actual root cause was the slot scan bias (see §11). Diagnostic testing confirmed zero condvar races when submits were distributed to different workers (`race_diff = 0`). This dead end consumed significant investigation time because the symptoms (intermittent `THREAD_POOL_FULL`) appeared to be a synchronization primitive bug, but were entirely caused by the submit function always scanning from slot 0.
+
+## 11. Slot Scan Bias Fix
+
+Documented 2026-05-16. Resolved the ~18% failure rate that was the subject of §10.
+
+### 11.1 Root cause
+
+`fun_thread_pool_submit` scanned worker slots starting from index 0 on every call:
+
+```c
+for (int32_t i = 0; i < p->num_threads; i++) {
+```
+
+When a worker takes ownership quickly (sets `slot->data = NULL` between submit1 and submit2), the next submit finds slot 0 idle and dispatches there again. Other workers never receive work. In a 2-worker pool:
+
+1. submit1 → slot 0 (idle) → dispatches, signals worker 0
+2. Worker 0 wakes, takes ownership (`data = NULL`), starts executing work function
+3. submit2 → slot 0 (now idle again!) → dispatches to slot 0, slot 1 never checked
+4. Worker 0 finishes first item, takes second item, slot 0 idle again
+5. Worker 1 still sleeping — never received any work
+
+This is not a synchronization bug. The condvar and mutex are correct. The problem is that fast workers clear their slots before the next submit, causing the always-zero-first scan to re-bias the same worker repeatedly.
+
+### 11.2 Evidence
+
+Diagnostic tests on 200 trials (pre-fix):
+- Workers that both took ownership: 180 (90%)
+- Only one worker took ownership: 20 (10%)
+- submit3 OK: 200/200, submit4 OK: 180/200
+- Race count when submits went to different slots (`race_diff`): **0**
+- Race count when submits went to same slot (`race_same`): **20** (100% of failures)
+
+The 0% failure rate when work distributes to different workers proves the condvar/mutex path has no race. Every failure traced to two submits hitting the same slot.
+
+### 11.3 Fix
+
+Added `next_hint` field (`volatile int32_t`) to `ThreadPool_s`. `submit` reads it with `__ATOMIC_RELAXED`, starts scanning from that index, and advances it past the slot that accepted work:
+
+```c
+int32_t hint = __atomic_load_n(&p->next_hint, __ATOMIC_RELAXED);
+
+for (int32_t offset = 0; offset < p->num_threads; offset++) {
+    int32_t i = (hint + offset) % p->num_threads;
+    // ... lock, check, assign ...
+    __atomic_store_n(&p->next_hint, (i + 1) % p->num_threads, __ATOMIC_RELAXED);
+    // ... signal, unlock, return ...
+}
+```
+
+`__ATOMIC_RELAXED` is sufficient because the hint is advisory — if concurrent threads read the same value, the worst case is they both start scanning from the same index, which is the original behavior. No ordering guarantees are needed beyond what the per-slot mutex already provides.
+
+### 11.4 Verification
+
+- 5000+ reproducer trials: **0 failures** (was ~100% before fix)
+- Diagnostic: `same_slot = 0` across all trials (every pair of submits distributes to different workers)
+- All 14 existing tests pass, no regressions

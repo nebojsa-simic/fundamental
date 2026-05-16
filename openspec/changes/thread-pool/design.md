@@ -45,7 +45,7 @@ This is critical for the network server integration. If `submit()` blocked, the 
 
 ### 3. Per-worker slots — no queue
 
-Each worker has a slot containing the assigned `WorkItem` copy, a `Mutex`, and a `CondVar`. `submit()` iterates worker slots, locks each mutex, and checks if the slot is idle (`data == NULL`). If idle, it stores the pool-owned copy, signals the condvar, and returns OK. If all slots are busy, it frees the unneeded copy and returns `ERROR_CODE_THREAD_POOL_FULL`.
+Each worker has a slot containing the assigned `WorkItem` copy, a `Mutex`, and a `CondVar`. `submit()` reads `next_hint` to determine the starting slot index, then iterates linearly (wrapping around), locking each mutex and checking if the slot is idle (`data == NULL`). If idle, it stores the pool-owned copy, advances `next_hint` past this slot, signals the condvar, and returns OK. If all slots are busy, it frees the unneeded copy and returns `ERROR_CODE_THREAD_POOL_FULL`.
 
 This eliminates the ring buffer entirely. No queue allocation, no enqueue/dequeue logic, no buffer sizing decisions. Backpressure is immediate: if all workers are busy, submit rejects instantly.
 
@@ -81,21 +81,27 @@ Per-worker slot pseudocode:
 
 ```
 Worker:                               Submit:
-  lock(slot.mutex)                      for each worker:
-  while (slot.data == NULL)               lock(slot.mutex)
-    if (stop) unlock, exit                  if (slot.data == NULL)
-    wait(slot.cond, slot.mutex)               slot.data = copy
-  data = slot.data                            signal(slot.cond)
-  slot.data = NULL                            unlock(slot.mutex)
-  unlock(slot.mutex)                          return OK
-  data->work_fn(data)                       unlock(slot.mutex)
-  fun_memory_free(data)                  fun_memory_free(copy)
-  goto top                               return FULL
+  lock(slot.mutex)                      hint = next_hint
+  while (slot.data == NULL)              for offset in 0..num_threads:
+    if (stop) unlock, exit                i = (hint + offset) % num_threads
+    wait(slot.cond, slot.mutex)            lock(slot.mutex)
+  data = slot.data                         if (slot.data == NULL)
+  slot.data = NULL                           slot.data = copy
+  unlock(slot.mutex)                         next_hint = (i + 1) % num_threads
+  data->work_fn(data)                        signal(slot.cond)
+  fun_memory_free(data)                      unlock(slot.mutex)
+  goto top                                   return OK
+                                            unlock(slot.mutex)
+                                       fun_memory_free(copy)
+                                       return FULL
 ```
+
+The round-robin `next_hint` (updated with `__ATOMIC_RELAXED`) ensures consecutive submits start scanning from the slot after the last one that accepted work. This prevents the bias where a fast worker clears its slot between submits, causing the always-zero-first scan to redispatch to the same worker while other workers sleep. The hint is advisory — if concurrent threads overlap on the same starting index, the worst case is the original sequential scan behavior, which is still correct.
 
 **Alternatives considered:**
 - Single shared mutex + condvar — all workers contend on one lock; worse under load
 - Lock-free CAS — workers would need to spin or use OS-specific wake mechanisms; condvar is standard
+- Always-scan-from-zero (original design) — fast workers clear their slots between submits, causing bias toward low-index slots; other workers never wake, false `THREAD_POOL_FULL` returns
 
 ### 7. Platform-specific thread creation
 

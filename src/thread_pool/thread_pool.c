@@ -18,6 +18,7 @@ struct ThreadPool_s {
 	WorkerSlot *slots;
 	void **thread_handles;
 	int32_t num_threads;
+	volatile int32_t next_hint;
 	volatile bool stop;
 };
 
@@ -72,6 +73,7 @@ CanReturnError(void)
 	struct ThreadPool_s *pool = (struct ThreadPool_s *)pool_mem.value;
 
 	pool->num_threads = num_threads;
+	pool->next_hint = 0;
 	pool->stop = false;
 
 	MemoryResult slots_mem =
@@ -152,7 +154,6 @@ CanReturnError(void)
 			result.error = ERROR_RESULT_THREAD_POOL_CREATE_FAILED;
 			return result;
 		}
-
 	}
 
 	*out_pool = (ThreadPool)pool;
@@ -202,13 +203,20 @@ CanReturnError(void)
 		return result;
 	}
 
-	for (int32_t i = 0; i < p->num_threads; i++) {
+	int32_t hint = __atomic_load_n(&p->next_hint, __ATOMIC_RELAXED);
+
+	for (int32_t offset = 0; offset < p->num_threads; offset++) {
+		int32_t i = (hint + offset) % p->num_threads;
+
 		fun_mutex_lock(p->slots[i].mutex);
 
 		if (p->slots[i].data == NULL) {
 			p->slots[i].data = copy_mem.value;
 			p->slots[i].data_size = item->data_size;
 			p->slots[i].work_fn = item->work_fn;
+
+			__atomic_store_n(&p->next_hint, (i + 1) % p->num_threads,
+							 __ATOMIC_RELAXED);
 
 			fun_condvar_signal(p->slots[i].condvar);
 			fun_mutex_unlock(p->slots[i].mutex);

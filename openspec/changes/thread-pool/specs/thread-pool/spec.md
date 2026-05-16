@@ -16,11 +16,15 @@ The system SHALL provide `fun_thread_pool_create(num_threads, &out_pool)` that c
 - **THEN** the function SHALL return an error result
 
 ### Requirement: Work can be submitted to the pool
-The system SHALL provide `fun_thread_pool_submit(pool, const WorkItem *item)` that copies the submitted work for execution by a worker thread. `WorkItem` contains `data` (pointer to caller-allocated data), `data_size` (size in bytes), and `work_fn` (function pointer, `void (*)(void *)`). On success, the pool SHALL copy `item->data` via `fun_memory_copy` into internal storage and enqueue the copy. The pool SHALL free the internal copy after `work_fn` completes. Pool SHALL NOT be NULL. `item` SHALL NOT be NULL. `item->data` SHALL NOT be NULL. `item->data_size` SHALL be greater than 0. `item->work_fn` SHALL NOT be NULL.
+The system SHALL provide `fun_thread_pool_submit(pool, const WorkItem *item)` that copies the submitted work for execution by a worker thread. `WorkItem` contains `data` (pointer to caller-allocated data), `data_size` (size in bytes), and `work_fn` (function pointer, `void (*)(void *)`). On success, the pool SHALL copy `item->data` via `fun_memory_copy` into internal storage and assign the copy to an idle worker slot. The pool SHALL free the internal copy after `work_fn` completes. The submit function SHALL use a round-robin starting index (`next_hint`) to scan worker slots, advancing past the slot that accepts work, to distribute consecutive submits across different workers. Pool SHALL NOT be NULL. `item` SHALL NOT be NULL. `item->data` SHALL NOT be NULL. `item->data_size` SHALL be greater than 0. `item->work_fn` SHALL NOT be NULL.
 
 #### Scenario: Submit succeeds and data is copied
 - **WHEN** `fun_thread_pool_submit` is called with a valid `WorkItem` and a worker slot is idle
 - **THEN** the pool SHALL copy `item->data` of size `item->data_size` via `fun_memory_copy`, assign the copy to an idle worker's slot, signal the worker, and the result SHALL be OK
+
+#### Scenario: Submit distributes work across workers
+- **WHEN** `fun_thread_pool_submit` is called twice in succession on a pool with 2 or more workers
+- **THEN** the second submit SHALL prefer a different worker slot from the first, unless the first slot has become idle and no other slot is idle
 
 #### Scenario: Caller frees original data after submit
 - **WHEN** `fun_thread_pool_submit` returns OK and the caller frees `item->data`
@@ -57,7 +61,7 @@ The system SHALL validate that `pool`, `item`, `item->data`, and `item->work_fn`
 - **THEN** the function SHALL return an error result
 
 ### Requirement: Workers execute submitted work functions with pool-owned data copies
-Worker threads SHALL dequeue `WorkItem` copies from the pool's queue and invoke the work function with the copied data pointer. Workers SHALL free the internal data copy via `fun_memory_free` after `work_fn` returns. Workers SHALL continue processing work until the pool is destroyed.
+Worker threads SHALL take ownership of `WorkItem` copies from their assigned slot and invoke the work function with the copied data pointer. Workers SHALL free the internal data copy via `fun_memory_free` after `work_fn` returns. Workers SHALL continue processing work until the pool is destroyed.
 
 #### Scenario: Worker executes work function with copied data
 - **WHEN** work is submitted with a `WorkItem`
