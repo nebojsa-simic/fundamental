@@ -152,6 +152,7 @@ CanReturnError(void)
 			result.error = ERROR_RESULT_THREAD_POOL_CREATE_FAILED;
 			return result;
 		}
+
 	}
 
 	*out_pool = (ThreadPool)pool;

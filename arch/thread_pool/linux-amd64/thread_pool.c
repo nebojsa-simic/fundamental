@@ -46,8 +46,7 @@ static inline long syscall1(long n, long a1)
 
 static inline void futex_wait(int *addr, int val)
 {
-	syscall6(SYS_futex, (long)addr, FUTEX_WAIT | FUTEX_PRIVATE_FLAG, (long)val,
-			 0, 0, 0);
+	syscall6(SYS_futex, (long)addr, FUTEX_WAIT, (long)val, 0, 0, 0);
 }
 
 static inline void futex_wake(int *addr, int count)
@@ -87,12 +86,53 @@ int arch_thread_create(void (*fn)(void *), void *arg, void **out_handle)
 
 	void *stack_top = (void *)((char *)stack_mem.value + THREAD_STACK_SIZE);
 
+	/* Store fn/arg on child's own stack so child can access them
+	   without depending on parent's stack frame (which may use
+	   RSP-relative addressing that breaks after clone switches RSP). */
+	void **child_data = (void **)stack_top - 2;
+	child_data[0] = (void *)fn;
+	child_data[1] = arg;
+
 	unsigned long flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND |
 						  CLONE_THREAD | CLONE_SYSVSEM | CLONE_CHILD_CLEARTID |
 						  CLONE_CHILD_SETTID;
 
-	long tid = syscall6(SYS_clone, flags, (long)stack_top, 0,
-						(long)&h->clear_tid, 0, 0);
+	long tid;
+	/* Inline clone + child execution.
+	   The child MUST run entirely inside this asm block: any C code
+	   after clone() would execute with the wrong RSP because the
+	   compiler's function prologue has already shifted RSP on the
+	   parent's stack.  Only raw asm sees the fresh child_stack. */
+	__asm__ __volatile__(
+		"mov %[nr], %%rax\n\t"
+		"mov %[flags], %%rdi\n\t"
+		"mov %[stack], %%rsi\n\t"
+		"mov %[ptid], %%rdx\n\t"
+		"mov %[ctid], %%r10\n\t"
+		"mov %[tls], %%r8\n\t"
+		"syscall\n\t"
+		"test %%rax, %%rax\n\t"
+		"jnz 1f\n\t"
+		/* ---- child ---- */
+		"movq 0(%%rsp), %%rax\n\t"   /* fn */
+		"movq 8(%%rsp), %%rdi\n\t"   /* arg */
+		"call *%%rax\n\t"
+		"mov %[exit_nr], %%eax\n\t"
+		"xor %%edi, %%edi\n\t"
+		"syscall\n\t"
+		/* ---- parent ---- */
+		"1:\n\t"
+		"mov %%rax, %[ret]\n\t"
+		: [ret] "=r"(tid)
+		: [nr] "i"(SYS_clone),
+		  [flags] "r"(flags),
+		  [stack] "r"((long)child_data),
+		  [ptid] "r"(0UL),
+		  [ctid] "r"((long)&h->clear_tid),
+		  [tls] "r"(0UL),
+		  [exit_nr] "i"(SYS_exit)
+		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "rcx", "r11",
+		  "memory");
 
 	if (tid < 0) {
 		fun_memory_free((Memory *)&stack_mem.value);
@@ -100,12 +140,8 @@ int arch_thread_create(void (*fn)(void *), void *arg, void **out_handle)
 		return -1;
 	}
 
-	if (tid == 0) {
-		fn(arg);
-		syscall1(SYS_exit, 0);
-	}
-
 	h->tid = (int)tid;
+	h->clear_tid = (int)tid;
 	*out_handle = h;
 	return 0;
 }

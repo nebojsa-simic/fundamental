@@ -200,7 +200,7 @@ void test_submit_pool_full()
 }
 
 /* ================================================================
-   8.7  THREAD_POOL_FULL - no internal copy, caller retains ownership
+    8.7  THREAD_POOL_FULL - no internal copy, caller retains ownership
    ================================================================ */
 void test_submit_full_retains_ownership()
 {
@@ -238,7 +238,7 @@ void test_submit_full_retains_ownership()
 }
 
 /* ================================================================
-   8.8  Submit with NULL pool returns error
+    8.8  Submit with NULL pool returns error
    ================================================================ */
 void test_submit_null_pool()
 {
