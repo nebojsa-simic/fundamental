@@ -3,7 +3,7 @@
 PROJECT_ROOT="../.."
 
 gcc \
-    --std=c17 -Os \
+    --std=c17 -Os -D_POSIX_C_SOURCE=199309L \
     -I $PROJECT_ROOT/include \
     test.c \
     $PROJECT_ROOT/src/network/server/server.c \

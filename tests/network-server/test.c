@@ -65,7 +65,7 @@ typedef HANDLE thread_h;
 #else
 typedef pthread_t thread_h;
 #define create_thread(h, d) pthread_create((h), NULL, server_thread, (d))
-#define join_thread(h) pthread_join(*(h), NULL)
+#define join_thread(h) pthread_join((h), NULL)
 #endif
 
 /* ----------------------------------------------------------------

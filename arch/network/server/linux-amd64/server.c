@@ -96,7 +96,7 @@ int fun_network_server_arch_tcp_setup(struct NetworkServerConfig_s *config)
 
 	int reuse = 1;
 	syscall6(SYS_setsockopt, fd, SOL_SOCKET, SO_REUSEADDR, (long)&reuse,
-			 sizeof(reuse));
+			 sizeof(reuse), 0);
 
 	union {
 		struct sockaddr_in in;
@@ -147,7 +147,7 @@ int fun_network_server_arch_udp_setup(struct NetworkServerConfig_s *config)
 
 	int reuse = 1;
 	syscall6(SYS_setsockopt, fd, SOL_SOCKET, SO_REUSEADDR, (long)&reuse,
-			 sizeof(reuse));
+			 sizeof(reuse), 0);
 
 	union {
 		struct sockaddr_in in;
@@ -210,7 +210,7 @@ int fun_network_server_arch_tcp_accept(struct NetworkServerConfig_s *config,
 
 	int nodelay = 1;
 	syscall6(SYS_setsockopt, client, IPPROTO_TCP, TCP_NODELAY, (long)&nodelay,
-			 sizeof(nodelay));
+			 sizeof(nodelay), 0);
 
 	*out_fd = client;
 	return 1;
