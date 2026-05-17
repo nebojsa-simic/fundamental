@@ -69,7 +69,7 @@
 ## 9. Validation
 
 - [x] 9.1 Run `run-tests-windows-amd64.bat` — all thread-pool tests pass
-- [x] 9.2 Run `./run-tests-linux-amd64.sh` — all thread-pool tests pass (pending Linux)
+- [x] 9.2 Run `./run-tests-linux-amd64.sh` — all thread-pool tests pass
 - [x] 9.3 Run `code-format.bat` — clang-format passes on all new files
 - [x] 9.4 Run `openspec validate thread-pool` — all specs validated
 

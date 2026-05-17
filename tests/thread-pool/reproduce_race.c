@@ -59,8 +59,8 @@ int main(void)
 		ThreadPool pool = NULL;
 		voidResult r = fun_thread_pool_create(2, &pool);
 		if (r.error.code != 0) {
-			fprintf(stderr, "trial %d: create failed code=%d\n",
-				trial, r.error.code);
+			fprintf(stderr, "trial %d: create failed code=%d\n", trial,
+					r.error.code);
 			return 1;
 		}
 
@@ -71,14 +71,12 @@ int main(void)
 		   ownership (slot->data = NULL) then spin in spin_fn. */
 		r = fun_thread_pool_submit(pool, &item);
 		if (r.error.code != 0) {
-			fprintf(stderr, "trial %d: submit1 code=%d\n",
-				trial, r.error.code);
+			fprintf(stderr, "trial %d: submit1 code=%d\n", trial, r.error.code);
 			return 1;
 		}
 		r = fun_thread_pool_submit(pool, &item);
 		if (r.error.code != 0) {
-			fprintf(stderr, "trial %d: submit2 code=%d\n",
-				trial, r.error.code);
+			fprintf(stderr, "trial %d: submit2 code=%d\n", trial, r.error.code);
 			return 1;
 		}
 
@@ -92,9 +90,9 @@ int main(void)
 		r = fun_thread_pool_submit(pool, &item);
 		if (r.error.code != 0) {
 			fprintf(stderr,
-				"RACE-HIT trial %d: submit3 code=%d "
-				"(expected 0)\n",
-				trial, r.error.code);
+					"RACE-HIT trial %d: submit3 code=%d "
+					"(expected 0)\n",
+					trial, r.error.code);
 			g_block = 0;
 			fun_thread_pool_destroy(pool);
 			return 1;
@@ -102,9 +100,9 @@ int main(void)
 		r = fun_thread_pool_submit(pool, &item);
 		if (r.error.code != 0) {
 			fprintf(stderr,
-				"RACE-HIT trial %d: submit4 code=%d "
-				"(expected 0)\n",
-				trial, r.error.code);
+					"RACE-HIT trial %d: submit4 code=%d "
+					"(expected 0)\n",
+					trial, r.error.code);
 			g_block = 0;
 			fun_thread_pool_destroy(pool);
 			return 1;
@@ -114,10 +112,9 @@ int main(void)
 		r = fun_thread_pool_submit(pool, &item);
 		if (r.error.code != ERROR_CODE_THREAD_POOL_FULL) {
 			fprintf(stderr,
-				"RACE-HIT trial %d: submit5 code=%d "
-				"(expected %d = FULL)\n",
-				trial, r.error.code,
-				ERROR_CODE_THREAD_POOL_FULL);
+					"RACE-HIT trial %d: submit5 code=%d "
+					"(expected %d = FULL)\n",
+					trial, r.error.code, ERROR_CODE_THREAD_POOL_FULL);
 			g_block = 0;
 			fun_thread_pool_destroy(pool);
 			return 1;

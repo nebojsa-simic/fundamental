@@ -77,7 +77,7 @@ cd demos/logging
 1. ❌ Guessing function names → ✅ Read the header first
 2. ❌ Wrong source paths → ✅ Check tests/<module>/build-*.bat
 3. ❌ Missing dependencies → ✅ Check what the test includes
-4. ❌ Wrong String type → ✅ It's a struct with `.data` and `.size`, not `char*`
+4. ❌ Wrong String type → ✅ It's `typedef const char *String`, just pass `"text"` directly
 
 ## Available Demos
 
@@ -85,6 +85,99 @@ cd demos/logging
 |------|---------------------|------------|-------------|
 | **console** | Console I/O | Beginner | `cd demos/console && .\build-windows-amd64.bat && .\demo.exe` |
 | **logging** | Logging, String templates | Beginner | `cd demos/logging && .\build-windows-amd64.bat && .\demo.exe` |
+| **shutdown** | Shutdown, File I/O, Startup, Signals | Intermediate | `cd demos/shutdown && .\build-windows-amd64.bat && .\demo.exe` |
+| **batch-renamer** | Filesystem, String, Console, Array | Intermediate | `cd demos/batch-renamer && .\build-windows-amd64.bat && .\demo.exe` |
+| **log-analyzer** | File I/O (streaming), String, Hashmap, Async | Intermediate | `cd demos/log-analyzer && .\build-windows-amd64.bat && .\demo.exe` |
+| **network-server** | Network (TCP server), String, Console, Hashmap, Async, Config | Advanced | `cd demos/network-server && .\build-windows-amd64.bat && .\demo.exe` |
+
+### Using the Network Server Demo
+
+The network-server demo is a **PUB/SUB message broker**. After building and running it, you can interact with it using `nc` (netcat) on Linux or `telnet` / PowerShell on Windows.
+
+**Start the server:**
+
+Linux:
+```bash
+cd demos/network-server
+./build-linux-amd64.sh && ./demo
+# Output: broker on 127.0.0.1:8080
+```
+
+Windows:
+```batch
+cd demos\network-server
+build-windows-amd64.bat && demo.exe
+REM Output: broker on 127.0.0.1:8080
+```
+
+**Connect and publish a message (separate terminal):**
+
+Linux:
+```bash
+nc 127.0.0.1 8080
+PUB news Hello from the publisher
+# Server responds: OK
+QUIT
+# Server responds: BYE
+```
+
+Windows (PowerShell):
+```powershell
+$tcp = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 8080)
+$stream = $tcp.GetStream()
+$writer = New-Object System.IO.StreamWriter($stream)
+$reader = New-Object System.IO.StreamReader($stream)
+$writer.WriteLine("PUB news Hello from the publisher")
+$writer.Flush()
+$reader.ReadLine()  # OK
+$writer.WriteLine("QUIT")
+$writer.Flush()
+$reader.ReadLine()  # BYE
+$tcp.Close()
+```
+
+**Connect and subscribe to get the last message (separate terminal):**
+
+Linux:
+```bash
+nc 127.0.0.1 8080
+SUB news
+# Server responds with the last message published on "news", then: OK
+QUIT
+# Server responds: BYE
+```
+
+Windows (PowerShell):
+```powershell
+$tcp = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 8080)
+$stream = $tcp.GetStream()
+$writer = New-Object System.IO.StreamWriter($stream)
+$reader = New-Object System.IO.StreamReader($stream)
+$writer.WriteLine("SUB news")
+$writer.Flush()
+$reader.ReadLine()  # last message on "news"
+$reader.ReadLine()  # OK
+$writer.WriteLine("QUIT")
+$writer.Flush()
+$reader.ReadLine()  # BYE
+$tcp.Close()
+```
+
+**Protocol commands:**
+
+| Command | Example | Description |
+|---------|---------|-------------|
+| `PUB <topic> <message>` | `PUB alerts Disk 90% full` | Publish a message to a topic |
+| `SUB <topic>` | `SUB alerts` | Subscribe and receive the last message on that topic |
+| `QUIT` | `QUIT` | Disconnect from the server |
+
+**Quick one-liner (Linux):**
+```bash
+echo -e "PUB events Server started\nQUIT" | nc 127.0.0.1 8080
+echo -e "SUB events\nQUIT" | nc 127.0.0.1 8080
+```
+
+> Note: The server handles one client at a time (blocking). It is a demo of the TCP network module, not a production broker.
 
 ## Documentation Conventions
 
@@ -192,8 +285,10 @@ These demos are **tested and verified** to compile and run:
 
 - ✅ **console** - Tested on Windows AMD64 (MinGW 15.2.0)
 - ✅ **logging** - Tested on Windows AMD64 (MinGW 15.2.0)
-
-More demos coming soon.
+- ✅ **shutdown** - Tested on Windows AMD64 (MinGW 15.2.0)
+- ✅ **batch-renamer** - Tested on Windows AMD64 (MinGW 15.2.0)
+- ✅ **log-analyzer** - Tested on Windows AMD64 (MinGW 15.2.0)
+- ✅ **network-server** - Tested on Windows AMD64 (MinGW 15.2.0)
 
 ## Error Handling Patterns
 
@@ -393,7 +488,7 @@ cat include/fundamental/<module>/<module>.h
 
 **Common mistakes to avoid:**
 - ❌ `fun_file_read()` - ✅ `fun_read_file_in_memory(Read params)`
-- ❌ `fun_console_write_line("text")` - ✅ `fun_console_write_line((String){.data="text", .size=len})`
+- ❌ `fun_console_write_line("text")` - ✅ `fun_console_write_line((String)"text")` or assign to `String` variable
 - ❌ `src/file/file.c` - ✅ `arch/file/windows-amd64/fileRead.c` (+ other fileRead*.c files)
 - ❌ `fundamental/console/console.h` - ✅ `fundamental/console/console.h` (this one is correct)
 - ❌ `arch/filesystem/windows-amd64/file.c` - ✅ `arch/file/windows-amd64/fileRead.c`
@@ -452,7 +547,7 @@ Also needs: arch/memory/<platform>/memory.c, src/string/*.c
 Headers: fundamental/hashmap/hashmap.h, fundamental/array/array.h, etc.
 Sources: src/hashmap/hashmap.c, src/array/array.c, etc.
 Arch: (none, except memory)
-Also needs: arch/memory/<platform>/memory.c, src/async/async.c, arch/async/<platform>/async.c
+Also needs: arch/memory/<platform>/memory.c, src/async/async.c, arch/async/<platform>/async.c, src/string/stringValidation.c
 ```
 
 ### String Operations
@@ -475,6 +570,40 @@ Arch: arch/memory/<platform>/memory.c
 Headers: fundamental/async/async.h
 Sources: src/async/async.c
 Arch: arch/async/<platform>/async.c
+```
+
+### Shutdown
+```
+Headers: fundamental/shutdown/shutdown.h
+Sources: src/shutdown/shutdown.c, src/platform/platform.c, src/startup/startup.c
+Arch: arch/shutdown/<platform>/atomic.c, arch/signals/<platform>/signal.c, arch/platform/<platform>/platform.c
+Also needs: src/filesystem/path.c, src/config/*.c, src/hashmap/hashmap.c, src/async/async.c,
+            src/console/console.c, src/string/*.c, arch/file/<platform>/fileWrite*.c,
+            arch/console/<platform>/console.c, arch/memory/<platform>/memory.c,
+            arch/filesystem/<platform>/*.c, arch/config/<platform>/env.c, arch/async/<platform>/async.c
+```
+
+### Network (TCP Server)
+```
+Headers: fundamental/network/server.h, fundamental/network/network.h
+Sources: src/network/server/server.c, src/network/network.c
+Arch: arch/network/<platform>/network.c, arch/network/server/<platform>/server.c
+Also needs: src/async/async.c, src/console/console.c, src/config/*.c, src/filesystem/path.c,
+            src/filesystem/file_exists.c, src/filesystem/directory.c, src/hashmap/hashmap.c,
+            src/string/*.c (3 files), arch/async/<platform>/async.c, arch/console/<platform>/console.c,
+            arch/memory/<platform>/memory.c, arch/config/<platform>/env.c,
+            arch/filesystem/<platform>/*.c
+Link: -lws2_32 (Windows) or -lpthread (Linux)
+```
+
+### Stream I/O
+```
+Headers: fundamental/stream/stream.h, fundamental/file/file.h
+Sources: src/stream/streamFile.c, src/stream/streamFlow.c, src/stream/streamLifecycle.c
+Arch: arch/stream/<platform>/streamOpen.c, arch/stream/<platform>/streamRead.c, arch/stream/<platform>/streamWrite.c,
+      arch/file/<platform>/fileRead.c, arch/file/<platform>/fileReadMmap.c, arch/file/<platform>/fileReadRing.c
+Also needs: src/console/console.c, src/hashmap/hashmap.c, src/async/async.c, src/string/*.c,
+            arch/console/<platform>/console.c, arch/memory/<platform>/memory.c, arch/async/<platform>/async.c
 ```
 
 ---

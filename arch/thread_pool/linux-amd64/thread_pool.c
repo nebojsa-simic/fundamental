@@ -114,8 +114,8 @@ int arch_thread_create(void (*fn)(void *), void *arg, void **out_handle)
 		"test %%rax, %%rax\n\t"
 		"jnz 1f\n\t"
 		/* ---- child ---- */
-		"movq 0(%%rsp), %%rax\n\t"   /* fn */
-		"movq 8(%%rsp), %%rdi\n\t"   /* arg */
+		"movq 0(%%rsp), %%rax\n\t" /* fn */
+		"movq 8(%%rsp), %%rdi\n\t" /* arg */
 		"call *%%rax\n\t"
 		"mov %[exit_nr], %%eax\n\t"
 		"xor %%edi, %%edi\n\t"
@@ -124,15 +124,10 @@ int arch_thread_create(void (*fn)(void *), void *arg, void **out_handle)
 		"1:\n\t"
 		"mov %%rax, %[ret]\n\t"
 		: [ret] "=r"(tid)
-		: [nr] "i"(SYS_clone),
-		  [flags] "r"(flags),
-		  [stack] "r"((long)child_data),
-		  [ptid] "r"(0UL),
-		  [ctid] "r"((long)&h->clear_tid),
-		  [tls] "r"(0UL),
+		: [nr] "i"(SYS_clone), [flags] "r"(flags), [stack] "r"((long)child_data),
+		  [ptid] "r"(0UL), [ctid] "r"((long)&h->clear_tid), [tls] "r"(0UL),
 		  [exit_nr] "i"(SYS_exit)
-		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "rcx", "r11",
-		  "memory");
+		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "rcx", "r11", "memory");
 
 	if (tid < 0) {
 		fun_memory_free((Memory *)&stack_mem.value);

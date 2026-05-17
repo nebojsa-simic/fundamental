@@ -20,11 +20,11 @@ static bool create_sparse_file(const char *path, uint64_t size)
 {
 	char byte = 0;
 	Write params = { .file_path = path,
-			 .input = &byte,
-			 .bytes_to_write = 1,
-			 .offset = size - 1,
-			 .mode = FILE_MODE_AUTO,
-			 .durability_mode = FILE_DURABILITY_ASYNC };
+					 .input = &byte,
+					 .bytes_to_write = 1,
+					 .offset = size - 1,
+					 .mode = FILE_MODE_AUTO,
+					 .durability_mode = FILE_DURABILITY_ASYNC };
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result, -1);
 	return result.error.code == 0;
@@ -68,8 +68,7 @@ static void test_read_beyond_2gb_offset(void)
 	AsyncResult read_res = fun_read_file_in_memory(params);
 	fun_async_await(&read_res, -1);
 
-	assert(read_res.error.code == 0 ||
-		   read_res.error.code != 0);
+	assert(read_res.error.code == 0 || read_res.error.code != 0);
 
 	fun_memory_free(&buffer);
 	delete_test_file(FILE_PATH);
@@ -100,8 +99,7 @@ static void test_write_at_large_offset(void)
 	AsyncResult write_res = fun_write_memory_to_file(params);
 	fun_async_await(&write_res, -1);
 
-	assert(write_res.error.code == 0 ||
-		   write_res.error.code != 0);
+	assert(write_res.error.code == 0 || write_res.error.code != 0);
 
 	fun_memory_free(&buffer);
 	delete_test_file(FILE_PATH);

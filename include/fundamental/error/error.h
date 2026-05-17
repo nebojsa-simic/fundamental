@@ -167,16 +167,13 @@ static ErrorResult ERROR_RESULT_NETWORK_SERVER_WRONG_CONFIG_TYPE = {
 static ErrorResult ERROR_RESULT_ASYNC_TIMEOUT = { ERROR_CODE_ASYNC_TIMEOUT,
 												  "Async operation timed out" };
 static ErrorResult ERROR_RESULT_THREAD_POOL_INVALID_SIZE = {
-	ERROR_CODE_THREAD_POOL_INVALID_SIZE,
-	"Thread pool requires num_threads > 0"
+	ERROR_CODE_THREAD_POOL_INVALID_SIZE, "Thread pool requires num_threads > 0"
 };
 static ErrorResult ERROR_RESULT_THREAD_POOL_CREATE_FAILED = {
-	ERROR_CODE_THREAD_POOL_CREATE_FAILED,
-	"Failed to create worker thread"
+	ERROR_CODE_THREAD_POOL_CREATE_FAILED, "Failed to create worker thread"
 };
 static ErrorResult ERROR_RESULT_THREAD_POOL_FULL = {
-	ERROR_CODE_THREAD_POOL_FULL,
-	"All worker threads are busy"
+	ERROR_CODE_THREAD_POOL_FULL, "All worker threads are busy"
 };
 
 #pragma GCC diagnostic pop
