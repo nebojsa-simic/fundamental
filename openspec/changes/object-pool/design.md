@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 Fundamental's memory module uses per-allocation `mmap`/`munmap` syscalls. For hot paths that repeatedly create and destroy same-sized objects (connection handles, request structs, buffer nodes), every cycle hits the kernel. Object pools eliminate this: pre-allocate a slab of N same-sized slots once via `fun_memory_allocate`, then serve acquire/release from a free list — no syscalls on the hot path.
@@ -7,6 +9,7 @@ The pool is sized once at creation time and never grows. Exhaustion is an explic
 ## Goals / Non-Goals
 
 **Goals:**
+
 - O(1) acquire/release without syscalls
 - Intrusive free list (next-pointer stored in each free slot, zero per-slot overhead)
 - Fixed capacity, pre-allocated once at create time
@@ -15,6 +18,7 @@ The pool is sized once at creation time and never grows. Exhaustion is an explic
 - Cross-platform (no `arch/` code, memory module handles platform)
 
 **Non-Goals:**
+
 - Thread safety (caller manages synchronization externally)
 - Auto-growth or elastic capacity (pool is fixed size, permanently)
 - Variable-size slots per pool (each pool has one element size)
@@ -30,6 +34,7 @@ Free slots form a singly-linked list. When a slot is free, its first `sizeof(voi
 **Constraint**: `elementSize >= sizeof(void*)` (8 bytes on amd64). Smaller elements would need a separate free index scheme — out of scope.
 
 **Alternatives considered:**
+
 - External free-index array: 8 bytes per slot overhead (pointer to each slot). Scales linearly with capacity. Rejected — intrusive is standard and zero-overhead.
 - Bitmap + bit-scan: O(1) with BSF but requires bitmap storage (capacity/8 bytes). Overkill. Rejected.
 
@@ -38,7 +43,8 @@ Free slots form a singly-linked list. When a slot is free, its first `sizeof(voi
 One `fun_memory_allocate` call at create time allocates `elementSize * capacity` bytes. Free list is built by iterating over slots and linking them. No further syscalls. Pool struct is small, no slab-list management.
 
 **Pool struct layout:**
-```
+
+```c
 ObjectPool {
     size_t elementSize;
     size_t capacity;

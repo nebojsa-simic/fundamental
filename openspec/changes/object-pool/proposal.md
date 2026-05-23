@@ -1,3 +1,5 @@
+# Proposal
+
 ## Why
 
 `fun_memory_allocate` always invokes `mmap` syscall — fine for large/rare allocations, prohibitive for frequent small-object create/destroy cycles. Glibc/ptmalloc solves this with slab allocators and free lists that serve requests without entering the kernel. Fundamental should offer an object pool module: pre-allocate a batch of same-sized slots once, then acquire/release them in O(1) without syscalls. Eliminates allocation pressure on hot paths.
@@ -16,6 +18,7 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `object-pool`: Fixed-size, fixed-capacity object pool with pre-allocation, O(1) acquire/release, leak detection on destroy, and type-safe macro wrapper.
 
 ### Modified Capabilities
