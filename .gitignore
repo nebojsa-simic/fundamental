@@ -6,4 +6,4 @@ tests/*/test_*
 
 # Test output files
 **/testData/
-demos/object-pool/demo
+demos/*/demo
