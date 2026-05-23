@@ -28,12 +28,17 @@ The memory module SHALL provide functions for resizing previously allocated memo
 - **AND** existing content is preserved during allocation expansion
 - **AND** memory continues to be accessible until freed
 
+#### Scenario: Null pointer reallocation
+- **WHEN** fun_memory_reallocate(NULL, new_size) is called
+- **THEN** function returns NULL pointer
+- **AND** no error is reported
+
 ### Requirement: Safe Deallocation
 The memory module SHALL provide safe deallocation of previously allocated memory blocks.
 
 #### Scenario: Deallocate memory
 - **WHEN** fun_memory_free(ptr) is called with a valid allocated pointer
-- **THEN** previously allocated memory is deallocated
+- **THEN** previously allocated memory is deallocated and returned to the operating system
 - **AND** memory address is no longer accessible
 - **AND** subsequent deallocation attempts fail safely
 
@@ -69,7 +74,7 @@ The memory module SHALL provide functions to retrieve the size of allocated memo
 
 #### Scenario: Retrieve memory block size
 - **WHEN** fun_memory_size(memory) is called with valid allocated memory
-- **THEN** function returns the size of the allocated memory block
+- **THEN** function returns the exact size originally passed to fun_memory_allocate
 - **IF** memory is NULL
 - **THEN** function returns 0 with appropriate error
 

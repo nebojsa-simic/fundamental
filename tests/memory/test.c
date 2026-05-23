@@ -220,6 +220,71 @@ void test_fun_memory_copy()
 	print_test_result("fun_memory_copy");
 }
 
+void test_realloc_multi_page_data_preservation()
+{
+	size_t oldSize = 5000;
+	MemoryResult r = fun_memory_allocate(oldSize);
+	ASSERT_NO_ERROR(r);
+	Memory mem = r.value;
+
+	fun_memory_fill(mem, oldSize, 0xCDCDCDCDCDCDCDCDULL);
+
+	r = fun_memory_reallocate(mem, 8000);
+	ASSERT_NO_ERROR(r);
+	mem = r.value;
+
+	uint8_t *bytes = (uint8_t *)mem;
+	for (size_t i = 0; i < oldSize; i++) {
+		assert(bytes[i] == 0xCD);
+	}
+
+	voidResult fr = fun_memory_free(&r.value);
+	ASSERT_NO_ERROR(fr);
+
+	print_test_result("test_realloc_multi_page_data_preservation");
+}
+
+void test_realloc_in_place_same_page()
+{
+	size_t size = 1000;
+	MemoryResult r = fun_memory_allocate(size);
+	ASSERT_NO_ERROR(r);
+	Memory oldPtr = r.value;
+
+	r = fun_memory_reallocate(r.value, 2000);
+	ASSERT_NO_ERROR(r);
+	assert(r.value == oldPtr);
+
+	voidResult fr = fun_memory_free(&r.value);
+	ASSERT_NO_ERROR(fr);
+
+	print_test_result("test_realloc_in_place_same_page");
+}
+
+void test_realloc_shrink_preserves_data()
+{
+	size_t oldSize = 4096;
+	MemoryResult r = fun_memory_allocate(oldSize);
+	ASSERT_NO_ERROR(r);
+	Memory mem = r.value;
+
+	fun_memory_fill(mem, oldSize, 0xABABABABABABABABULL);
+
+	r = fun_memory_reallocate(mem, 2048);
+	ASSERT_NO_ERROR(r);
+	mem = r.value;
+
+	uint8_t *bytes = (uint8_t *)mem;
+	for (size_t i = 0; i < 2048; i++) {
+		assert(bytes[i] == 0xAB);
+	}
+
+	voidResult fr = fun_memory_free(&r.value);
+	ASSERT_NO_ERROR(fr);
+
+	print_test_result("test_realloc_shrink_preserves_data");
+}
+
 int main()
 {
 	printf("Running memory module tests:\n");
@@ -229,6 +294,9 @@ int main()
 	test_fun_memory_fill();
 	test_fun_memory_size();
 	test_fun_memory_copy();
+	test_realloc_multi_page_data_preservation();
+	test_realloc_in_place_same_page();
+	test_realloc_shrink_preserves_data();
 	printf("All tests passed!\n");
 	return 0;
 }
