@@ -41,7 +41,15 @@
 - [ ] 7.7 Test query functions: freeCount, capacity, elementSize
 - [ ] 7.8 Test type-safe macro with a custom struct type (create typed pool, acquire, release, destroy)
 
-## 8. Validation
+## 8. Demo Application
 
-- [ ] 8.1 Build and run tests on Linux (`./build-linux-amd64.sh && ./test`)
-- [ ] 8.2 Build and run tests on Windows (`build-windows-amd64.bat && test.exe`)
+- [ ] 8.1 Create `demos/object-pool/demo.c` — single-node lock service: two typed object pools (`SessionPool` for per-client state, `LockPool` for named locks). Protocol: `ACQUIRE <name>` grabs a lock, `RELEASE <name>` frees it, `LIST` shows all locks and owners, `QUIT` releases all held locks and disconnects. Pool exhaustion → `BUSY` (session pool) or `NOLOCK` (lock pool). Auto-release on disconnect. Prints per-event console output
+- [ ] 8.2 Create `demos/object-pool/build-linux-amd64.sh` — compile demo.c + src/object-pool/object-pool.c + arch/memory/linux-amd64/memory.c + network (server/simple-async) + console + startup + async + string
+- [ ] 8.3 Create `demos/object-pool/build-windows-amd64.bat` — compile demo.c + src/object-pool/object-pool.c + arch/memory/windows-amd64/memory.c + network (server/simple-async) + console + startup + async + string
+
+## 9. Validation
+
+- [ ] 9.1 Build and run tests on Linux (`./build-linux-amd64.sh && ./test`)
+- [ ] 9.2 Build and run tests on Windows (`build-windows-amd64.bat && test.exe`)
+- [ ] 9.3 Build and run demo on Linux
+- [ ] 9.4 Build and run demo on Windows

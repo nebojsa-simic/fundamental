@@ -97,3 +97,20 @@ The object pool module SHALL provide a macro to generate type-safe pool wrappers
 - **THEN** a MyStruct* is returned or NULL if exhausted
 - **WHEN** fun_object_pool_MyStruct_release(pool, ptr) is called
 - **THEN** the slot is returned to the pool
+
+### Requirement: Demo Application
+The object pool module SHALL include a demo application that demonstrates real-world usage.
+
+#### Scenario: Demo builds and runs
+- **WHEN** the demo is built with the platform build script
+- **THEN** a working `lockd` executable is produced
+- **AND** the lock service listens on TCP port 8080
+- **AND** clients can `ACQUIRE <name>`, `RELEASE <name>`, `LIST`, and `QUIT`
+- **AND** session pool exhaustion rejects new connections with `BUSY`
+- **AND** lock pool exhaustion returns `NOLOCK`
+- **AND** QUIT releases all locks held by that client
+- **AND** console output reports connections, lock state changes, and pool stats
+
+#### Scenario: Demo is cross-platform
+- **WHEN** the demo is built on Linux AND Windows
+- **THEN** it compiles and runs identically on both platforms
