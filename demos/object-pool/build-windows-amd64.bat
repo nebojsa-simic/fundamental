@@ -1,0 +1,34 @@
+@echo off
+set PROJECT_ROOT=../..
+
+gcc ^
+    --std=c17 -Os ^
+    -I %PROJECT_ROOT%/include ^
+    demo.c ^
+    %PROJECT_ROOT%/src/object-pool/object-pool.c ^
+    %PROJECT_ROOT%/src/network/server/server.c ^
+    %PROJECT_ROOT%/src/network/network.c ^
+    %PROJECT_ROOT%/arch/network/windows-amd64/network.c ^
+    %PROJECT_ROOT%/arch/network/server/windows-amd64/server.c ^
+    %PROJECT_ROOT%/src/async/async.c ^
+    %PROJECT_ROOT%/arch/async/windows-amd64/async.c ^
+    %PROJECT_ROOT%/src/console/console.c ^
+    %PROJECT_ROOT%/arch/console/windows-amd64/console.c ^
+    %PROJECT_ROOT%/src/config/config.c ^
+    %PROJECT_ROOT%/src/config/iniParser.c ^
+    %PROJECT_ROOT%/src/config/cliParser.c ^
+    %PROJECT_ROOT%/arch/config/windows-amd64/env.c ^
+    %PROJECT_ROOT%/src/filesystem/path.c ^
+    %PROJECT_ROOT%/src/filesystem/file_exists.c ^
+    %PROJECT_ROOT%/src/filesystem/directory.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/path.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/file_exists.c ^
+    %PROJECT_ROOT%/arch/filesystem/windows-amd64/directory.c ^
+    %PROJECT_ROOT%/src/hashmap/hashmap.c ^
+    %PROJECT_ROOT%/arch/memory/windows-amd64/memory.c ^
+    %PROJECT_ROOT%/src/string/stringConversion.c ^
+    %PROJECT_ROOT%/src/string/stringOperations.c ^
+    %PROJECT_ROOT%/src/string/stringValidation.c ^
+    -o demo.exe -lws2_32
+
+echo Build complete: demo.exe
