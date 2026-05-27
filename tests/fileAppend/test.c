@@ -104,8 +104,9 @@ bool test_fun_append_memory_to_file_to_existing(void)
 			long file_size = ftell(verify_fp);
 			if (file_size == 12) { // "Initial data" = 8 + 4
 				fseek(verify_fp, 0, SEEK_SET);
-				fread(read_buffer, 1, file_size, verify_fp);
-				if (memcmp(read_buffer, "Initial data", 12) != 0) {
+				size_t read_count = fread(read_buffer, 1, file_size, verify_fp);
+				if (read_count != (size_t)file_size ||
+					memcmp(read_buffer, "Initial data", 12) != 0) {
 					success = false;
 				}
 			} else {
