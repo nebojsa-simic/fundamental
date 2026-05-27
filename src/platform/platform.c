@@ -6,15 +6,6 @@
 PlatformOS fun_platform_os(void);
 PlatformArch fun_platform_arch(void);
 
-/*
- * Platform deinitialization (Shutdown Phase 1)
- * No-op for now - platform detection functions don't require cleanup.
- */
-static void platform_deinit(void)
-{
-	/* Platform layer has no cleanup required */
-}
-
 /* Register platform shutdown handler */
 
 /*

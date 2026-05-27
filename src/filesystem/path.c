@@ -402,13 +402,4 @@ int fun_filesystem_init(void)
 	return 0;
 }
 
-/*
- * Filesystem deinitialization (Shutdown Phase 3)
- * No-op for now - filesystem functions don't require cleanup.
- */
-static void filesystem_deinit(void)
-{
-	/* Filesystem layer has no cleanup required */
-}
-
 /* Register filesystem shutdown handler */

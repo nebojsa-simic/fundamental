@@ -13,29 +13,15 @@ set CC=C:\Users\nsimi\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinL
 REM Compiler flags
 set CFLAGS=-I%PROJECT_ROOT%\include -Wall -Wextra -g -O0
 
-REM Build test_substring.exe
-echo Building test_substring.exe...
+echo Building stringSubstring tests...
 %CC% %CFLAGS% ^
-    %SCRIPT_DIR%test_substring.c ^
+    %SCRIPT_DIR%test.c ^
     %PROJECT_ROOT%\src\string\stringOperations.c ^
     %PROJECT_ROOT%\src\string\stringValidation.c ^
-    -o %SCRIPT_DIR%test_substring.exe
+    -o %SCRIPT_DIR%test.exe
 
 if %ERRORLEVEL% neq 0 (
-    echo Build failed for test_substring.exe
-    exit /b 1
-)
-
-REM Build test_slice.exe
-echo Building test_slice.exe...
-%CC% %CFLAGS% ^
-    %SCRIPT_DIR%test_slice.c ^
-    %PROJECT_ROOT%\src\string\stringOperations.c ^
-    %PROJECT_ROOT%\src\string\stringValidation.c ^
-    -o %SCRIPT_DIR%test_slice.exe
-
-if %ERRORLEVEL% neq 0 (
-    echo Build failed for test_slice.exe
+    echo Build failed!
     exit /b 1
 )
 

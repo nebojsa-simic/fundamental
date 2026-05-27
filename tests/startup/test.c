@@ -7,156 +7,84 @@
 #include "fundamental/startup/startup.h"
 #include "fundamental/console/console.h"
 #include "fundamental/error/error.h"
-#include <stdint.h>
+#include <stdio.h>
 
-/* Track if startup ran */
-static int g_startup_ran = 0;
+#define GREEN_CHECK "\033[0;32m✓\033[0m"
+#define YELLOW_SKIP "\033[0;33m⏭\033[0m"
 
-/*
- * Test: startup runs before main()
- *
- * Verifies that __main() is called and executes fun_startup_run().
- */
-static int test_startup_runs_before_main(void)
+static int tests_passed = 0;
+static int tests_failed = 0;
+
+static void print_test_result(const char *name, int passed)
 {
-	/* fun_startup_run() should have been called by __main */
-	/* We verify this by checking that modules are initialized */
-	fun_console_write_line("PASS: startup ran (modules initialized)");
-	return 1;
+	if (passed) {
+		printf("%s %s\n", GREEN_CHECK, name);
+		tests_passed++;
+	} else {
+		printf("\033[0;31m✗\033[0m %s\n", name);
+		tests_failed++;
+	}
 }
 
-/*
- * Test: verbose mode outputs are compiled in
- *
- * This test verifies that STARTUP_TRACE is defined.
- */
-static int test_verbose_mode_defined(void)
+static void test_startup_runs_before_main(void)
+{
+	print_test_result("test_startup_runs_before_main", 1);
+}
+
+static void test_verbose_mode_defined(void)
 {
 #ifdef STARTUP_TRACE
-	fun_console_write_line("PASS: STARTUP_TRACE macro is defined");
-	return 1;
+	print_test_result("test_verbose_mode_defined", 1);
 #else
-	fun_console_write_line("FAIL: STARTUP_TRACE macro not defined");
-	return 0;
+	print_test_result("test_verbose_mode_defined", 0);
 #endif
 }
 
-/*
- * Test: platform init succeeds
- */
-static int test_platform_init_succeeds(void)
+static void test_platform_init_succeeds(void)
 {
 	int result = fun_platform_init();
-	if (result == 0) {
-		fun_console_write_line("PASS: platform init succeeds");
-		return 1;
-	}
-	fun_console_write_line("FAIL: platform init failed");
-	return 0;
+	print_test_result("test_platform_init_succeeds", result == 0);
 }
 
-/*
- * Test: filesystem init succeeds
- */
-static int test_filesystem_init_succeeds(void)
+static void test_filesystem_init_succeeds(void)
 {
 	int result = fun_filesystem_init();
-	if (result == 0) {
-		fun_console_write_line("PASS: filesystem init succeeds");
-		return 1;
-	}
-	fun_console_write_line("FAIL: filesystem init failed");
-	return 0;
+	print_test_result("test_filesystem_init_succeeds", result == 0);
 }
 
-/*
- * Test: config init succeeds
- */
-static int test_config_init_succeeds(void)
+static void test_config_init_succeeds(void)
 {
 	int result = fun_config_init();
-	if (result == 0) {
-		fun_console_write_line("PASS: config init succeeds");
-		return 1;
-	}
-	fun_console_write_line("FAIL: config init failed");
-	return 0;
+	print_test_result("test_config_init_succeeds", result == 0);
 }
 
-/*
- * Test: network init succeeds
- */
-static int test_network_init_succeeds(void)
+static void test_network_init_succeeds(void)
 {
 	int result = fun_network_init();
-	if (result == 0) {
-		fun_console_write_line("PASS: network init succeeds");
-		return 1;
-	}
-	fun_console_write_line("FAIL: network init failed");
-	return 0;
+	print_test_result("test_network_init_succeeds", result == 0);
 }
 
-/*
- * Main test runner
- */
 int cli_main(int argc, const char **argv)
 {
-	int passed = 0;
-	int failed = 0;
-
 	(void)argc;
 	(void)argv;
 
-	fun_console_write_line("Running startup tests...\n");
+	printf("Running startup module tests:\n");
 
-	/* Run tests */
-	if (test_startup_runs_before_main()) {
-		passed++;
+	test_startup_runs_before_main();
+	test_verbose_mode_defined();
+	test_platform_init_succeeds();
+	test_filesystem_init_succeeds();
+	test_config_init_succeeds();
+	test_network_init_succeeds();
+
+	if (tests_failed == 0) {
+		printf("All startup tests passed!\n");
 	} else {
-		failed++;
+		printf("Tests passed: %d, failed: %d\n", tests_passed, tests_failed);
 	}
 
-	if (test_verbose_mode_defined()) {
-		passed++;
-	} else {
-		failed++;
-	}
-
-	if (test_platform_init_succeeds()) {
-		passed++;
-	} else {
-		failed++;
-	}
-
-	if (test_filesystem_init_succeeds()) {
-		passed++;
-	} else {
-		failed++;
-	}
-
-	if (test_config_init_succeeds()) {
-		passed++;
-	} else {
-		failed++;
-	}
-
-	if (test_network_init_succeeds()) {
-		passed++;
-	} else {
-		failed++;
-	}
-
-	/* Print summary */
-	fun_console_write_line("\nTest Summary:");
-
-	if (failed == 0) {
-		fun_console_write_line("All tests passed!");
-		return 0;
-	} else {
-		fun_console_write_line("Some tests failed.");
-		return 1;
-	}
+	return tests_failed > 0 ? 1 : 0;
 }
 
 int main(int argc, char **argv)

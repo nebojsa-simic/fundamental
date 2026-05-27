@@ -75,21 +75,6 @@ static void print_result(const char *name, int ok)
 	}
 }
 
-/* Write a temporary INI file for testing */
-static void write_ini_file(const char *path, const char *content)
-{
-	FILE *f = fopen(path, "w");
-	if (f) {
-		fputs(content, f);
-		fclose(f);
-	}
-}
-
-static void remove_ini_file(const char *path)
-{
-	remove(path);
-}
-
 /* ------------------------------------------------------------------
  * 13.4: test_config_load_success
  * ------------------------------------------------------------------ */
