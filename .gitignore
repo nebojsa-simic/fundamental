@@ -7,3 +7,10 @@ tests/*/test_*
 # Test output files
 **/testData/
 demos/*/demo
+
+# Logs
+.logs/
+
+# Diagnostic/repro binaries in test dirs
+tests/*/diag*
+tests/*/reproduce*
