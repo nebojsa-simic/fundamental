@@ -7,8 +7,8 @@
 
 - [ ] 2.1 Create `include/fundamental/json/json.h` with header guard `LIBRARY_JSON_H`
 - [ ] 2.2 Define `FunJsonTokenType` enum (OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, STRING, NUMBER, BOOL, NULL, KEY, TOKEN_END)
-- [ ] 2.3 Define `FunJsonToken` struct: type, value, length, depth, parent_is_array, array_index
-- [ ] 2.4 Define `FunJsonParser` stack-allocatable struct (data buffer pointer, pos, len, depth, cursor state)
+- [ ] 2.3 Define `FunJsonToken` struct: type, String value, uint64_t length, uint64_t depth, bool parent_is_array, uint64_t array_index
+- [ ] 2.4 Define `FunJsonState` stack-allocatable struct (data buffer pointer, pos, len, depth, cursor state)
 - [ ] 2.5 Define `FUN_JSON_MAX_DEPTH` constant (32)
 - [ ] 2.6 Declare all 17 public function signatures with `CanReturnError` / `DEFINE_RESULT_TYPE` patterns
 - [ ] 2.7 Add `#include` dependencies: `error.h`, `string.h`, `<stddef.h>`, `<stdbool.h>`, `<stdint.h>`
@@ -96,8 +96,9 @@
 - [ ] 13.11 Test `fun_json_query` — valid path, non-existent path, type mismatch
 - [ ] 13.12 Test typed extractors — int parse, double parse, bool parse, null check, string copy, type mismatch
 - [ ] 13.13 Test convenience combinators — query_string, query_int, query_double, query_bool
-- [ ] 13.14 Test in-place buffer mutation — verify value pointers point into original buffer, null terminators present
-- [ ] 13.15 Test with the full Caddy JSON config from the proposal
+- [ ] 13.14 Test in-place buffer mutation — verify tokenizer inserts null terminators into original buffer
+- [ ] 13.15 Test non-mutating query — verify data buffer is unmodified after `fun_json_query` and repeated queries on same data succeed
+- [ ] 13.16 Test with the full Caddy JSON config from the proposal — iterate routes via `fun_json_init_at_path`, query individual values via `fun_json_query_string`
 
 ## 14. Build Scripts
 
