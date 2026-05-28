@@ -74,42 +74,50 @@
 - [ ] 11.4 Implement `fun_json_token_as_bool` — return bool equivalent, error on non-BOOL token
 - [ ] 11.5 Implement `fun_json_token_is_null` — return true if token type is NULL
 
-## 12. Convenience Combinators
+## 12. Array Extractors
 
-- [ ] 12.1 Implement `fun_json_query_string` — query path + copy string into caller buffer
-- [ ] 12.2 Implement `fun_json_query_int` — query path + parse as int64
-- [ ] 12.3 Implement `fun_json_query_double` — query path + parse as double
-- [ ] 12.4 Implement `fun_json_query_bool` — query path + parse as bool
+- [ ] 12.1 Implement `fun_json_query_int_array` — walk JSON array via non-mutating scan, copy int64_t elements into caller buffer, return count
+- [ ] 12.2 Implement `fun_json_query_double_array` — walk JSON array via non-mutating scan, copy double elements into caller buffer, return count
+- [ ] 12.3 Handle errors: path-not-found → 278, target-not-array → 279, non-numeric element → 279
+- [ ] 12.4 Cap output at `max_count` — return actual count, caller compares against max_count for truncation detection
 
-## 13. Test Suite
+## 13. Convenience Combinators
 
-- [ ] 13.1 Create `tests/json/test_json.c` with test infrastructure (GREEN_CHECK, RED_CROSS, assert helpers)
-- [ ] 13.2 Test `fun_json_init` — null args, empty input, valid init
-- [ ] 13.3 Test `fun_json_next` — complete token sequence for `{"key":"value"}`, depth and parent context
-- [ ] 13.4 Test all token types — strings, ints, floats, booleans, null, nested objects, nested arrays
-- [ ] 13.5 Test string escaping — `\"`, `\\`, `\n`, `\t`, `\uXXXX`
-- [ ] 13.6 Test error cases — unterminated string, invalid number, missing colon, missing comma, nesting overflow
-- [ ] 13.7 Test `fun_json_init_at_path` — valid path, non-existent key, array index, wrong type
-- [ ] 13.8 Test `fun_json_next_at` — skipping subtrees, array traversal
-- [ ] 13.9 Test `fun_json_skip_value` — object subtree, array subtree, nested skip
-- [ ] 13.10 Test `fun_json_find_key` — key found, key absent, sibling keys ignored
-- [ ] 13.11 Test `fun_json_query` — valid path, non-existent path, type mismatch
-- [ ] 13.12 Test typed extractors — int parse, double parse, bool parse, null check, string copy, type mismatch
-- [ ] 13.13 Test convenience combinators — query_string, query_int, query_double, query_bool
-- [ ] 13.14 Test in-place buffer mutation — verify tokenizer inserts null terminators into original buffer
-- [ ] 13.15 Test non-mutating query — verify data buffer is unmodified after `fun_json_query` and repeated queries on same data succeed
-- [ ] 13.16 Test with the full Caddy JSON config from the proposal — iterate routes via `fun_json_init_at_path`, query individual values via `fun_json_query_string`
+- [ ] 13.1 Implement `fun_json_query_string` — query path + copy string into caller buffer
+- [ ] 13.2 Implement `fun_json_query_int` — query path + parse as int64
+- [ ] 13.3 Implement `fun_json_query_double` — query path + parse as double
+- [ ] 13.4 Implement `fun_json_query_bool` — query path + parse as bool
 
-## 14. Build Scripts
+## 14. Test Suite
 
-- [ ] 14.1 Create `tests/json/build-linux-amd64.sh` with explicit source listing
-- [ ] 14.2 Create `tests/json/build-windows-amd64.bat` with explicit source listing
-- [ ] 14.3 Verify clean compile on Linux with `-Wall -Wextra -g -O0`
-- [ ] 14.4 Verify clean compile on Windows with `-Wall -Wextra -g -O0`
+- [ ] 14.1 Create `tests/json/test_json.c` with test infrastructure (GREEN_CHECK, RED_CROSS, assert helpers)
+- [ ] 14.2 Test `fun_json_init` — null args, empty input, valid init
+- [ ] 14.3 Test `fun_json_next` — complete token sequence for `{"key":"value"}`, depth and parent context
+- [ ] 14.4 Test all token types — strings, ints, floats, booleans, null, nested objects, nested arrays
+- [ ] 14.5 Test string escaping — `\"`, `\\`, `\n`, `\t`, `\uXXXX`
+- [ ] 14.6 Test error cases — unterminated string, invalid number, missing colon, missing comma, nesting overflow
+- [ ] 14.7 Test `fun_json_init_at_path` — valid path, non-existent key, array index, wrong type
+- [ ] 14.8 Test `fun_json_next_at` — skipping subtrees, array traversal
+- [ ] 14.9 Test `fun_json_skip_value` — object subtree, array subtree, nested skip
+- [ ] 14.10 Test `fun_json_find_key` — key found, key absent, sibling keys ignored
+- [ ] 14.11 Test `fun_json_query` — valid path, non-existent path, type mismatch
+- [ ] 14.12 Test typed extractors — int parse, double parse, bool parse, null check, string copy, type mismatch
+- [ ] 14.13 Test convenience combinators — query_string, query_int, query_double, query_bool
+- [ ] 14.14 Test array extractors — int array, double array, non-array target, non-numeric element, buffered output, empty array, truncation
+- [ ] 14.15 Test in-place buffer mutation — verify tokenizer inserts null terminators into original buffer
+- [ ] 14.16 Test non-mutating query — verify data buffer is unmodified after `fun_json_query` and repeated queries on same data succeed
+- [ ] 14.17 Test with the full Caddy JSON config from the proposal — iterate routes via `fun_json_init_at_path`, query individual values via `fun_json_query_string`
 
-## 15. Validation
+## 15. Build Scripts
 
-- [ ] 15.1 Run `openspec validate json-parser-performance` to verify all artifacts
-- [ ] 15.2 Run full test suite on Linux: `./tests/json/build-linux-amd64.sh && ./tests/json/test`
-- [ ] 15.3 Run full test suite on Windows: `tests\json\build-windows-amd64.bat && tests\json\test.exe`
-- [ ] 15.4 Format all new files with `clang-format -i -style=file`
+- [ ] 15.1 Create `tests/json/build-linux-amd64.sh` with explicit source listing
+- [ ] 15.2 Create `tests/json/build-windows-amd64.bat` with explicit source listing
+- [ ] 15.3 Verify clean compile on Linux with `-Wall -Wextra -g -O0`
+- [ ] 15.4 Verify clean compile on Windows with `-Wall -Wextra -g -O0`
+
+## 16. Validation
+
+- [ ] 16.1 Run `openspec validate json-parser-performance` to verify all artifacts
+- [ ] 16.2 Run full test suite on Linux: `./tests/json/build-linux-amd64.sh && ./tests/json/test`
+- [ ] 16.3 Run full test suite on Windows: `tests\json\build-windows-amd64.bat && tests\json\test.exe`
+- [ ] 16.4 Format all new files with `clang-format -i -style=file`

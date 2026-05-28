@@ -286,6 +286,52 @@ The JSON module SHALL provide single-call functions that combine non-mutating qu
 - **WHEN** `fun_json_query_string(data, len, "routes", out, size)` is called and the target is an ARRAY_START
 - **THEN** an error result with code `ERROR_CODE_JSON_TYPE_MISMATCH` (279) is returned
 
+### Requirement: Typed Array Extractors
+The JSON module SHALL provide single-call functions that copy JSON arrays of numbers into caller-allocated buffers, returning the element count.
+
+#### Scenario: Double array signature
+- **WHEN** calling `uint64Result fun_json_query_double_array(String data, uint64_t len, String path, double *out, uint64_t max_count)`
+- **THEN** the non-mutating scan walks the JSON array at `path`
+- **AND** each number element is parsed as `double` and written to `out`
+- **AND** the returned `value` is the number of elements copied (capped at `max_count`)
+- **AND** `uint64Result` uses the pre-defined `uint64_tResult` type from `error.h`
+
+#### Scenario: Int array signature
+- **WHEN** calling `uint64Result fun_json_query_int_array(String data, uint64_t len, String path, int64_t *out, uint64_t max_count)`
+- **THEN** each number element is parsed as `int64_t` and written to `out`
+
+#### Scenario: Copy glTF VEC3 vector
+- **WHEN** `fun_json_query_double_array(data, len, "accessors.1.max", out, 4)` is called on `"max": [1.0, 1.0, 0.0]`
+- **THEN** the result value is `uint64_t` 3
+- **AND** `out = [1.0, 1.0, 0.0]`
+
+#### Scenario: Copy index array
+- **WHEN** `fun_json_query_int_array(data, len, "scenes.0.nodes", out, 16)` is called on `"nodes": [0]`
+- **THEN** the result value is `uint64_t` 1
+- **AND** `out[0] = 0`
+
+#### Scenario: Target is not an array
+- **WHEN** `fun_json_query_int_array(data, len, "scene", out, 16)` is called and "scene" is a NUMBER
+- **THEN** an error result with code `ERROR_CODE_JSON_TYPE_MISMATCH` (279) is returned
+
+#### Scenario: Array contains non-numeric element
+- **WHEN** `fun_json_query_int_array` encounters a STRING or OBJECT element inside the array
+- **THEN** an error result with code `ERROR_CODE_JSON_TYPE_MISMATCH` (279) is returned
+
+#### Scenario: Path not found
+- **WHEN** `fun_json_query_double_array(data, len, "nonexistent", out, 4)` is called
+- **THEN** an error result with code `ERROR_CODE_JSON_PATH_NOT_FOUND` (278) is returned
+
+#### Scenario: Buffer larger than array
+- **WHEN** `fun_json_query_int_array(data, len, path, out, 100)` is called on an array of 5 elements
+- **THEN** the result value is `uint64_t` 5
+- **AND** elements 0-4 of `out` are populated
+
+#### Scenario: Idempotent — no buffer mutation
+- **WHEN** `fun_json_query_int_array` is called twice on the same `data` with the same path
+- **THEN** both calls succeed with the same count and values
+- **AND** the data buffer is unmodified
+
 ### Requirement: In-Place Buffer Mutation (Tokenizer Only)
 The JSON module SHALL modify the input buffer during tokenization, and query functions SHALL NOT.
 

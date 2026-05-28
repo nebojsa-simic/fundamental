@@ -20,6 +20,7 @@ No existing module needs modification. The parser is pure computation — no pla
 - Path-based single-shot query (`fun_json_query`) that scans only up to the matching token then stops
 - Typed extractors (`fun_json_token_as_int` → `int64Result`, `_as_double` → `doubleResult`, `_as_bool` → `boolResult`, `_is_null` → `boolResult`) operating on any token
 - Convenience combinators (`fun_json_query_string`, `_int`, `_double`, `_bool`) for one-call config lookups
+- Array extractors (`fun_json_query_int_array` → `uint64Result`, `fun_json_query_double_array` → `uint64Result`) for copying JSON arrays into caller buffers
 - Strict JSON grammar with specific error codes per failure mode
 
 **Non-Goals:**
@@ -96,19 +97,37 @@ ErrorResult fun_json_query(String data, uint64_t len, String path,
 
 **Rationale:** `fun_json_token_as_int()` works on any token's `value`/`length` pair — no need for a separate "number result" type. This keeps the token type flat and extractors orthogonal. Return types follow the config module pattern: `int64Result`, `doubleResult`, `boolResult`.
 
-### 10. Path syntax: dot for keys, integer index for arrays
+### 10. Array extractors for bulk numeric queries
+
+**Rationale:** JSON arrays of numbers (glTF's `max`/`min` vectors, index lists, node lists) are a common pattern. Without array extractors, the caller writes a boilerplate `init_at_path + next_at` loop to copy N values into a caller buffer. `fun_json_query_int_array` and `fun_json_query_double_array` collapse that into one call:
+
+```c
+double max_vec[4];
+uint64_t count = fun_json_query_double_array(data, len,
+    "accessors.1.max", max_vec, 4).value;
+```
+
+The function internally walks the array via the non-mutating query scan, copies each number element into the caller-provided buffer, and returns the element count. If the array has more elements than `max_count`, the buffer is filled to capacity and the count returned; the caller can compare count vs max_count to detect truncation.
+
+Return type is `uint64Result` (count + error) — `uint64_t` is already defined as a result type in `error.h`. Error codes: `ERROR_CODE_JSON_PATH_NOT_FOUND` (path missing), `ERROR_CODE_JSON_TYPE_MISMATCH` (target is not an array, or element is wrong type).
+
+Zero heap allocation — the output buffer is caller-allocated.
+
+**Alternative:** Manual Layer 1 loop for every array. Rejected — the loop is 7 lines of boilerplate per array query, repeated hundreds of times across JSON config consumers. 19 funs over 17 is the right balance.
+
+### 11. Path syntax: dot for keys, integer index for arrays
 
 **Rationale:** Familiar from JavaScript. `apps.http.servers.restic.routes.0.handle.1.handler` is instantly readable. No special characters, no quoting needed.
 
-### 11. Error code block 270-279
+### 12. Error code block 270-279
 
 **Rationale:** Thread pool ends at 252, config sits at 220. Nine codes cover: PARSE_ERROR(270), UNTERMINATED_STRING(271), INVALID_NUMBER(272), NESTING_TOO_DEEP(273), MISSING_COLON(275), MISSING_COMMA(277), UNEXPECTED_TOKEN(276), PATH_NOT_FOUND(278), TYPE_MISMATCH(279).
 
-### 12. No `arch/` code
+### 13. No `arch/` code
 
 **Rationale:** JSON parsing is pure character scanning and arithmetic on a buffer. No syscalls, no platform abstractions. Same as `src/tsv/tsv.c`.
 
-### 13. `FunJsonState` type name (not `FunJsonParser`)
+### 14. `FunJsonState` type name (not `FunJsonParser`)
 
 **Rationale:** TSV uses `FunTsvState` — parser state types use `*State` suffix. `FunJsonState` is consistent with the closest precedent.
 
