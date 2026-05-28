@@ -1,0 +1,114 @@
+## 1. Error Codes and Type Definitions
+
+- [ ] 1.1 Add error codes 270-279 to `include/fundamental/error/error.h` (PARSE_ERROR, UNTERMINATED_STRING, INVALID_NUMBER, NESTING_TOO_DEEP, MISSING_COLON, MISSING_COMMA, UNEXPECTED_TOKEN, PATH_NOT_FOUND, TYPE_MISMATCH)
+- [ ] 1.2 Add corresponding `ERROR_RESULT_JSON_*` static definitions in `include/fundamental/error/error.h`
+
+## 2. Module Header
+
+- [ ] 2.1 Create `include/fundamental/json/json.h` with header guard `LIBRARY_JSON_H`
+- [ ] 2.2 Define `FunJsonTokenType` enum (OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, STRING, NUMBER, BOOL, NULL, KEY, TOKEN_END)
+- [ ] 2.3 Define `FunJsonToken` struct: type, value, length, depth, parent_is_array, array_index
+- [ ] 2.4 Define `FunJsonParser` stack-allocatable struct (data buffer pointer, pos, len, depth, cursor state)
+- [ ] 2.5 Define `FUN_JSON_MAX_DEPTH` constant (32)
+- [ ] 2.6 Declare all 17 public function signatures with `CanReturnError` / `DEFINE_RESULT_TYPE` patterns
+- [ ] 2.7 Add `#include` dependencies: `error.h`, `string.h`, `<stddef.h>`, `<stdbool.h>`, `<stdint.h>`
+
+## 3. Core Tokenizer
+
+- [ ] 3.1 Create `src/json/tokenizer.c` with `fun_json_init` — initialise parser state from buffer + length
+- [ ] 3.2 Implement `fun_json_init_at_path` — scan path prefix, position cursor at target depth
+- [ ] 3.3 Implement character-scanning helpers: skip whitespace, peek/advance, detect digit/alpha
+- [ ] 3.4 Implement `fun_json_next` main token dispatch loop: switch on current character → delegate to type-specific parser
+
+## 4. String Parser
+
+- [ ] 4.1 Create `src/json/string.c` with internal `json_parse_string()` — scan quoted string, unescape in-place, return pointer+length
+- [ ] 4.2 Handle escape sequences: `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`, `\t`, `\uXXXX`
+- [ ] 4.3 Detect unterminated string (no closing quote before buffer end) → error 271
+
+## 5. Number Parser
+
+- [ ] 5.1 Create `src/json/number.c` with internal `json_parse_number()` — scan integer, fraction, exponent parts, return pointer+length
+- [ ] 5.2 Validate number grammar: no leading zeros (except `0`), fraction requires digit after `.`, exponent requires digit after `e`/`E`
+- [ ] 5.3 Detect invalid number format → error 272
+
+## 6. Structural Token Parsing
+
+- [ ] 6.1 Parse `{` → OBJECT_START, increment depth, check nesting limit → error 273 on overflow
+- [ ] 6.2 Parse `}` → OBJECT_END, decrement depth
+- [ ] 6.3 Parse `[` → ARRAY_START, increment depth, reset array_index, check nesting limit → error 273
+- [ ] 6.4 Parse `]` → ARRAY_END, decrement depth
+- [ ] 6.5 Parse `:` — required between KEY and value → error 275 if absent
+- [ ] 6.6 Parse `,` — required between elements → error 277 if absent (detected on next token)
+
+## 7. Literal Parsing
+
+- [ ] 7.1 Implement `json_parse_true()` — match `t`, `r`, `u`, `e` → BOOL token
+- [ ] 7.2 Implement `json_parse_false()` — match `f`, `a`, `l`, `s`, `e` → BOOL token
+- [ ] 7.3 Implement `json_parse_null()` — match `n`, `u`, `l`, `l` → NULL token
+- [ ] 7.4 Detect partial literal match (`fal`, `tru`, `nul`) → error 276 (UNEXPECTED_TOKEN)
+
+## 8. Token Context Tracking
+
+- [ ] 8.1 Track `parent_is_array` per depth level — set true when inside `[...]`, false inside `{...}`
+- [ ] 8.2 Track `array_index` per depth level — increment on each comma-separated element inside `[...]`
+- [ ] 8.3 Populate `token.depth`, `token.parent_is_array`, `token.array_index` on every yielded token
+
+## 9. Depth-Aware Iteration Helpers
+
+- [ ] 9.1 Implement `fun_json_next_at` — yield next token at or above given depth, skip deeper subtrees
+- [ ] 9.2 Implement `fun_json_skip_value` — consume all tokens until depth returns to current level
+- [ ] 9.3 Implement `fun_json_find_key` — scan keys at current object level, return value of first match
+
+## 10. Path Query
+
+- [ ] 10.1 Implement `fun_json_query` — parse dot-separated path, scan tokens until match, return token
+- [ ] 10.2 Handle numeric path segments as array indices (`routes.0` → first element)
+- [ ] 10.3 Return error 278 (PATH_NOT_FOUND) if key missing or index out of bounds
+
+## 11. Typed Extractors
+
+- [ ] 11.1 Implement `fun_json_token_copy_string` — copy `value[0..length]` + null into caller buffer
+- [ ] 11.2 Implement `fun_json_token_as_int` — parse NUMBER value as int64, return error on overflow or non-numeric token
+- [ ] 11.3 Implement `fun_json_token_as_double` — parse NUMBER value as double
+- [ ] 11.4 Implement `fun_json_token_as_bool` — return bool equivalent, error on non-BOOL token
+- [ ] 11.5 Implement `fun_json_token_is_null` — return true if token type is NULL
+
+## 12. Convenience Combinators
+
+- [ ] 12.1 Implement `fun_json_query_string` — query path + copy string into caller buffer
+- [ ] 12.2 Implement `fun_json_query_int` — query path + parse as int64
+- [ ] 12.3 Implement `fun_json_query_double` — query path + parse as double
+- [ ] 12.4 Implement `fun_json_query_bool` — query path + parse as bool
+
+## 13. Test Suite
+
+- [ ] 13.1 Create `tests/json/test_json.c` with test infrastructure (GREEN_CHECK, RED_CROSS, assert helpers)
+- [ ] 13.2 Test `fun_json_init` — null args, empty input, valid init
+- [ ] 13.3 Test `fun_json_next` — complete token sequence for `{"key":"value"}`, depth and parent context
+- [ ] 13.4 Test all token types — strings, ints, floats, booleans, null, nested objects, nested arrays
+- [ ] 13.5 Test string escaping — `\"`, `\\`, `\n`, `\t`, `\uXXXX`
+- [ ] 13.6 Test error cases — unterminated string, invalid number, missing colon, missing comma, nesting overflow
+- [ ] 13.7 Test `fun_json_init_at_path` — valid path, non-existent key, array index, wrong type
+- [ ] 13.8 Test `fun_json_next_at` — skipping subtrees, array traversal
+- [ ] 13.9 Test `fun_json_skip_value` — object subtree, array subtree, nested skip
+- [ ] 13.10 Test `fun_json_find_key` — key found, key absent, sibling keys ignored
+- [ ] 13.11 Test `fun_json_query` — valid path, non-existent path, type mismatch
+- [ ] 13.12 Test typed extractors — int parse, double parse, bool parse, null check, string copy, type mismatch
+- [ ] 13.13 Test convenience combinators — query_string, query_int, query_double, query_bool
+- [ ] 13.14 Test in-place buffer mutation — verify value pointers point into original buffer, null terminators present
+- [ ] 13.15 Test with the full Caddy JSON config from the proposal
+
+## 14. Build Scripts
+
+- [ ] 14.1 Create `tests/json/build-linux-amd64.sh` with explicit source listing
+- [ ] 14.2 Create `tests/json/build-windows-amd64.bat` with explicit source listing
+- [ ] 14.3 Verify clean compile on Linux with `-Wall -Wextra -g -O0`
+- [ ] 14.4 Verify clean compile on Windows with `-Wall -Wextra -g -O0`
+
+## 15. Validation
+
+- [ ] 15.1 Run `openspec validate json-parser-performance` to verify all artifacts
+- [ ] 15.2 Run full test suite on Linux: `./tests/json/build-linux-amd64.sh && ./tests/json/test`
+- [ ] 15.3 Run full test suite on Windows: `tests\json\build-windows-amd64.bat && tests\json\test.exe`
+- [ ] 15.4 Format all new files with `clang-format -i -style=file`
