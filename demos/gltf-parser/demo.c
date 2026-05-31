@@ -10,11 +10,15 @@
 
 #define FILE_BUF_SIZE 167176
 
-static void print_int(int64_t num)
+static void print_count(const char *label, int64_t count)
 {
-	char buf[32];
-	fun_string_from_int(num, 10, buf, sizeof(buf));
-	fun_console_write(buf);
+	char buf[64];
+	StringTemplateParam params[] = {
+		{ .key = "label", .value = { .stringValue = label } },
+		{ .key = "count", .value = { .intValue = count } },
+	};
+	fun_string_template("  ${label}: #{count}", params, 2, buf, sizeof(buf));
+	fun_console_write_line(buf);
 }
 
 static ErrorResult count_accessor_type(FunJsonToken *element, uint64_t idx,
@@ -40,14 +44,6 @@ static ErrorResult count_accessor_type(FunJsonToken *element, uint64_t idx,
 	return ERROR_RESULT_NO_ERROR;
 }
 
-static void print_count(const char *label, int64_t count)
-{
-	fun_console_write("  ");
-	fun_console_write(label);
-	fun_console_write(": ");
-	print_int(count);
-	fun_console_write_line("");
-}
 static ErrorResult json_count_cb(FunJsonToken *element, uint64_t idx, void *ctx,
 								 FunJsonState *state)
 {
@@ -148,9 +144,12 @@ int main(void)
 		er = fun_json_query(data, len, "accessors.0.count", &ac);
 		if (!fun_error_is_error(er)) {
 			int64_t cnt = fun_json_token_as_int(&ac).value;
-			fun_console_write("  count: ");
-			print_int(cnt);
-			fun_console_write_line("");
+			char buf[64];
+			StringTemplateParam params[] = {
+				{ .key = "n", .value = { .intValue = cnt } },
+			};
+			fun_string_template("  count: #{n}", params, 1, buf, sizeof(buf));
+			fun_console_write_line(buf);
 		}
 	}
 
