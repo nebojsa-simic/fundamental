@@ -605,9 +605,11 @@ static void test_token_value_equals(void)
 
 // === for_each callback ===
 
-static ErrorResult count_ints(FunJsonToken *element, uint64_t idx, void *ctx)
+static ErrorResult count_ints(FunJsonToken *element, uint64_t idx, void *ctx,
+							  FunJsonState *state)
 {
 	(void)idx;
+	(void)state;
 	int64_t *total = (int64_t *)ctx;
 	if (element->type != FUN_JSON_NUMBER)
 		return ERROR_RESULT_JSON_TYPE_MISMATCH;
@@ -626,10 +628,12 @@ static void test_for_each(void)
 	print_test_result("fun_json_for_each", ok);
 }
 
-static ErrorResult count_objects(FunJsonToken *element, uint64_t idx, void *ctx)
+static ErrorResult count_objects(FunJsonToken *element, uint64_t idx, void *ctx,
+								 FunJsonState *state)
 {
 	(void)idx;
 	(void)element;
+	(void)state;
 	int64_t *count = (int64_t *)ctx;
 	(*count)++;
 	return ERROR_RESULT_NO_ERROR;

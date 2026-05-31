@@ -99,7 +99,7 @@ uint64_tResult fun_json_query_string_array(String data, uint64_t len,
 // === Iteration callback (Layer 2 — non-mutating) ===
 
 typedef ErrorResult (*FunJsonEachFn)(FunJsonToken *element, uint64_t index,
-									 void *context);
+									 void *context, FunJsonState *state);
 
 ErrorResult fun_json_for_each(String data, uint64_t len, String path,
 							  FunJsonEachFn fn, void *context);

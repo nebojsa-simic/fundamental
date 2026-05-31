@@ -525,7 +525,7 @@ ErrorResult fun_json_for_each(String data, uint64_t len, String path,
 			 t.type == FUN_JSON_ARRAY_START || t.type == FUN_JSON_STRING ||
 			 t.type == FUN_JSON_NUMBER || t.type == FUN_JSON_BOOL ||
 			 t.type == FUN_JSON_NULL)) {
-			err = fn(&t, idx, context);
+			err = fn(&t, idx, context, &s);
 			if (fun_error_is_error(err))
 				return err;
 			idx++;

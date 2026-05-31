@@ -18,17 +18,22 @@ static void print_int(int64_t num)
 }
 
 static ErrorResult count_accessor_type(FunJsonToken *element, uint64_t idx,
-									   void *ctx)
+									   void *ctx, FunJsonState *state)
 {
 	(void)idx;
 	int64_t *counts = (int64_t *)ctx;
-	if (fun_json_token_value_equals(element, "SCALAR"))
+	FunJsonToken type_tok;
+	ErrorResult err =
+		fun_json_find_key(state, element->depth, "type", &type_tok);
+	if (fun_error_is_error(err))
+		return err;
+	if (fun_json_token_value_equals(&type_tok, "SCALAR"))
 		counts[0]++;
-	else if (fun_json_token_value_equals(element, "VEC2"))
+	else if (fun_json_token_value_equals(&type_tok, "VEC2"))
 		counts[1]++;
-	else if (fun_json_token_value_equals(element, "VEC3"))
+	else if (fun_json_token_value_equals(&type_tok, "VEC3"))
 		counts[2]++;
-	else if (fun_json_token_value_equals(element, "VEC4"))
+	else if (fun_json_token_value_equals(&type_tok, "VEC4"))
 		counts[3]++;
 	else
 		counts[4]++;
@@ -43,11 +48,12 @@ static void print_count(const char *label, int64_t count)
 	print_int(count);
 	fun_console_write_line("");
 }
-
-static ErrorResult json_count_cb(FunJsonToken *element, uint64_t idx, void *ctx)
+static ErrorResult json_count_cb(FunJsonToken *element, uint64_t idx, void *ctx,
+								 FunJsonState *state)
 {
 	(void)idx;
 	(void)element;
+	(void)state;
 	int64_t *count = (int64_t *)ctx;
 	(*count)++;
 	return ERROR_RESULT_NO_ERROR;
@@ -116,41 +122,7 @@ int main(void)
 	fun_console_write_line("--- Accessor Types ---");
 	int64_t type_counts[5] = { 0, 0, 0, 0, 0 };
 
-	FunJsonToken arr_token;
-	ErrorResult err = fun_json_query(data, len, "accessors", &arr_token);
-	if (!fun_error_is_error(err) && arr_token.type == FUN_JSON_ARRAY_START) {
-		FunJsonState as;
-		as._data = data;
-		as._pos = arr_token.value ? (uint64_t)(arr_token.value - data) + 1 : 1;
-		as._len = len;
-		as._depth = arr_token.depth;
-		as._in_array[arr_token.depth] = true;
-		as._array_index[arr_token.depth] = 0;
-		as._expecting_value[arr_token.depth] = true;
-		as._expecting_comma[arr_token.depth] = false;
-		as._expecting_key[arr_token.depth] = false;
-		as._mutating = false;
-
-		FunJsonToken at;
-		while (1) {
-			err = fun_json_next_at(&as, arr_token.depth + 1, &at);
-			if (fun_error_is_error(err))
-				break;
-			if (at.type == FUN_JSON_TOKEN_END)
-				break;
-			if (at.type == FUN_JSON_ARRAY_END && at.depth <= arr_token.depth)
-				break;
-			if (at.type != FUN_JSON_OBJECT_START)
-				continue;
-
-			FunJsonToken type_tok;
-			err =
-				fun_json_find_key(&as, arr_token.depth + 1, "type", &type_tok);
-			if (fun_error_is_error(err))
-				continue;
-			(void)count_accessor_type(&type_tok, 0, type_counts);
-		}
-	}
+	fun_json_for_each(data, len, "accessors", count_accessor_type, type_counts);
 
 	print_count("SCALAR", type_counts[0]);
 	print_count("VEC2", type_counts[1]);
