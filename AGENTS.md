@@ -61,6 +61,7 @@ This skill provides:
 - **Windows**: Navigate to specific test directory and run: `.\build-windows-amd64.bat`
 - **Linux**: Navigate to specific test directory and run: `./build-linux-amd64.sh`
 - Individual test executables are named `test.exe` (Windows) or `test` (Linux)
+- **Compiler**: All build scripts use `gcc` (MinGW on Windows, native on Linux). Never use `cl.exe`, `ccl.exe`, or any MSVC compiler. Use `set CC=gcc` in batch files, `CC=gcc` in shell scripts.
 
 ### Running Individual Tests
 

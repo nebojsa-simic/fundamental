@@ -14,7 +14,7 @@ set SOURCES=^
     %PROJECT_ROOT%\arch\file\windows-amd64\fileReadMmap.c ^
     %PROJECT_ROOT%\arch\file\windows-amd64\fileReadRing.c ^
     %PROJECT_ROOT%\src\stream\streamFile.c ^
-    %PROJECT_ROOT%\src\stream\streamLifecycle_windows.c ^
+    %PROJECT_ROOT%\src\stream\streamLifecycle.c ^
     %PROJECT_ROOT%\src\stream\streamFlow.c ^
     %PROJECT_ROOT%\arch\stream\windows-amd64\streamOpen.c ^
     %PROJECT_ROOT%\arch\stream\windows-amd64\streamRead.c ^
