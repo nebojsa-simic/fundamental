@@ -478,6 +478,65 @@ ErrorResult fun_json_skip_value(FunJsonState *state)
 	}
 }
 
+ErrorResult fun_json_for_each(String data, uint64_t len, String path,
+							  FunJsonEachFn fn, void *context)
+{
+	if (data == NULL || path == NULL || fn == NULL)
+		return ERROR_RESULT_NULL_POINTER;
+
+	FunJsonToken arr;
+	ErrorResult err = fun_json_query(data, len, path, &arr);
+	if (fun_error_is_error(err))
+		return err;
+	if (arr.type != FUN_JSON_ARRAY_START)
+		return ERROR_RESULT_JSON_TYPE_MISMATCH;
+
+	FunJsonState s;
+	char *mdata = (char *)data;
+	s._data = mdata;
+	s._pos = arr.value ? (uint64_t)(arr.value - data) + 1 : 1;
+	s._len = len;
+	s._depth = arr.depth;
+	s._in_array[arr.depth] = true;
+	s._array_index[arr.depth] = 0;
+	s._expecting_value[arr.depth] = true;
+	s._expecting_key[arr.depth] = false;
+	s._expecting_comma[arr.depth] = false;
+	s._mutating = false;
+
+	uint64_t idx = 0;
+	FunJsonToken t;
+	int nest = 0;
+	while (1) {
+		err = fun_json_next_at(&s, arr.depth + 1, &t);
+		if (fun_error_is_error(err))
+			return err;
+		if (t.type == FUN_JSON_TOKEN_END)
+			return ERROR_RESULT_NO_ERROR;
+		if (nest == 0 && t.type == FUN_JSON_ARRAY_END && t.depth <= arr.depth)
+			return ERROR_RESULT_NO_ERROR;
+		if (t.type == FUN_JSON_OBJECT_END || t.type == FUN_JSON_ARRAY_END) {
+			if (nest > 0)
+				nest--;
+			continue;
+		}
+		if (nest == 0 && (t.depth == arr.depth || t.depth == arr.depth + 1) &&
+			(t.type == FUN_JSON_OBJECT_START ||
+			 t.type == FUN_JSON_ARRAY_START || t.type == FUN_JSON_STRING ||
+			 t.type == FUN_JSON_NUMBER || t.type == FUN_JSON_BOOL ||
+			 t.type == FUN_JSON_NULL)) {
+			err = fn(&t, idx, context);
+			if (fun_error_is_error(err))
+				return err;
+			idx++;
+			if (t.type == FUN_JSON_OBJECT_START ||
+				t.type == FUN_JSON_ARRAY_START)
+				nest++;
+		}
+	}
+	return ERROR_RESULT_NO_ERROR;
+}
+
 ErrorResult fun_json_find_key(FunJsonState *state, uint64_t depth, String key,
 							  FunJsonToken *token)
 {
@@ -770,6 +829,22 @@ boolResult fun_json_token_is_null(FunJsonToken *token)
 	}
 	r.value = (token->type == FUN_JSON_NULL);
 	return r;
+}
+
+bool fun_json_token_value_equals(FunJsonToken *token, String expected)
+{
+	if (token == NULL || expected == NULL)
+		return false;
+	if (token->value == NULL)
+		return false;
+
+	uint64_t elen = fun_string_length(expected);
+	if (token->length != elen)
+		return false;
+	for (uint64_t i = 0; i < elen; i++)
+		if (token->value[i] != expected[i])
+			return false;
+	return true;
 }
 
 // === Convenience combinators ===

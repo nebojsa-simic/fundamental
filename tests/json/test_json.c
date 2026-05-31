@@ -586,6 +586,77 @@ static void test_query_idempotent(void)
 	print_test_result("fun_json_query idempotent", ok);
 }
 
+// === Token value equals ===
+
+static void test_token_value_equals(void)
+{
+	FunJsonState state;
+	char data[] = "\"hello\"";
+	fun_json_init(&state, data, fun_string_length(data));
+	FunJsonToken t;
+	fun_json_next(&state, &t);
+
+	int ok = (fun_json_token_value_equals(&t, "hello") &&
+			  !fun_json_token_value_equals(&t, "world") &&
+			  !fun_json_token_value_equals(&t, "helloo"));
+
+	print_test_result("fun_json_token_value_equals", ok);
+}
+
+// === for_each callback ===
+
+static ErrorResult count_ints(FunJsonToken *element, uint64_t idx, void *ctx)
+{
+	(void)idx;
+	int64_t *total = (int64_t *)ctx;
+	if (element->type != FUN_JSON_NUMBER)
+		return ERROR_RESULT_JSON_TYPE_MISMATCH;
+	*total += fun_json_token_as_int(element).value;
+	return ERROR_RESULT_NO_ERROR;
+}
+
+static void test_for_each(void)
+{
+	const char *data = "{\"values\":[10,20,30,40]}";
+	int64_t sum = 0;
+	ErrorResult r = fun_json_for_each(data, fun_string_length(data), "values",
+									  count_ints, &sum);
+	int ok = (!fun_error_is_error(r) && sum == 100);
+
+	print_test_result("fun_json_for_each", ok);
+}
+
+static ErrorResult count_objects(FunJsonToken *element, uint64_t idx, void *ctx)
+{
+	(void)idx;
+	(void)element;
+	int64_t *count = (int64_t *)ctx;
+	(*count)++;
+	return ERROR_RESULT_NO_ERROR;
+}
+
+static void test_for_each_objects(void)
+{
+	const char *data = "{\"items\":[{\"a\":1},{\"b\":2},{\"c\":3}]}";
+	int64_t count = 0;
+	ErrorResult r = fun_json_for_each(data, fun_string_length(data), "items",
+									  count_objects, &count);
+	int ok = (!fun_error_is_error(r) && count == 3);
+
+	print_test_result("fun_json_for_each objects", ok);
+}
+
+static void test_for_each_empty(void)
+{
+	const char *data = "{\"empty\":[]}";
+	int64_t count = 0;
+	ErrorResult r = fun_json_for_each(data, fun_string_length(data), "empty",
+									  count_objects, &count);
+	int ok = (!fun_error_is_error(r) && count == 0);
+
+	print_test_result("fun_json_for_each empty", ok);
+}
+
 int main(void)
 {
 	printf("=== JSON Module Tests ===\n\n");
@@ -623,6 +694,10 @@ int main(void)
 	test_next_at();
 	test_find_key();
 	test_query_idempotent();
+	test_token_value_equals();
+	test_for_each();
+	test_for_each_objects();
+	test_for_each_empty();
 
 	printf("\nResults: %d passed, %d failed, %d total\n", tests_passed,
 		   tests_failed, tests_passed + tests_failed);

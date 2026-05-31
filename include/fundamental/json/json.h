@@ -75,6 +75,7 @@ int64_tResult fun_json_token_as_int(FunJsonToken *token);
 doubleResult fun_json_token_as_double(FunJsonToken *token);
 boolResult fun_json_token_as_bool(FunJsonToken *token);
 boolResult fun_json_token_is_null(FunJsonToken *token);
+bool fun_json_token_value_equals(FunJsonToken *token, String expected);
 
 // === Convenience combinators (Layer 2 — non-mutating) ===
 
@@ -94,5 +95,13 @@ uint64_tResult fun_json_query_double_array(String data, uint64_t len,
 uint64_tResult fun_json_query_string_array(String data, uint64_t len,
 										   String path, OutputString buffer,
 										   uint64_t buffer_size);
+
+// === Iteration callback (Layer 2 — non-mutating) ===
+
+typedef ErrorResult (*FunJsonEachFn)(FunJsonToken *element, uint64_t index,
+									 void *context);
+
+ErrorResult fun_json_for_each(String data, uint64_t len, String path,
+							  FunJsonEachFn fn, void *context);
 
 #endif // LIBRARY_JSON_H

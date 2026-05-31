@@ -1,6 +1,5 @@
 // glTF Parser Demo — Fundamental Library
 // Parses Sponza.gltf (167KB, 405 accessors, 103 primitives)
-// Uses JSON Layer 2 for counts, Layer 1 for per-primitive stats
 
 #include "fundamental/console/console.h"
 #include "fundamental/string/string.h"
@@ -18,6 +17,24 @@ static void print_int(int64_t num)
 	fun_console_write(buf);
 }
 
+static ErrorResult count_accessor_type(FunJsonToken *element, uint64_t idx,
+									   void *ctx)
+{
+	(void)idx;
+	int64_t *counts = (int64_t *)ctx;
+	if (fun_json_token_value_equals(element, "SCALAR"))
+		counts[0]++;
+	else if (fun_json_token_value_equals(element, "VEC2"))
+		counts[1]++;
+	else if (fun_json_token_value_equals(element, "VEC3"))
+		counts[2]++;
+	else if (fun_json_token_value_equals(element, "VEC4"))
+		counts[3]++;
+	else
+		counts[4]++;
+	return ERROR_RESULT_NO_ERROR;
+}
+
 static void print_count(const char *label, int64_t count)
 {
 	fun_console_write("  ");
@@ -27,38 +44,19 @@ static void print_count(const char *label, int64_t count)
 	fun_console_write_line("");
 }
 
+static ErrorResult json_count_cb(FunJsonToken *element, uint64_t idx, void *ctx)
+{
+	(void)idx;
+	(void)element;
+	int64_t *count = (int64_t *)ctx;
+	(*count)++;
+	return ERROR_RESULT_NO_ERROR;
+}
+
 static int64_t json_count_array_elements(char *data, uint64_t len, String path)
 {
-	FunJsonToken arr;
-	ErrorResult err = fun_json_query(data, len, path, &arr);
-	if (fun_error_is_error(err) || arr.type != FUN_JSON_ARRAY_START)
-		return -1;
-
-	FunJsonState s;
-	s._data = data;
-	s._pos = arr.value ? (uint64_t)(arr.value - data) + 1 : 1;
-	s._len = len;
-	s._depth = arr.depth;
-	s._in_array[s._depth] = true;
-	s._array_index[s._depth] = 0;
-	s._expecting_value[s._depth] = true;
-	s._expecting_key[s._depth] = false;
-	s._expecting_comma[s._depth] = false;
-	s._mutating = false;
-
 	int64_t count = 0;
-	FunJsonToken t;
-	while (1) {
-		err = fun_json_next_at(&s, arr.depth + 1, &t);
-		if (fun_error_is_error(err))
-			break;
-		if (t.type == FUN_JSON_TOKEN_END)
-			break;
-		if (t.type == FUN_JSON_ARRAY_END && t.depth <= arr.depth)
-			break;
-		if (t.depth == arr.depth + 1 && t.type == FUN_JSON_OBJECT_START)
-			count++;
-	}
+	fun_json_for_each(data, len, path, json_count_cb, &count);
 	return count;
 }
 
@@ -91,8 +89,7 @@ int main(void)
 	fun_console_write_line("=== Sponza glTF Parser ===");
 	fun_console_write_line("");
 
-	// --- Layer 2: top-level queries ---
-
+	// --- Layer 2: top-level counts ---
 	fun_console_write_line("Top-level counts:");
 	print_count("meshes", json_count_array_elements(data, len, "meshes"));
 	print_count("nodes", json_count_array_elements(data, len, "nodes"));
@@ -115,10 +112,9 @@ int main(void)
 	fun_console_write_line(")");
 	fun_console_write_line("");
 
-	// --- Accessor types summary (non-mutating) ---
+	// --- Accessor types via for_each ---
 	fun_console_write_line("--- Accessor Types ---");
-	int64_t scalar_count = 0, vec2_count = 0, vec3_count = 0, vec4_count = 0,
-			mat_count = 0;
+	int64_t type_counts[5] = { 0, 0, 0, 0, 0 };
 
 	FunJsonToken arr_token;
 	ErrorResult err = fun_json_query(data, len, "accessors", &arr_token);
@@ -152,31 +148,18 @@ int main(void)
 				fun_json_find_key(&as, arr_token.depth + 1, "type", &type_tok);
 			if (fun_error_is_error(err))
 				continue;
-
-			if (type_tok.length == 6 && type_tok.value[0] == 'S')
-				scalar_count++;
-			else if (type_tok.length == 4 && type_tok.value[0] == 'V' &&
-					 type_tok.value[3] == '2')
-				vec2_count++;
-			else if (type_tok.length == 4 && type_tok.value[0] == 'V' &&
-					 type_tok.value[3] == '3')
-				vec3_count++;
-			else if (type_tok.length == 4 && type_tok.value[0] == 'V' &&
-					 type_tok.value[3] == '4')
-				vec4_count++;
-			else
-				mat_count++;
+			(void)count_accessor_type(&type_tok, 0, type_counts);
 		}
 	}
 
-	print_count("SCALAR", scalar_count);
-	print_count("VEC2", vec2_count);
-	print_count("VEC3", vec3_count);
-	print_count("VEC4", vec4_count);
-	print_count("MATn", mat_count);
+	print_count("SCALAR", type_counts[0]);
+	print_count("VEC2", type_counts[1]);
+	print_count("VEC3", type_counts[2]);
+	print_count("VEC4", type_counts[3]);
+	print_count("MATn", type_counts[4]);
 	fun_console_write_line("");
 
-	// --- First accessor detail (non-mutating) ---
+	// --- First accessor detail ---
 	fun_console_write_line("--- First Accessor ---");
 	{
 		char buf[64];
