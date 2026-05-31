@@ -78,8 +78,9 @@
 
 - [ ] 12.1 Implement `fun_json_query_int_array` — walk JSON array via non-mutating scan, copy int64_t elements into caller buffer, return count
 - [ ] 12.2 Implement `fun_json_query_double_array` — walk JSON array via non-mutating scan, copy double elements into caller buffer, return count
-- [ ] 12.3 Handle errors: path-not-found → 278, target-not-array → 279, non-numeric element → 279
-- [ ] 12.4 Cap output at `max_count` — return actual count, caller compares against max_count for truncation detection
+- [ ] 12.3 Implement `fun_json_query_string_array` — walk JSON array via non-mutating scan, copy string values sequentially into flat caller buffer (\0-separated), return count
+- [ ] 12.4 Handle errors: path-not-found → 278, target-not-array → 279, non-string element → 279
+- [ ] 12.5 Cap output at `buffer_size` — stop on overflow, never truncate mid-string; int/double cap at `max_count`
 
 ## 13. Convenience Combinators
 
@@ -103,7 +104,7 @@
 - [ ] 14.11 Test `fun_json_query` — valid path, non-existent path, type mismatch
 - [ ] 14.12 Test typed extractors — int parse, double parse, bool parse, null check, string copy, type mismatch
 - [ ] 14.13 Test convenience combinators — query_string, query_int, query_double, query_bool
-- [ ] 14.14 Test array extractors — int array, double array, non-array target, non-numeric element, buffered output, empty array, truncation
+- [ ] 14.14 Test array extractors — int array, double array, string array, non-array target, wrong element type, buffered output, empty array, truncation/overflow
 - [ ] 14.15 Test in-place buffer mutation — verify tokenizer inserts null terminators into original buffer
 - [ ] 14.16 Test non-mutating query — verify data buffer is unmodified after `fun_json_query` and repeated queries on same data succeed
 - [ ] 14.17 Test with the full Caddy JSON config from the proposal — iterate routes via `fun_json_init_at_path`, query individual values via `fun_json_query_string`

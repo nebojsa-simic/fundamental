@@ -332,6 +332,44 @@ The JSON module SHALL provide single-call functions that copy JSON arrays of num
 - **THEN** both calls succeed with the same count and values
 - **AND** the data buffer is unmodified
 
+### Requirement: String Array Extractor
+The JSON module SHALL provide a function that copies a JSON array of strings into a caller-allocated buffer, returning the element count.
+
+#### Scenario: String array signature
+- **WHEN** calling `uint64Result fun_json_query_string_array(String data, uint64_t len, String path, OutputString buffer, uint64_t buffer_size)`
+- **THEN** the non-mutating scan walks the JSON array at `path`
+- **AND** each string value is copied into `buffer`, null-terminated, sequentially
+- **AND** the returned `value` is the number of strings copied
+
+#### Scenario: Copy host list
+- **WHEN** `fun_json_query_string_array(data, len, "hosts", buf, 256)` is called on `"hosts": ["a.example.com", "b.example.com"]`
+- **THEN** the result value is `uint64_t` 2
+- **AND** `buf` contains `"a.example.com\0b.example.com\0"`
+- **AND** caller can walk with `p = buf; p += fun_string_length(p) + 1`
+
+#### Scenario: Empty string array
+- **WHEN** `fun_json_query_string_array(data, len, "tags", buf, 256)` is called on `"tags": []`
+- **THEN** the result value is `uint64_t` 0
+- **AND** buffer is unmodified
+
+#### Scenario: Target is not an array
+- **WHEN** `fun_json_query_string_array(data, len, "scene", buf, 256)` is called and "scene" is a NUMBER
+- **THEN** an error result with code `ERROR_CODE_JSON_TYPE_MISMATCH` (279) is returned
+
+#### Scenario: Path not found
+- **WHEN** `fun_json_query_string_array(data, len, "nonexistent", buf, 256)` is called
+- **THEN** an error result with code `ERROR_CODE_JSON_PATH_NOT_FOUND` (278) is returned
+
+#### Scenario: Buffer overflow
+- **WHEN** `fun_json_query_string_array` is called with a buffer smaller than the total string content
+- **THEN** as many complete strings as fit are copied
+- **AND** strings are never truncated mid-value
+
+#### Scenario: Idempotent
+- **WHEN** `fun_json_query_string_array` is called twice on the same `data`
+- **THEN** both calls succeed with the same count and content
+- **AND** the data buffer is unmodified
+
 ### Requirement: In-Place Buffer Mutation (Tokenizer Only)
 The JSON module SHALL modify the input buffer during tokenization, and query functions SHALL NOT.
 

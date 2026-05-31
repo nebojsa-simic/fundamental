@@ -20,7 +20,7 @@ No existing module needs modification. The parser is pure computation — no pla
 - Path-based single-shot query (`fun_json_query`) that scans only up to the matching token then stops
 - Typed extractors (`fun_json_token_as_int` → `int64Result`, `_as_double` → `doubleResult`, `_as_bool` → `boolResult`, `_is_null` → `boolResult`) operating on any token
 - Convenience combinators (`fun_json_query_string`, `_int`, `_double`, `_bool`) for one-call config lookups
-- Array extractors (`fun_json_query_int_array` → `uint64Result`, `fun_json_query_double_array` → `uint64Result`) for copying JSON arrays into caller buffers
+- Array extractors (`fun_json_query_int_array` → `uint64Result`, `fun_json_query_double_array` → `uint64Result`, `fun_json_query_string_array` → `uint64Result`) for copying JSON arrays into caller buffers
 - Strict JSON grammar with specific error codes per failure mode
 
 **Non-Goals:**
@@ -97,23 +97,33 @@ ErrorResult fun_json_query(String data, uint64_t len, String path,
 
 **Rationale:** `fun_json_token_as_int()` works on any token's `value`/`length` pair — no need for a separate "number result" type. This keeps the token type flat and extractors orthogonal. Return types follow the config module pattern: `int64Result`, `doubleResult`, `boolResult`.
 
-### 10. Array extractors for bulk numeric queries
+### 10. Array extractors for bulk numeric and string queries
 
-**Rationale:** JSON arrays of numbers (glTF's `max`/`min` vectors, index lists, node lists) are a common pattern. Without array extractors, the caller writes a boilerplate `init_at_path + next_at` loop to copy N values into a caller buffer. `fun_json_query_int_array` and `fun_json_query_double_array` collapse that into one call:
+**Rationale:** JSON arrays of numbers (glTF's `max`/`min` vectors, index lists, node lists) and strings (host lists, path arrays) are a common pattern. Without array extractors, the caller writes a boilerplate `init_at_path + next_at` loop to copy N values into a caller buffer. The three array extractor functions collapse that into one call:
 
 ```c
 double max_vec[4];
 uint64_t count = fun_json_query_double_array(data, len,
     "accessors.1.max", max_vec, 4).value;
+
+int64_t indices[36];
+uint64_t n = fun_json_query_int_array(data, len,
+    "accessors.0.indices", indices, 36).value;
+
+char buf[256];
+uint64_t nc = fun_json_query_string_array(data, len,
+    "hosts", buf, sizeof(buf)).value;
+// buf = "host1\0host2\0host3\0"
+// walk with: p += fun_string_length(p) + 1
 ```
 
-The function internally walks the array via the non-mutating query scan, copies each number element into the caller-provided buffer, and returns the element count. If the array has more elements than `max_count`, the buffer is filled to capacity and the count returned; the caller can compare count vs max_count to detect truncation.
+Integer and double extractors copy typed elements into caller arrays. The string extractor copies string values into a flat char buffer sequentially, each `\0`-terminated, returning the element count. The caller advances through the buffer using `fun_string_length` to skip to the next element.
 
 Return type is `uint64Result` (count + error) — `uint64_t` is already defined as a result type in `error.h`. Error codes: `ERROR_CODE_JSON_PATH_NOT_FOUND` (path missing), `ERROR_CODE_JSON_TYPE_MISMATCH` (target is not an array, or element is wrong type).
 
-Zero heap allocation — the output buffer is caller-allocated.
+Zero heap allocation — all output buffers are caller-allocated.
 
-**Alternative:** Manual Layer 1 loop for every array. Rejected — the loop is 7 lines of boilerplate per array query, repeated hundreds of times across JSON config consumers. 19 funs over 17 is the right balance.
+**Alternative:** Manual Layer 1 loop for every array. Rejected — the loop is 7 lines of boilerplate per array query, repeated hundreds of times across JSON config consumers. 20 functions over 17 is the right balance.
 
 ### 11. Path syntax: dot for keys, integer index for arrays
 

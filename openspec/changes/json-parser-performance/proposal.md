@@ -7,7 +7,7 @@ The Fundamental Library lacks any JSON parsing capability, blocking config forma
 - New module `json/` providing a streaming JSON tokenizer (Layer 1) and non-mutating path-based query helpers (Layer 2)
 - Tokenizer mutates input buffer in-place (inserts `\0` at value boundaries) — zero-copy string extraction
 - Query functions perform a non-mutating scan — idempotent, caller can query the same data multiple times
-- 19 public functions covering tokenization, iteration, query, typed scalar extraction, and typed array extraction
+- 20 public functions covering tokenization, iteration, query, typed scalar extraction, and typed array extraction
 - Go-style return values: token-producing functions use output parameters (`FunJsonToken *token`) + return `ErrorResult`; typed extractors return `int64Result`/`doubleResult`/`boolResult`/`uint64Result`
 - New error code block: 270-279 covering parse errors, type mismatches, path-not-found, nesting overflow, and malformed input
 - Header at `include/fundamental/json/json.h`, sources at `src/json/`, tests at `tests/json/`
