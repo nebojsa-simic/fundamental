@@ -44,8 +44,18 @@
 #define ERROR_CODE_THREAD_POOL_CREATE_FAILED 251
 #define ERROR_CODE_THREAD_POOL_FULL 252
 
+#define ERROR_CODE_JSON_PARSE_ERROR 270
+#define ERROR_CODE_JSON_UNTERMINATED_STRING 271
+#define ERROR_CODE_JSON_INVALID_NUMBER 272
+#define ERROR_CODE_JSON_NESTING_TOO_DEEP 273
+#define ERROR_CODE_JSON_MISSING_COLON 275
+#define ERROR_CODE_JSON_UNEXPECTED_TOKEN 276
+#define ERROR_CODE_JSON_MISSING_COMMA 277
+#define ERROR_CODE_JSON_PATH_NOT_FOUND 278
+#define ERROR_CODE_JSON_TYPE_MISMATCH 279
+
 typedef struct {
-	uint8_t code;
+	uint16_t code;
 	const char *message;
 } ErrorResult;
 
@@ -174,6 +184,33 @@ static ErrorResult ERROR_RESULT_THREAD_POOL_CREATE_FAILED = {
 };
 static ErrorResult ERROR_RESULT_THREAD_POOL_FULL = {
 	ERROR_CODE_THREAD_POOL_FULL, "All worker threads are busy"
+};
+static ErrorResult ERROR_RESULT_JSON_PARSE_ERROR = {
+	ERROR_CODE_JSON_PARSE_ERROR, "JSON parse error"
+};
+static ErrorResult ERROR_RESULT_JSON_UNTERMINATED_STRING = {
+	ERROR_CODE_JSON_UNTERMINATED_STRING, "Unterminated string literal"
+};
+static ErrorResult ERROR_RESULT_JSON_INVALID_NUMBER = {
+	ERROR_CODE_JSON_INVALID_NUMBER, "Invalid number format"
+};
+static ErrorResult ERROR_RESULT_JSON_NESTING_TOO_DEEP = {
+	ERROR_CODE_JSON_NESTING_TOO_DEEP, "JSON nesting too deep"
+};
+static ErrorResult ERROR_RESULT_JSON_MISSING_COLON = {
+	ERROR_CODE_JSON_MISSING_COLON, "Missing colon after key"
+};
+static ErrorResult ERROR_RESULT_JSON_UNEXPECTED_TOKEN = {
+	ERROR_CODE_JSON_UNEXPECTED_TOKEN, "Unexpected token"
+};
+static ErrorResult ERROR_RESULT_JSON_MISSING_COMMA = {
+	ERROR_CODE_JSON_MISSING_COMMA, "Missing comma between elements"
+};
+static ErrorResult ERROR_RESULT_JSON_PATH_NOT_FOUND = {
+	ERROR_CODE_JSON_PATH_NOT_FOUND, "Path not found in JSON document"
+};
+static ErrorResult ERROR_RESULT_JSON_TYPE_MISMATCH = {
+	ERROR_CODE_JSON_TYPE_MISMATCH, "Type mismatch in JSON value"
 };
 
 #pragma GCC diagnostic pop
