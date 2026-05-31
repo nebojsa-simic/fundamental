@@ -53,6 +53,7 @@
 #define ERROR_CODE_JSON_MISSING_COMMA 277
 #define ERROR_CODE_JSON_PATH_NOT_FOUND 278
 #define ERROR_CODE_JSON_TYPE_MISMATCH 279
+#define ERROR_CODE_JSON_INCOMPLETE 280
 
 typedef struct {
 	uint16_t code;
@@ -212,6 +213,8 @@ static ErrorResult ERROR_RESULT_JSON_PATH_NOT_FOUND = {
 static ErrorResult ERROR_RESULT_JSON_TYPE_MISMATCH = {
 	ERROR_CODE_JSON_TYPE_MISMATCH, "Type mismatch in JSON value"
 };
+static ErrorResult ERROR_RESULT_JSON_INCOMPLETE = { ERROR_CODE_JSON_INCOMPLETE,
+													"Need more data" };
 
 #pragma GCC diagnostic pop
 

@@ -64,8 +64,14 @@ static ErrorResult json_parse_string(FunJsonState *state, FunJsonToken *token,
 		}
 		if (c == '\\') {
 			state->_pos++;
-			if (state->_pos >= state->_len)
+			if (state->_pos >= state->_len) {
+				if (state->_streaming) {
+					state->_save_pos = start;
+					token->type = FUN_JSON_INCOMPLETE;
+					return ERROR_RESULT_NO_ERROR;
+				}
 				return ERROR_RESULT_JSON_UNTERMINATED_STRING;
+			}
 			c = state->_data[state->_pos];
 			if (c == 'u')
 				state->_pos += 4;
@@ -73,19 +79,34 @@ static ErrorResult json_parse_string(FunJsonState *state, FunJsonToken *token,
 		len++;
 		state->_pos++;
 	}
+	if (state->_streaming) {
+		state->_save_pos = start;
+		token->type = FUN_JSON_INCOMPLETE;
+		return ERROR_RESULT_NO_ERROR;
+	}
 	return ERROR_RESULT_JSON_UNTERMINATED_STRING;
 }
 
 static ErrorResult json_parse_number(FunJsonState *state, FunJsonToken *token)
 {
+#define NUM_INCOMPLETE                     \
+	do {                                   \
+		state->_save_pos = start;          \
+		token->type = FUN_JSON_INCOMPLETE; \
+		return ERROR_RESULT_NO_ERROR;      \
+	} while (0)
+
 	token->type = FUN_JSON_NUMBER;
 	uint64_t start = state->_pos;
 	uint64_t p = start;
 
-	if (state->_data[p] == '-')
+	if (p < state->_len && state->_data[p] == '-')
 		p++;
-	if (p >= state->_len)
+	if (p >= state->_len) {
+		if (state->_streaming)
+			NUM_INCOMPLETE;
 		return ERROR_RESULT_JSON_INVALID_NUMBER;
+	}
 
 	if (state->_data[p] == '0') {
 		p++;
@@ -98,30 +119,58 @@ static ErrorResult json_parse_number(FunJsonState *state, FunJsonToken *token)
 		return ERROR_RESULT_JSON_INVALID_NUMBER;
 	}
 
-	if (p < state->_len && state->_data[p] == '.') {
+	if (p >= state->_len) {
+		if (state->_streaming)
+			NUM_INCOMPLETE;
+		goto done;
+	}
+
+	if (state->_data[p] == '.') {
 		p++;
-		if (p >= state->_len || !json_is_digit(state->_data[p]))
+		if (p >= state->_len) {
+			if (state->_streaming)
+				NUM_INCOMPLETE;
+			return ERROR_RESULT_JSON_INVALID_NUMBER;
+		}
+		if (!json_is_digit(state->_data[p]))
 			return ERROR_RESULT_JSON_INVALID_NUMBER;
 		while (p < state->_len && json_is_digit(state->_data[p]))
 			p++;
 	}
 
-	if (p < state->_len && (state->_data[p] == 'e' || state->_data[p] == 'E')) {
+	if (p >= state->_len) {
+		if (state->_streaming)
+			NUM_INCOMPLETE;
+		goto done;
+	}
+
+	if (state->_data[p] == 'e' || state->_data[p] == 'E') {
 		p++;
-		if (p < state->_len &&
-			(state->_data[p] == '+' || state->_data[p] == '-'))
+		if (p >= state->_len) {
+			if (state->_streaming)
+				NUM_INCOMPLETE;
+			return ERROR_RESULT_JSON_INVALID_NUMBER;
+		}
+		if (state->_data[p] == '+' || state->_data[p] == '-')
 			p++;
-		if (p >= state->_len || !json_is_digit(state->_data[p]))
+		if (p >= state->_len) {
+			if (state->_streaming)
+				NUM_INCOMPLETE;
+			return ERROR_RESULT_JSON_INVALID_NUMBER;
+		}
+		if (!json_is_digit(state->_data[p]))
 			return ERROR_RESULT_JSON_INVALID_NUMBER;
 		while (p < state->_len && json_is_digit(state->_data[p]))
 			p++;
 	}
 
+done:
 	token->value = &state->_data[start];
 	token->length = p - start;
 	state->_pos = p;
 
 	return ERROR_RESULT_NO_ERROR;
+#undef NUM_INCOMPLETE
 }
 
 static ErrorResult json_parse_literal(FunJsonState *state, const char *expected,
@@ -129,8 +178,15 @@ static ErrorResult json_parse_literal(FunJsonState *state, const char *expected,
 									  FunJsonToken *token)
 {
 	for (uint64_t i = 0; i < elen; i++) {
-		if (state->_pos + i >= state->_len ||
-			state->_data[state->_pos + i] != expected[i])
+		if (state->_pos + i >= state->_len) {
+			if (state->_streaming) {
+				state->_save_pos = state->_pos;
+				token->type = FUN_JSON_INCOMPLETE;
+				return ERROR_RESULT_NO_ERROR;
+			}
+			return ERROR_RESULT_JSON_UNEXPECTED_TOKEN;
+		}
+		if (state->_data[state->_pos + i] != expected[i])
 			return ERROR_RESULT_JSON_UNEXPECTED_TOKEN;
 	}
 	state->_pos += elen;
@@ -226,6 +282,22 @@ ErrorResult fun_json_init(FunJsonState *state, char *data, uint64_t len)
 	state->_expecting_key[0] = false;
 	state->_expecting_value[0] = false;
 	state->_expecting_comma[0] = false;
+	state->_save_pos = 0;
+	state->_streaming = false;
+	return ERROR_RESULT_NO_ERROR;
+}
+
+ErrorResult fun_json_feed(FunJsonState *state, uint64_t new_len)
+{
+	if (state == NULL)
+		return ERROR_RESULT_NULL_POINTER;
+
+	state->_len = new_len;
+	state->_streaming = true;
+	if (state->_save_pos > 0) {
+		state->_pos = state->_save_pos;
+		state->_save_pos = 0;
+	}
 	return ERROR_RESULT_NO_ERROR;
 }
 
@@ -242,6 +314,10 @@ ErrorResult fun_json_next(FunJsonState *state, FunJsonToken *token)
 	token->array_index = 0;
 
 	if (state->_pos >= state->_len) {
+		if (state->_streaming && state->_save_pos > 0) {
+			token->type = FUN_JSON_INCOMPLETE;
+			return ERROR_RESULT_NO_ERROR;
+		}
 		token->type = FUN_JSON_TOKEN_END;
 		return ERROR_RESULT_NO_ERROR;
 	}
@@ -349,7 +425,8 @@ ErrorResult fun_json_next_at(FunJsonState *state, uint64_t depth,
 		err = fun_json_next(state, &t);
 		if (fun_error_is_error(err))
 			return err;
-		if (t.type == FUN_JSON_TOKEN_END || t.depth <= depth) {
+		if (t.type == FUN_JSON_TOKEN_END || t.type == FUN_JSON_INCOMPLETE ||
+			t.depth <= depth) {
 			*token = t;
 			return ERROR_RESULT_NO_ERROR;
 		}
@@ -366,7 +443,8 @@ ErrorResult fun_json_skip_value(FunJsonState *state)
 		err = fun_json_next(state, &token);
 		if (fun_error_is_error(err))
 			return err;
-		if (token.type == FUN_JSON_TOKEN_END)
+		if (token.type == FUN_JSON_TOKEN_END ||
+			token.type == FUN_JSON_INCOMPLETE)
 			return ERROR_RESULT_NO_ERROR;
 		if (token.type == FUN_JSON_OBJECT_START ||
 			token.type == FUN_JSON_ARRAY_START)
@@ -412,7 +490,7 @@ ErrorResult fun_json_for_each(String data, uint64_t len, String path,
 		err = fun_json_next_at(&s, arr.depth + 1, &t);
 		if (fun_error_is_error(err))
 			return err;
-		if (t.type == FUN_JSON_TOKEN_END)
+		if (t.type == FUN_JSON_TOKEN_END || t.type == FUN_JSON_INCOMPLETE)
 			return ERROR_RESULT_NO_ERROR;
 		if (nest == 0 && t.type == FUN_JSON_ARRAY_END && t.depth <= arr.depth)
 			return ERROR_RESULT_NO_ERROR;
@@ -448,7 +526,7 @@ ErrorResult fun_json_find_key(FunJsonState *state, uint64_t depth, String key,
 		err = fun_json_next(state, &t);
 		if (fun_error_is_error(err))
 			return err;
-		if (t.type == FUN_JSON_TOKEN_END ||
+		if (t.type == FUN_JSON_TOKEN_END || t.type == FUN_JSON_INCOMPLETE ||
 			(t.type == FUN_JSON_OBJECT_END && t.depth <= depth))
 			return ERROR_RESULT_JSON_PATH_NOT_FOUND;
 
@@ -520,6 +598,8 @@ static ErrorResult json_query_scan(String data, uint64_t len, String path,
 					return err;
 				if (t.type == FUN_JSON_TOKEN_END)
 					return ERROR_RESULT_JSON_PATH_NOT_FOUND;
+				if (t.type == FUN_JSON_INCOMPLETE)
+					return ERROR_RESULT_JSON_INCOMPLETE;
 				if ((t.type == FUN_JSON_ARRAY_END && t.depth <= state._depth))
 					return ERROR_RESULT_JSON_PATH_NOT_FOUND;
 				if (t.depth == state._depth &&
@@ -540,6 +620,8 @@ static ErrorResult json_query_scan(String data, uint64_t len, String path,
 				if (t.type == FUN_JSON_TOKEN_END ||
 					(t.type == FUN_JSON_OBJECT_END && t.depth <= state._depth))
 					return ERROR_RESULT_JSON_PATH_NOT_FOUND;
+				if (t.type == FUN_JSON_INCOMPLETE)
+					return ERROR_RESULT_JSON_INCOMPLETE;
 				if (t.type == FUN_JSON_KEY && t.depth == state._depth) {
 					if (t.length == seg_len &&
 						json_bytes_equal(t.value, t.length, p, seg_len)) {
@@ -856,6 +938,10 @@ static uint64_tResult json_walk_number_array(String data, uint64_t len,
 		}
 		if (t.type == FUN_JSON_TOKEN_END)
 			break;
+		if (t.type == FUN_JSON_INCOMPLETE) {
+			r.error = ERROR_RESULT_JSON_INCOMPLETE;
+			return r;
+		}
 		if (t.type == FUN_JSON_ARRAY_END && t.depth <= token.depth)
 			break;
 		if (t.type != FUN_JSON_NUMBER) {
@@ -942,6 +1028,10 @@ uint64_tResult fun_json_query_string_array(String data, uint64_t len,
 		}
 		if (t.type == FUN_JSON_ARRAY_END || t.type == FUN_JSON_TOKEN_END)
 			break;
+		if (t.type == FUN_JSON_INCOMPLETE) {
+			r.error = ERROR_RESULT_JSON_INCOMPLETE;
+			return r;
+		}
 		if (t.type != FUN_JSON_STRING) {
 			r.error = ERROR_RESULT_JSON_TYPE_MISMATCH;
 			return r;

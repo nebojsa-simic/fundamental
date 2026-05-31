@@ -19,7 +19,8 @@ typedef enum {
 	FUN_JSON_BOOL,
 	FUN_JSON_NULL,
 	FUN_JSON_KEY,
-	FUN_JSON_TOKEN_END
+	FUN_JSON_TOKEN_END,
+	FUN_JSON_INCOMPLETE
 } FunJsonTokenType;
 
 typedef struct {
@@ -41,6 +42,8 @@ typedef struct {
 	bool _expecting_key[FUN_JSON_MAX_DEPTH + 1];
 	bool _expecting_value[FUN_JSON_MAX_DEPTH + 1];
 	bool _expecting_comma[FUN_JSON_MAX_DEPTH + 1];
+	uint64_t _save_pos;
+	bool _streaming;
 } FunJsonState;
 
 // === Initialization (Layer 1 — mutable buffer) ===
@@ -48,6 +51,10 @@ typedef struct {
 ErrorResult fun_json_init(FunJsonState *state, char *data, uint64_t len);
 ErrorResult fun_json_init_at_path(FunJsonState *state, char *data, uint64_t len,
 								  String path, uint64_t *base_depth);
+
+// === Streaming support ===
+
+ErrorResult fun_json_feed(FunJsonState *state, uint64_t new_len);
 
 // === Token iteration (Layer 1) ===
 
