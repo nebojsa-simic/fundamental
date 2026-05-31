@@ -41,7 +41,6 @@ typedef struct {
 	bool _expecting_key[FUN_JSON_MAX_DEPTH + 1];
 	bool _expecting_value[FUN_JSON_MAX_DEPTH + 1];
 	bool _expecting_comma[FUN_JSON_MAX_DEPTH + 1];
-	bool _mutating;
 } FunJsonState;
 
 // === Initialization (Layer 1 — mutable buffer) ===

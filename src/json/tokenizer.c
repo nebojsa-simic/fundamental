@@ -46,128 +46,34 @@ static void json_set_token_ctx(FunJsonState *state, FunJsonToken *token)
 
 // === Internal parsing functions ===
 
-static ErrorResult json_parse_escaped_char(FunJsonState *state, char **wp)
-{
-	if (state->_pos >= state->_len)
-		return ERROR_RESULT_JSON_UNTERMINATED_STRING;
-
-	char c = state->_data[state->_pos];
-	state->_pos++;
-
-	switch (c) {
-	case '"':
-		**wp = '"';
-		break;
-	case '\\':
-		**wp = '\\';
-		break;
-	case '/':
-		**wp = '/';
-		break;
-	case 'b':
-		**wp = '\b';
-		break;
-	case 'f':
-		**wp = '\f';
-		break;
-	case 'n':
-		**wp = '\n';
-		break;
-	case 'r':
-		**wp = '\r';
-		break;
-	case 't':
-		**wp = '\t';
-		break;
-	case 'u': {
-		uint32_t codepoint = 0;
-		for (int i = 0; i < 4; i++) {
-			if (state->_pos >= state->_len)
-				return ERROR_RESULT_JSON_UNTERMINATED_STRING;
-			int h = JSON_HEX_DIGIT(state->_data[state->_pos]);
-			if (h < 0)
-				return ERROR_RESULT_JSON_UNEXPECTED_TOKEN;
-			codepoint = (codepoint << 4) | (uint32_t)h;
-			state->_pos++;
-		}
-		if (codepoint < 0x80) {
-			**wp = (char)codepoint;
-		} else if (codepoint < 0x800) {
-			**wp = (char)(0xC0 | (codepoint >> 6));
-			(*wp)++;
-			**wp = (char)(0x80 | (codepoint & 0x3F));
-		} else {
-			**wp = (char)(0xE0 | (codepoint >> 12));
-			(*wp)++;
-			**wp = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-			(*wp)++;
-			**wp = (char)(0x80 | (codepoint & 0x3F));
-		}
-		break;
-	}
-	default:
-		return ERROR_RESULT_JSON_UNEXPECTED_TOKEN;
-	}
-	(*wp)++;
-	return ERROR_RESULT_NO_ERROR;
-}
-
 static ErrorResult json_parse_string(FunJsonState *state, FunJsonToken *token,
 									 bool is_key)
 {
 	token->type = is_key ? FUN_JSON_KEY : FUN_JSON_STRING;
+	uint64_t start = state->_pos;
+	state->_pos++;
+	uint64_t len = 0;
 
-	if (state->_mutating) {
-		uint64_t start = state->_pos + 1;
-		char *wp = &state->_data[start];
-		state->_pos++;
-
-		while (state->_pos < state->_len) {
-			char c = state->_data[state->_pos];
-			if (c == '"') {
-				state->_data[state->_pos] = '\0';
-				state->_pos++;
-				token->value = &state->_data[start];
-				token->length = (uint64_t)(wp - &state->_data[start]);
-				return ERROR_RESULT_NO_ERROR;
-			}
-			if (c == '\\') {
-				state->_pos++;
-				ErrorResult err = json_parse_escaped_char(state, &wp);
-				if (fun_error_is_error(err))
-					return err;
-				continue;
-			}
-			*wp++ = c;
+	while (state->_pos < state->_len) {
+		char c = state->_data[state->_pos];
+		if (c == '"') {
 			state->_pos++;
+			token->value = &state->_data[start + 1];
+			token->length = len;
+			return ERROR_RESULT_NO_ERROR;
 		}
-		return ERROR_RESULT_JSON_UNTERMINATED_STRING;
-	} else {
-		uint64_t start = state->_pos;
-		state->_pos++;
-		uint64_t len = 0;
-
-		while (state->_pos < state->_len) {
-			char c = state->_data[state->_pos];
-			if (c == '"') {
-				state->_pos++;
-				token->value = &state->_data[start + 1];
-				token->length = len;
-				return ERROR_RESULT_NO_ERROR;
-			}
-			if (c == '\\') {
-				state->_pos++;
-				if (state->_pos >= state->_len)
-					return ERROR_RESULT_JSON_UNTERMINATED_STRING;
-				c = state->_data[state->_pos];
-				if (c == 'u')
-					state->_pos += 4;
-			}
-			len++;
+		if (c == '\\') {
 			state->_pos++;
+			if (state->_pos >= state->_len)
+				return ERROR_RESULT_JSON_UNTERMINATED_STRING;
+			c = state->_data[state->_pos];
+			if (c == 'u')
+				state->_pos += 4;
 		}
-		return ERROR_RESULT_JSON_UNTERMINATED_STRING;
+		len++;
+		state->_pos++;
 	}
+	return ERROR_RESULT_JSON_UNTERMINATED_STRING;
 }
 
 static ErrorResult json_parse_number(FunJsonState *state, FunJsonToken *token)
@@ -228,9 +134,6 @@ static ErrorResult json_parse_literal(FunJsonState *state, const char *expected,
 			return ERROR_RESULT_JSON_UNEXPECTED_TOKEN;
 	}
 	state->_pos += elen;
-
-	if (state->_mutating && state->_pos < state->_len)
-		state->_data[state->_pos - elen] = '\0';
 
 	token->type = type;
 	token->value = NULL;
@@ -323,7 +226,6 @@ ErrorResult fun_json_init(FunJsonState *state, char *data, uint64_t len)
 	state->_expecting_key[0] = false;
 	state->_expecting_value[0] = false;
 	state->_expecting_comma[0] = false;
-	state->_mutating = true;
 	return ERROR_RESULT_NO_ERROR;
 }
 
@@ -502,7 +404,6 @@ ErrorResult fun_json_for_each(String data, uint64_t len, String path,
 	s._expecting_value[arr.depth] = true;
 	s._expecting_key[arr.depth] = false;
 	s._expecting_comma[arr.depth] = false;
-	s._mutating = false;
 
 	uint64_t idx = 0;
 	FunJsonToken t;
@@ -576,7 +477,6 @@ static ErrorResult json_query_scan(String data, uint64_t len, String path,
 	state._expecting_key[0] = false;
 	state._expecting_value[0] = false;
 	state._expecting_comma[0] = false;
-	state._mutating = false;
 
 	const char *p = path;
 	while (*p) {
@@ -942,7 +842,6 @@ static uint64_tResult json_walk_number_array(String data, uint64_t len,
 	state._expecting_value[state._depth] = true;
 	state._expecting_comma[state._depth] = false;
 	state._expecting_key[state._depth] = false;
-	state._mutating = false;
 
 	r.value = token.value ? (uint64_t)(token.value - data) + 1 : 1;
 	state._pos = r.value;
@@ -1029,7 +928,6 @@ uint64_tResult fun_json_query_string_array(String data, uint64_t len,
 	state._expecting_value[state._depth] = true;
 	state._expecting_comma[state._depth] = false;
 	state._expecting_key[state._depth] = false;
-	state._mutating = false;
 
 	uint64_t vp = token.value ? (uint64_t)(token.value - data) + 1 : 1;
 	state._pos = vp;
@@ -1083,7 +981,6 @@ ErrorResult fun_json_init_at_path(FunJsonState *state, char *data, uint64_t len,
 	state->_expecting_key[dc(state)] = false;
 	state->_expecting_value[dc(state)] = true;
 	state->_expecting_comma[dc(state)] = false;
-	state->_mutating = true;
 
 	return ERROR_RESULT_NO_ERROR;
 }
