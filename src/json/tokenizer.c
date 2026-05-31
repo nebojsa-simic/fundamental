@@ -493,7 +493,8 @@ ErrorResult fun_json_find_key(FunJsonState *state, uint64_t depth, String key,
 			return ERROR_RESULT_JSON_PATH_NOT_FOUND;
 
 		if (t.type == FUN_JSON_KEY && t.depth == depth &&
-			fun_string_compare(t.value, key) == 0) {
+			t.length == fun_string_length(key) &&
+			json_bytes_equal(t.value, t.length, key, fun_string_length(key))) {
 			return fun_json_next(state, token);
 		}
 	}
