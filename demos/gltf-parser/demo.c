@@ -10,13 +10,6 @@
 
 #define BUF_SIZE 4096
 
-static void print_int(int64_t num)
-{
-	char buf[32];
-	fun_string_from_int(num, 10, buf, sizeof(buf));
-	fun_console_write(buf);
-}
-
 static void print_count(const char *label, int64_t count)
 {
 	char buf[64];
@@ -61,8 +54,6 @@ int main(void)
 	int64_t scalar_count = 0, vec2_count = 0, vec3_count = 0, vec4_count = 0;
 	int64_t chunks = 0;
 	bool type_key_active = false;
-	bool in_accessors = false;
-	int64_t accessor_depth = 0;
 
 	// --- Read + parse loop ---
 	while (1) {
