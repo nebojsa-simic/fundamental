@@ -1,10 +1,12 @@
 .vscode
 
 test
+tests/*/test_*
+!tests/*/test_*.c
+!tests/*/test_*.h
+!tests/*/test_data/
+!tests/*/test_data/**
 *.exe
-tests/path_type/test_conversion
-tests/path_type/test_operations
-tests/path_type/test_component_access
 
 # Test output files
 **/testData/
