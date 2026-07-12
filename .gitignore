@@ -1,7 +1,6 @@
 .vscode
 
 test
-tests/*/test_*
 *.exe
 
 # Test output files
