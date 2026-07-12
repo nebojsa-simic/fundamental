@@ -2,6 +2,9 @@
 
 test
 *.exe
+tests/path_type/test_conversion
+tests/path_type/test_operations
+tests/path_type/test_component_access
 
 # Test output files
 **/testData/
