@@ -200,38 +200,6 @@ float fun_math_silu(float x)
 	return x * fun_math_sigmoid(x);
 }
 
-void fun_math_silu_f32(const float *x, float *out, size_t n)
-{
-	(void)x;
-	(void)out;
-	(void)n;
-}
-
-void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-						   size_t n, float eps)
-{
-	(void)x;
-	(void)weight;
-	(void)out;
-	(void)n;
-	(void)eps;
-}
-
-void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
-						 size_t n)
-{
-	(void)gate;
-	(void)up;
-	(void)out;
-	(void)n;
-}
-
-void fun_math_softmax_f32(float *x, size_t n)
-{
-	(void)x;
-	(void)n;
-}
-
 void _math_bench_noop(const float *x, float *out, size_t n)
 {
 	for (size_t i = 0; i < n; i++)

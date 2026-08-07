@@ -1,4 +1,6 @@
 #!/bin/bash
+gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ../../arch/math/avx2/vector.c -o vector_avx2.o
+
 gcc \
     --std=c17 -Os \
     -I ../../include \
@@ -11,7 +13,9 @@ gcc \
     test_harness_self.c \
     ../../src/math/math_scalar.c \
     ../../src/math/math_init.c \
+    ../../src/math/math_dispatch.c \
     ../../arch/math/linux-amd64/cpu_features.c \
+    vector_avx2.o \
     -lm \
     -o test
 
