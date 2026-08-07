@@ -11,7 +11,6 @@ gcc --std=c17 -Os -I ../../include ^
     ../../arch/gguf/windows-amd64/mmap.c ^
     ../../src/math/math_scalar.c ^
     ../../src/math/math_init.c ^
-    ../../src/math/math_dispatch.c ^
     ../../arch/math/windows-amd64/cpu_features.c ^
     ../../src/console/console.c ^
     ../../arch/console/windows-amd64/console.c ^

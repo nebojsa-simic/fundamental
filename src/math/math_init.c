@@ -13,11 +13,8 @@ void _math_set_features(int sse2, int avx, int avx2, int avx512f)
 	g_has_avx512f = avx512f;
 }
 
-void _math_dispatch_init(void);
-
 __attribute__((weak)) void fun_math_init(void)
 {
-	_math_dispatch_init();
 }
 
 int fun_math_has_sse2(void)

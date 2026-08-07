@@ -13,7 +13,6 @@ gcc ^
     test_harness_self.c ^
     ../../src/math/math_scalar.c ^
     ../../src/math/math_init.c ^
-    ../../src/math/math_dispatch.c ^
     ../../arch/math/windows-amd64/cpu_features.c ^
     vector_avx2.o ^
     -lm ^
