@@ -69,6 +69,7 @@ int main(int argc, char **argv)
 	int generated = 0;
 	while (generated < MAX_TOKENS) {
 		fun_console_write(".");
+		fun_console_flush();
 		float *logits = (float *)fun_memory_allocate(
 					201088 * sizeof(float))
 					.value;

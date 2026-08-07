@@ -1,9 +1,11 @@
 @echo off
+gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include model.c -o model.o
+
 gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector.c -o vector_avx2.o
 
 gcc --std=c17 -Os -I ../../include ^
-    main.c model.c tokenizer.c ^
+    main.c tokenizer.c model.o ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
     ../../arch/gguf/windows-amd64/mmap.c ^

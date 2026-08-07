@@ -2,6 +2,7 @@
 #include "fundamental/math/math.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
+#include <immintrin.h>
 #include <stdint.h>
 
 #define MAX_SEQ 256
@@ -159,21 +160,28 @@ void model_free(Model *m)
 
 static void rms_norm(float *x, const float *w, int n, float eps)
 {
-	float ss = 0.0f;
-	for (int i = 0; i < n; i++)
-		ss += x[i] * x[i];
-	float scale = 1.0f / fun_math_sqrt(ss / (float)n + eps);
-	for (int i = 0; i < n; i++)
-		x[i] *= scale * w[i];
+	fun_math_rms_norm_f32(x, w, x, (size_t)n, eps);
 }
 
 static void mat_vec_f32(const float *w, const float *x, float *bias,
 			 float *out, int rows, int cols)
 {
 	for (int r = 0; r < rows; r++) {
+		const float *wr = w + r * cols;
 		float s = bias ? bias[r] : 0.0f;
-		for (int c = 0; c < cols; c++)
-			s += w[r * cols + c] * x[c];
+		int c = 0;
+		__m256 sum = _mm256_setzero_ps();
+		for (; c + 8 <= cols; c += 8) {
+			__m256 wv = _mm256_loadu_ps(wr + c);
+			__m256 xv = _mm256_loadu_ps(x + c);
+			sum = _mm256_fmadd_ps(wv, xv, sum);
+		}
+		float tmp[8];
+		_mm256_storeu_ps(tmp, sum);
+		for (int i = 0; i < 8; i++)
+			s += tmp[i];
+		for (; c < cols; c++)
+			s += wr[c] * x[c];
 		out[r] = s;
 	}
 }
@@ -292,39 +300,32 @@ void model_forward(Model *m, const int *tokens, int n_tokens,
 
 			for (int i = 0; i < q_dim; i++)
 				attn[i] = 0.0f;
+			float *scores = (float *)fun_memory_allocate(
+				(size_t)(pos + 1) * sizeof(float)).value;
 			for (int h = 0; h < n_h; h++) {
 				int kvh = h * n_kv / n_h;
 				float *qh = qbuf + h * hd;
-				float max_score = -1e30f;
-				float sum_exp = 0.0f;
+				float inv_sqrt_hd =
+					1.0f / fun_math_sqrt((float)hd);
 				for (int t = 0; t <= pos; t++) {
 					float *kh = k_hist[l] +
 						    t * kv_dim + kvh * hd;
-					float s =
-						mat_vec_dot32(qh, kh, hd) /
-						fun_math_sqrt((float)hd);
-					if (s > max_score)
-						max_score = s;
-					float es = fun_math_exp(
-						s - max_score);
-					sum_exp += es;
+					scores[t] =
+						mat_vec_dot32(qh, kh, hd) *
+						inv_sqrt_hd;
 				}
+				fun_math_softmax_f32(scores,
+						     (size_t)(pos + 1));
 				for (int t = 0; t <= pos; t++) {
-					float *kh = k_hist[l] +
-						    t * kv_dim + kvh * hd;
-					float s =
-						mat_vec_dot32(qh, kh, hd) /
-						fun_math_sqrt((float)hd);
-					float wgt = fun_math_exp(
-							    s - max_score) /
-						    sum_exp;
 					float *vh = v_hist[l] +
 						    t * kv_dim + kvh * hd;
+					float wgt = scores[t];
 					for (int d = 0; d < hd; d++)
 						attn[h * hd + d] +=
 							wgt * vh[d];
 				}
 			}
+			fun_memory_free((Memory *)&scores);
 
 			mat_vec_f32(w->o_weight, attn, w->o_bias, proj, hs,
 				    q_dim);
@@ -471,9 +472,9 @@ void model_forward(Model *m, const int *tokens, int n_tokens,
 					for (int j = 0; j < hs; j++)
 						s += gate_buf[i * hs + j] *
 						     hidden[j];
-					mid[i] = fun_math_silu(
-						s + gbias[i]);
+					mid[i] = s + gbias[i];
 				}
+				fun_math_silu_f32(mid, mid, (size_t)ffn);
 				for (int i = 0; i < ffn; i++) {
 					float s = 0.0f;
 					for (int j = 0; j < hs; j++)
