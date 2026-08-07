@@ -426,3 +426,95 @@ const uint8_t *fun_gguf_get_raw_data(const GGufFile *f)
 {
 	return f->data;
 }
+
+uint64_t fun_gguf_get_raw_size(const GGufFile *f)
+{
+	return f->mapped_size;
+}
+
+const uint8_t *fun_gguf_get_kv_start(const GGufFile *f, uint64_t *count)
+{
+	*count = f->kv_count;
+	return f->kv_start;
+}
+
+StringResult fun_gguf_get_token_string(const GGufFile *f, uint32_t index,
+					uint64_t *out_len)
+{
+	StringResult result;
+	result.error.code = ERROR_CODE_NO_ERROR;
+	result.error.message = NULL;
+	result.value = NULL;
+	if (out_len)
+		*out_len = 0;
+
+	static const uint8_t *cached_vp = NULL;
+	static uint64_t cached_total = 0;
+	static uint64_t cached_pos = 0;
+	static const uint8_t *cached_p = NULL;
+	static const GGufFile *cached_f = NULL;
+
+	if (cached_f != f || cached_vp == NULL) {
+		uint32_t vt = 0;
+		cached_vp = find_kv(f, "tokenizer.ggml.tokens", &vt);
+		if (!cached_vp || vt != 9) {
+			result.error.code = ERROR_CODE_GGUF_KEY_NOT_FOUND;
+			result.error.message =
+				"tokenizer.ggml.tokens not found";
+			return result;
+		}
+		cached_total = read_le64(cached_vp + 4);
+		cached_p = cached_vp + 12;
+		cached_pos = 0;
+		cached_f = f;
+	}
+
+	if (index >= cached_total) {
+		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
+		result.error.message = "Token index out of bounds";
+		return result;
+	}
+
+	const uint8_t *p = cached_p;
+	uint64_t pos = cached_pos;
+	const uint8_t *end = f->data + f->mapped_size;
+
+	if (index == pos) {
+	} else if (index > pos) {
+		for (uint64_t i = pos; i < index; i++) {
+			uint64_t len = read_le64(p);
+			p += 8;
+			if (p + len > end) {
+				result.error.code =
+					ERROR_CODE_GGUF_PARSE_ERROR;
+				result.error.message = "Token overflow";
+				return result;
+			}
+			p += len;
+		}
+	} else {
+		p = cached_vp + 12;
+		pos = 0;
+		cached_p = p;
+		for (uint64_t i = 0; i < index; i++) {
+			uint64_t len = read_le64(p);
+			p += 8;
+			p += len;
+		}
+	}
+
+	uint64_t len = read_le64(p);
+	p += 8;
+	if (p + len > end) {
+		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
+		result.error.message = "Token overflow";
+		return result;
+	}
+
+	cached_p = p + len;
+	cached_pos = index + 1;
+	result.value = (String)p;
+	if (out_len)
+		*out_len = len;
+	return result;
+}

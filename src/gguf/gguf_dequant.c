@@ -187,3 +187,71 @@ voidResult fun_gguf_dequant_mxfp4(GGufFile *f, String name, float *out)
 	}
 	return result;
 }
+
+voidResult fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
+					 uint64_t elem_start,
+					 uint64_t elem_count, float *out)
+{
+	voidResult result;
+	result.error.code = 0;
+	result.error.message = NULL;
+
+	uint64_tResult off_res = fun_gguf_get_tensor_offset(f, name);
+	if (fun_error_is_error(off_res.error)) {
+		result.error = off_res.error;
+		return result;
+	}
+	uint32_tResult tp_res = fun_gguf_get_tensor_type(f, name);
+	if (fun_error_is_error(tp_res.error) ||
+	    tp_res.value != GGUF_TYPE_MXFP4) {
+		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
+		result.error.message = "Tensor is not MXFP4";
+		return result;
+	}
+
+	const uint8_t *src = fun_gguf_get_raw_data(f) + off_res.value;
+	uint64_t block_start = elem_start / 32;
+	src += block_start * 17;
+	uint64_t total_blocks = (elem_count + 31) / 32;
+	float *dst = out;
+
+	for (uint64_t b = 0; b < total_blocks; b++) {
+		uint8_t scale = src[b * 17];
+		float scale_f = 1.0f;
+		if (scale == 0)
+			scale_f = 0.0f;
+		else
+			scale_f = *(float *)&(uint32_t){ (uint32_t)scale
+							<< 23 };
+		for (int j = 0; j < 16; j++) {
+			uint8_t byte = src[b * 17 + 1 + j];
+			for (int nib = 0; nib < 2; nib++) {
+				uint8_t n = (byte >> (nib * 4)) & 0xF;
+				uint32_t sign = (n >> 3) & 1;
+				uint32_t exp = (n >> 1) & 3;
+				uint32_t mant = n & 1;
+				float val;
+				if (exp == 0 && mant == 0)
+					val = 0.0f;
+				else if (exp == 3) {
+					uint32_t inf_bits = 0x7F800000;
+					uint32_t nan_bits = 0x7FC00000;
+					val = mant ? *(float *)&nan_bits
+						   : *(float *)&inf_bits;
+				} else {
+					float m = (float)(exp == 0 ? 0 : 1)
+						  + (float)mant * 0.5f;
+					int e = (int)exp -
+						(exp == 0 ? 0 : 1);
+					if (e > 0)
+						m *= (float)(1 << e);
+					val = m;
+				}
+				if (sign)
+					val = -val;
+				dst[b * 32 + j * 2 + nib] = val * scale_f;
+			}
+		}
+	}
+	return result;
+}
