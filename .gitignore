@@ -18,3 +18,5 @@ demos/*/demo
 # Diagnostic/repro binaries in test dirs
 tests/*/diag*
 tests/*/reproduce*
+models/
+models/
