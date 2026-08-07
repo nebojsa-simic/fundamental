@@ -1,4 +1,5 @@
 #include "model.h"
+#include "fundamental/console/console.h"
 #include "fundamental/math/math.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
@@ -145,6 +146,21 @@ void model_load(Model *m, GGufFile *gguf)
 	m->layers = (LayerWeights *)fun_memory_allocate(
 			    m->config.n_layers * sizeof(LayerWeights))
 			    .value;
+	for (int i = 0; i < m->config.n_layers; i++) {
+		m->layers[i].q_weight = NULL;
+		m->layers[i].q_bias = NULL;
+		m->layers[i].k_weight = NULL;
+		m->layers[i].k_bias = NULL;
+		m->layers[i].v_weight = NULL;
+		m->layers[i].v_bias = NULL;
+		m->layers[i].o_weight = NULL;
+		m->layers[i].o_bias = NULL;
+		m->layers[i].attn_norm_weight = NULL;
+		m->layers[i].post_attn_norm_weight = NULL;
+		m->layers[i].router_weight = NULL;
+		m->layers[i].router_bias = NULL;
+		m->layers[i].gguf = NULL;
+	}
 }
 
 void model_free(Model *m)
@@ -200,8 +216,8 @@ static void rope_single(float *q, float *k, int pos, float theta, int hd,
 	for (int h = 0; h < n_h; h++) {
 		float *qh = q + h * hd;
 		for (int d = 0; d < hd; d += 2) {
-			float freq =
-				1.0f / fun_math_sqrt(6.0f * theta + 1e-6f);
+			float freq = 1.0f / fun_math_sqrt(
+				theta * (float)hd);
 			float angle = (float)pos * freq;
 			float ca = fun_math_cos(angle);
 			float sa = fun_math_sin(angle);
@@ -213,8 +229,8 @@ static void rope_single(float *q, float *k, int pos, float theta, int hd,
 	for (int h = 0; h < n_kv_h; h++) {
 		float *kh = k + h * hd;
 		for (int d = 0; d < hd; d += 2) {
-			float freq =
-				1.0f / fun_math_sqrt(6.0f * theta + 1e-6f);
+			float freq = 1.0f / fun_math_sqrt(
+				theta * (float)hd);
 			float angle = (float)pos * freq;
 			float ca = fun_math_cos(angle);
 			float sa = fun_math_sin(angle);
@@ -282,8 +298,6 @@ void model_forward(Model *m, const int *tokens, int n_tokens,
 			if (!w->q_weight)
 				dequant_layer(m, l);
 
-			rms_norm(hidden, w->attn_norm_weight, hs, eps);
-
 			mat_vec_f32(w->q_weight, hidden, w->q_bias, qbuf,
 				    q_dim, hs);
 			mat_vec_f32(w->k_weight, hidden, w->k_bias, kbuf,
@@ -300,8 +314,9 @@ void model_forward(Model *m, const int *tokens, int n_tokens,
 
 			for (int i = 0; i < q_dim; i++)
 				attn[i] = 0.0f;
+			int spo = (pos + 1 + 7) & ~7;
 			float *scores = (float *)fun_memory_allocate(
-				(size_t)(pos + 1) * sizeof(float)).value;
+				(size_t)spo * sizeof(float)).value;
 			for (int h = 0; h < n_h; h++) {
 				int kvh = h * n_kv / n_h;
 				float *qh = qbuf + h * hd;
@@ -314,8 +329,10 @@ void model_forward(Model *m, const int *tokens, int n_tokens,
 						mat_vec_dot32(qh, kh, hd) *
 						inv_sqrt_hd;
 				}
+				for (int t = pos + 1; t < spo; t++)
+					scores[t] = -1e30f;
 				fun_math_softmax_f32(scores,
-						     (size_t)(pos + 1));
+						     (size_t)spo);
 				for (int t = 0; t <= pos; t++) {
 					float *vh = v_hist[l] +
 						    t * kv_dim + kvh * hd;
