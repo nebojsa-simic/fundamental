@@ -32,6 +32,7 @@ typedef struct {
 	float *post_attn_norm_weight;
 	float *router_weight;
 	float *router_bias;
+	float *sinks;
 	GGufFile *gguf;
 	char name_prefix[64];
 } LayerWeights;
@@ -41,12 +42,15 @@ typedef struct {
 	GGufFile *gguf;
 	float *tok_embeddings;
 	float *output_weight;
+	float *output_norm_weight;
 	LayerWeights *layers;
+	float **k_cache;
+	float **v_cache;
+	int cached_len;
 } Model;
 
 void model_load(Model *m, GGufFile *gguf);
 void model_free(Model *m);
-void model_forward(Model *m, const int *tokens, int n_tokens,
-		   float *logits);
+void model_forward(Model *m, const int *tokens, int n_tokens, float *logits);
 
 #endif

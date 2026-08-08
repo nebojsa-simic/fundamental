@@ -64,7 +64,7 @@ static inline __m256 __attribute__((always_inline)) _mm256_silu_ps(__m256 x)
 	return _mm256_mul_ps(x, _mm256_sigmoid_ps(x));
 }
 
-static float _mm256_hsum_ps(__m256 v)
+static inline float __attribute__((always_inline)) _mm256_hsum_ps(__m256 v)
 {
 	__m128 hi = _mm256_extractf128_ps(v, 1);
 	__m128 lo = _mm256_castps256_ps128(v);
@@ -138,14 +138,19 @@ void fun_math_softmax_f32(float *x, size_t n)
 
 	float sum = 0.0f;
 	__m256 m256 = _mm256_set1_ps(m);
+	__m256 lo = _mm256_set1_ps(-80.0f);
 	for (i = 0; i + 8 <= n; i += 8) {
 		__m256 v = _mm256_loadu_ps(x + i);
-		__m256 e = _mm256_exp_ps(_mm256_sub_ps(v, m256));
+		v = _mm256_sub_ps(v, m256);
+		v = _mm256_max_ps(v, lo);
+		__m256 e = _mm256_exp_ps(v);
 		_mm256_storeu_ps(x + i, e);
 		sum += _mm256_hsum_ps(e);
 	}
 	for (; i < n; i++) {
 		float e = __builtin_expf(x[i] - m);
+		if (e != e)
+			e = 0.0f;
 		x[i] = e;
 		sum += e;
 	}

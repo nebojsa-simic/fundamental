@@ -20,7 +20,7 @@ typedef struct {
 
 void tokenizer_load(Tokenizer *t, GGufFile *gguf);
 int tokenizer_encode(Tokenizer *t, const char *text, int *out_tokens,
-		     int max_out);
+					 int max_out);
 void tokenizer_decode(Tokenizer *t, int token_id, char *out, int out_size);
 
 #endif

@@ -1,0 +1,45 @@
+GGUF probe
+    file size: 12096558336
+    magic=0x46554747
+    version: 3
+    tensors: 459
+    kv: 35
+    data_align key: 0
+    kv section ends (file offset): 12979490
+    tensor metadata starts (file offset): 12979490
+    tensor[0] len=13 name='output.weight' 6f 75 74 70 75 74 2e 77 65 69 67 68 74 
+    tensor[1] len=18 name='output_norm.weight' 6f 75 74 70 75 74 5f 6e 6f 72 6d 2e 77 65 69 67 68 74 
+    tensor[2] len=17 name='token_embd.weight' 74 6f 6b 65 6e 5f 65 6d 62 64 2e 77 65 69 67 68 74 
+    tensor[3] type=0 name='blk.0.attn_k.bias'
+    tensor[4] type=8 name='blk.0.attn_k.weight'
+    tensor[5] type=0 name='blk.0.attn_norm.weight'
+    tensor[6] type=0 name='blk.0.attn_output.bias'
+    tensor[7] type=8 name='blk.0.attn_output.weight'
+    tensor[8] type=0 name='blk.0.attn_q.bias'
+    tensor[9] type=8 name='blk.0.attn_q.weight'
+    tensor[10] type=0 name='blk.0.attn_sinks.weight'
+    tensor[11] type=0 name='blk.0.attn_v.bias'
+    tensor[12] type=8 name='blk.0.attn_v.weight'
+    tensor[13] type=0 name='blk.0.ffn_down_exps.bias'
+    tensor[14] type=39 name='blk.0.ffn_down_exps.weight'
+    tensor[15] type=0 name='blk.0.ffn_gate_exps.bias'
+    tensor[16] type=39 name='blk.0.ffn_gate_exps.weight'
+    tensor[17] type=0 name='blk.0.ffn_gate_inp.bias'
+    tensor[18] type=0 name='blk.0.ffn_gate_inp.weight'
+    tensor[19] type=0 name='blk.0.ffn_up_exps.bias'
+    tensor[20] type=39 name='blk.0.ffn_up_exps.weight'
+    tensor[21] type=0 name='blk.0.post_attention_norm.weight'
+    tensor metadata ends (file offset): 13007396
+    token_embd.off: 615340800
+    token_embd.size: 615329280
+    token_embd.type: 8
+    output.off: 0
+    output.size: 615329280
+    output.type: 8
+    aligned_start (meta_end aligned to ALIGN): 13007424
+    after-zero data start (file offset): 13007424
+Q8 at file_offset = data_base + blob.off:
+    emb at zero_start+off scale=0.194824 q[0]=-2 q[1]=-4
+    emb at aligned+off scale=0.194824 q[0]=-2 q[1]=-4
+    out at aligned+off scale=0.000081 q[0]=-74 q[1]=9
+    raw half at aligned+emb: 0x323c

@@ -34,6 +34,11 @@ static float half_to_float(uint16_t h)
 	return *(float *)&f32;
 }
 
+static const float kvalues_mxfp4[16] = {
+	0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f, 6.0f,
+	-0.0f, -0.5f, -1.0f, -1.5f, -2.0f, -3.0f, -4.0f, -6.0f
+};
+
 extern const uint8_t *fun_gguf_get_raw_data(const GGufFile *f);
 
 voidResult fun_gguf_dequant_f32(GGufFile *f, String name, float *out)
@@ -69,6 +74,34 @@ voidResult fun_gguf_dequant_f32(GGufFile *f, String name, float *out)
 	uint64_t count = sz_res.value / 4;
 	for (uint64_t i = 0; i < count; i++)
 		out[i] = src[i];
+	return result;
+}
+
+voidResult fun_gguf_dequant_f32_range(GGufFile *f, String name,
+				      uint64_t elem_start,
+				      uint64_t elem_count, float *out)
+{
+	voidResult result;
+	result.error.code = 0;
+	result.error.message = NULL;
+
+	uint64_tResult off_res = fun_gguf_get_tensor_offset(f, name);
+	if (fun_error_is_error(off_res.error)) {
+		result.error = off_res.error;
+		return result;
+	}
+	uint32_tResult tp_res = fun_gguf_get_tensor_type(f, name);
+	if (fun_error_is_error(tp_res.error) ||
+	    tp_res.value != GGUF_TYPE_F32) {
+		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
+		result.error.message = "Tensor is not F32";
+		return result;
+	}
+
+	const float *src =
+		(const float *)(fun_gguf_get_raw_data(f) + off_res.value);
+	for (uint64_t i = 0; i < elem_count; i++)
+		out[i] = src[elem_start + i];
 	return result;
 }
 
@@ -158,31 +191,10 @@ voidResult fun_gguf_dequant_mxfp4(GGufFile *f, String name, float *out)
 
 		for (int j = 0; j < 16; j++) {
 			uint8_t byte = src[b * 17 + 1 + j];
-			for (int nib = 0; nib < 2; nib++) {
-				uint8_t n = (byte >> (nib * 4)) & 0xF;
-				uint32_t sign = (n >> 3) & 1;
-				uint32_t exp = (n >> 1) & 3;
-				uint32_t mant = n & 1;
-				float val;
-				if (exp == 0 && mant == 0)
-					val = 0.0f;
-				else if (exp == 3) {
-					uint32_t inf_bits = 0x7F800000;
-					uint32_t nan_bits = 0x7FC00000;
-					val = mant ? *(float *)&nan_bits
-						   : *(float *)&inf_bits;
-				} else {
-					float m = (float)(exp == 0 ? 0 : 1)
-						  + (float)mant * 0.5f;
-					int e = (int)exp - (exp == 0 ? 0 : 1);
-					if (e > 0)
-						m *= (float)(1 << e);
-					val = m;
-				}
-				if (sign)
-					val = -val;
-				dst[b * 32 + j * 2 + nib] = val * scale_f;
-			}
+			dst[b * 32 + j] =
+				kvalues_mxfp4[byte & 0xF] * scale_f;
+			dst[b * 32 + j + 16] =
+				kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
 		}
 	}
 	return result;
@@ -225,32 +237,10 @@ voidResult fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
 							<< 23 };
 		for (int j = 0; j < 16; j++) {
 			uint8_t byte = src[b * 17 + 1 + j];
-			for (int nib = 0; nib < 2; nib++) {
-				uint8_t n = (byte >> (nib * 4)) & 0xF;
-				uint32_t sign = (n >> 3) & 1;
-				uint32_t exp = (n >> 1) & 3;
-				uint32_t mant = n & 1;
-				float val;
-				if (exp == 0 && mant == 0)
-					val = 0.0f;
-				else if (exp == 3) {
-					uint32_t inf_bits = 0x7F800000;
-					uint32_t nan_bits = 0x7FC00000;
-					val = mant ? *(float *)&nan_bits
-						   : *(float *)&inf_bits;
-				} else {
-					float m = (float)(exp == 0 ? 0 : 1)
-						  + (float)mant * 0.5f;
-					int e = (int)exp -
-						(exp == 0 ? 0 : 1);
-					if (e > 0)
-						m *= (float)(1 << e);
-					val = m;
-				}
-				if (sign)
-					val = -val;
-				dst[b * 32 + j * 2 + nib] = val * scale_f;
-			}
+			dst[b * 32 + j] =
+				kvalues_mxfp4[byte & 0xF] * scale_f;
+			dst[b * 32 + j + 16] =
+				kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
 		}
 	}
 	return result;

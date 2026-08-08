@@ -68,6 +68,23 @@ static int test_open(void)
 		return 1;
 	}
 
+	{
+		uint64_t nan = 0, huge = 0;
+		for (uint64_t i = 0; i < el_count; i++) {
+			if (buf[i] != buf[i])
+				nan++;
+			float a = buf[i] < 0 ? -buf[i] : buf[i];
+			if (a > 1000.0f)
+				huge++;
+		}
+		if (nan > 0 || huge > 0) {
+			fun_console_error_line("FAIL: dequant garbage");
+			fun_memory_free((Memory *)&buf);
+			fun_gguf_close(f);
+			return 1;
+		}
+	}
+
 	fun_memory_free((Memory *)&buf);
 
 	uint64_tResult mx_sz =
@@ -89,6 +106,48 @@ static int test_open(void)
 		fun_memory_free((Memory *)&mx_buf);
 		fun_gguf_close(f);
 		return 1;
+	}
+
+	{
+		uint64_t nan = 0, huge = 0, zero = 0;
+		float mn = 1e30f, mx = -1e30f;
+		for (uint64_t i = 0; i < mx_el; i++) {
+			if (mx_buf[i] != mx_buf[i])
+				nan++;
+			else {
+				if (mx_buf[i] == 0.0f)
+					zero++;
+				if (mx_buf[i] < mn)
+					mn = mx_buf[i];
+				if (mx_buf[i] > mx)
+					mx = mx_buf[i];
+			}
+			float a = mx_buf[i] < 0 ? -mx_buf[i] : mx_buf[i];
+			if (a > 1000.0f)
+				huge++;
+		}
+		char sb[128];
+		fun_console_write("    MXFP4 dbg: nan=");
+		fun_string_from_int(nan, 10, sb, 128);
+		fun_console_write(sb);
+		fun_console_write(" huge=");
+		fun_string_from_int(huge, 10, sb, 128);
+		fun_console_write(sb);
+		fun_console_write(" zero=");
+		fun_string_from_int(zero, 10, sb, 128);
+		fun_console_write(sb);
+		fun_console_write(" min=");
+		fun_string_from_double(mn, 3, sb, 128);
+		fun_console_write(sb);
+		fun_console_write(" max=");
+		fun_string_from_double(mx, 3, sb, 128);
+		fun_console_write_line(sb);
+		if (nan > 0 || huge > 0) {
+			fun_console_error_line("FAIL: MXFP4 dequant garbage");
+			fun_memory_free((Memory *)&mx_buf);
+			fun_gguf_close(f);
+			return 1;
+		}
 	}
 
 	fun_memory_free((Memory *)&mx_buf);

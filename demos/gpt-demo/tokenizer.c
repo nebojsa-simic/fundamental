@@ -21,7 +21,7 @@ static int trie_alloc(TrieNode *nodes, int *count)
 }
 
 static void trie_insert(TrieNode *nodes, int *count, const char *token,
-			 int token_id, int len)
+						int token_id, int len)
 {
 	int node = 0;
 	for (int i = 0; i < len; i++) {
@@ -39,49 +39,60 @@ void tokenizer_load(Tokenizer *t, GGufFile *gguf)
 	t->eos_id = EOS_TOKEN;
 	t->n_tokens = VOCAB_SIZE;
 
-	t->tokens =
-		(char **)fun_memory_allocate(VOCAB_SIZE * sizeof(char *))
-			 .value;
-	t->token_lens =
-		(int *)fun_memory_allocate(VOCAB_SIZE * sizeof(int))
-			 .value;
+	t->tokens = (char **)fun_memory_allocate(VOCAB_SIZE * sizeof(char *)).value;
+	t->token_lens = (int *)fun_memory_allocate(VOCAB_SIZE * sizeof(int)).value;
 
-	t->trie = (TrieNode *)fun_memory_allocate(
-				  VOCAB_SIZE * 16 * sizeof(TrieNode))
-				  .value;
+	t->trie =
+		(TrieNode *)fun_memory_allocate(VOCAB_SIZE * 16 * sizeof(TrieNode))
+			.value;
 	t->trie_count = 0;
 	trie_alloc(t->trie, &t->trie_count);
 
 	for (int i = 0; i < VOCAB_SIZE; i++) {
 		uint64_t tlen = 0;
-		StringResult sr = fun_gguf_get_token_string(
-			gguf, (uint32_t)i, &tlen);
+		StringResult sr = fun_gguf_get_token_string(gguf, (uint32_t)i, &tlen);
 		if (fun_error_is_error(sr.error))
 			break;
 
 		int len = (int)tlen;
 		t->token_lens[i] = len;
 
-		char *copy = (char *)fun_memory_allocate(
-				     (size_t)(len + 1))
-				     .value;
+		char *copy = (char *)fun_memory_allocate((size_t)(len + 1)).value;
 		for (int j = 0; j < len; j++)
 			copy[j] = sr.value[j];
 		copy[len] = '\0';
+
+		int out_len = 0;
+		for (int j = 0; j < len; j++) {
+			unsigned char c = (unsigned char)copy[j];
+			if (c == 0xC4 && j + 1 < len &&
+				(unsigned char)copy[j + 1] == 0xA0) {
+				copy[out_len++] = ' ';
+				j++;
+			} else if (c == 0xC4 && j + 1 < len &&
+					   (unsigned char)copy[j + 1] == 0x8A) {
+				copy[out_len++] = '\n';
+				j++;
+			} else {
+				copy[out_len++] = (char)c;
+			}
+		}
+		copy[out_len] = '\0';
+		t->token_lens[i] = out_len;
 		t->tokens[i] = copy;
 
-		if (len > 0)
-			trie_insert(t->trie, &t->trie_count, copy, i,
-				    len);
+		if (out_len > 0)
+			trie_insert(t->trie, &t->trie_count, copy, i, out_len);
 	}
 }
 
 int tokenizer_encode(Tokenizer *t, const char *text, int *out_tokens,
-		     int max_out)
+					 int max_out)
 {
 	int n = 0;
 	int text_len = (int)fun_string_length(text);
-	out_tokens[n++] = t->bos_id;
+	if (n >= max_out)
+		return n;
 
 	int i = 0;
 	while (i < text_len && n < max_out) {

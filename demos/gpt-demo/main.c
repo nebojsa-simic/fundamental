@@ -10,7 +10,6 @@
 
 #define MAX_TOKENS 64
 #define MAX_SEQ 256
-
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
@@ -26,8 +25,8 @@ int main(int argc, char **argv)
 
 	fun_console_write_line("Loading model...");
 
-	GGufFileHandleResult gr = fun_gguf_open(
-		"../../models/openai_gpt-oss-20b-MXFP4.gguf");
+	GGufFileHandleResult gr =
+		fun_gguf_open("../../models/openai_gpt-oss-20b-MXFP4.gguf");
 	if (fun_error_is_error(gr.error)) {
 		fun_console_error_line("Cannot open model file");
 		return 1;
@@ -41,8 +40,7 @@ int main(int argc, char **argv)
 	model_load(&model, gguf);
 
 	QueryPerformanceCounter(&t1);
-	double load_s = (double)(t1.QuadPart - t0.QuadPart) /
-			(double)freq.QuadPart;
+	double load_s = (double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
 
 	char buf[256];
 	MemoryResult num_mem = fun_memory_allocate(256);
@@ -56,6 +54,11 @@ int main(int argc, char **argv)
 	int tokens[MAX_SEQ];
 	int n_tokens = tokenizer_encode(&tok, prompt, tokens, MAX_SEQ);
 
+	if (n_tokens == 0) {
+		fun_console_error_line("  Empty prompt after tokenization");
+		return 1;
+	}
+
 	fun_console_write("  Prompt tokens: ");
 	fun_string_from_int(n_tokens, 10, num_buf, 256);
 	fun_console_write_line(num_buf);
@@ -68,12 +71,13 @@ int main(int argc, char **argv)
 
 	int generated = 0;
 	while (generated < MAX_TOKENS) {
-		fun_console_write(".");
-		fun_console_flush();
-		float *logits = (float *)fun_memory_allocate(
-					201088 * sizeof(float))
-					.value;
+		QueryPerformanceCounter(&t0);
+		float *logits =
+			(float *)fun_memory_allocate(201088 * sizeof(float)).value;
 		model_forward(&model, tokens, n_tokens, logits);
+		QueryPerformanceCounter(&t1);
+		double fwd_s =
+			(double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
 
 		int next_id = 0;
 		float max_l = logits[0];
@@ -85,20 +89,36 @@ int main(int argc, char **argv)
 		}
 		fun_memory_free((Memory *)&logits);
 
-		if (next_id == tok.eos_id)
+		if (next_id == tok.eos_id) {
+			fun_console_write_line("  [EOS]");
 			break;
+		}
 
 		tokens[n_tokens++] = next_id;
 		generated++;
 
 		char token_str[32];
 		tokenizer_decode(&tok, next_id, token_str, 32);
+
+		fun_console_write("  [");
+		fun_string_from_int(generated, 10, num_buf, 256);
+		fun_console_write(num_buf);
+		fun_console_write("/");
+		fun_string_from_int(MAX_TOKENS, 10, num_buf, 256);
+		fun_console_write(num_buf);
+		fun_console_write("] id=");
+		fun_string_from_int(next_id, 10, num_buf, 256);
+		fun_console_write(num_buf);
+		fun_console_write(" t='");
 		fun_console_write(token_str);
+		fun_console_write("' (");
+		fun_string_from_double(fwd_s, 1, num_buf, 256);
+		fun_console_write(num_buf);
+		fun_console_write_line("s)");
 	}
 
 	QueryPerformanceCounter(&t1);
-	double eval_s = (double)(t1.QuadPart - t0.QuadPart) /
-			(double)freq.QuadPart;
+	double eval_s = (double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
 
 	fun_console_write_line("");
 	fun_console_write_line("");

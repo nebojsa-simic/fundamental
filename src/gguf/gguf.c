@@ -9,6 +9,7 @@ struct GGufFile {
 	uint64_t kv_count;
 	const uint8_t *kv_start;
 	const uint8_t *tensor_start;
+	uint64_t data_start;
 	void *platform_handles[2];
 };
 
@@ -271,6 +272,34 @@ GGufFileHandleResult fun_gguf_open(String path)
 
 	f->tensor_start = p;
 
+	{
+		const uint8_t *tp = p;
+		for (uint64_t i = 0; i < f->tensor_count; i++) {
+			uint64_t nlen = read_le64(tp);
+			tp += 8;
+			if (tp + nlen > end)
+				break;
+			tp += nlen;
+			uint32_t ndims = read_le32(tp);
+			tp += 4;
+			if (tp + (uint64_t)ndims * 8 > end)
+				break;
+			tp += (uint64_t)ndims * 8;
+			tp += 4;
+			tp += 8;
+		}
+		uint64_t meta_end = (uint64_t)(tp - f->data);
+		uint64_t alignment = (uint64_t)fun_gguf_get_metadata_u32(
+						f, "general.alignment")
+					    .value;
+		if (alignment == 0)
+			alignment = 32;
+		uint64_t pad = alignment - meta_end % alignment;
+		if (pad == alignment)
+			pad = 0;
+		f->data_start = meta_end + pad;
+	}
+
 	result.value = f;
 	return result;
 }
@@ -424,12 +453,22 @@ uint32_tResult fun_gguf_get_tensor_type(GGufFile *f, String name)
 
 const uint8_t *fun_gguf_get_raw_data(const GGufFile *f)
 {
-	return f->data;
+	return f->data + f->data_start;
 }
 
 uint64_t fun_gguf_get_raw_size(const GGufFile *f)
 {
-	return f->mapped_size;
+	return f->mapped_size - f->data_start;
+}
+
+const uint8_t *fun_gguf_get_file_base(const GGufFile *f)
+{
+	return f->data;
+}
+
+uint64_t fun_gguf_get_data_start(const GGufFile *f)
+{
+	return f->data_start;
 }
 
 const uint8_t *fun_gguf_get_kv_start(const GGufFile *f, uint64_t *count)
