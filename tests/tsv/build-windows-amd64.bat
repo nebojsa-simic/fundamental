@@ -8,7 +8,7 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..\..
 
 REM Compiler (use gcc from mingw which has its own toolchain)
-set CC=C:\Users\nsimi\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\gcc.exe
+set CC=gcc
 
 REM Compiler flags
 set CFLAGS=-I%PROJECT_ROOT%\include -Wall -Wextra -g -O0
