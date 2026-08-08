@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-08
+goal: Vectorize rope_single via reusable rotary kernel, golden-tested from
+  scalar reference
