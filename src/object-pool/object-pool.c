@@ -56,17 +56,15 @@ CanReturnError(void) fun_object_pool_destroy(ObjectPool *pool)
 	}
 
 	if (pool->freeCount < pool->capacity) {
-		result.error =
-			fun_error_result(ERROR_CODE_POOL_LEAKED,
-							 "Pool destroyed with outstanding slots");
+		result.error = fun_error_result(
+			ERROR_CODE_POOL_LEAKED, "Pool destroyed with outstanding slots");
 	} else {
 		result.error = ERROR_RESULT_NO_ERROR;
 	}
 
 	Memory mem = pool->memory;
 	voidResult fr = fun_memory_free(&mem);
-	if (fun_error_is_error(fr.error) &&
-		fun_error_is_ok(result.error)) {
+	if (fun_error_is_error(fr.error) && fun_error_is_ok(result.error)) {
 		result.error = fr.error;
 	}
 

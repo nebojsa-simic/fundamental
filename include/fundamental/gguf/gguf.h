@@ -42,28 +42,24 @@ uint64_t fun_gguf_get_raw_size(const GGufFile *f);
 const uint8_t *fun_gguf_get_file_base(const GGufFile *f);
 uint64_t fun_gguf_get_data_start(const GGufFile *f);
 const uint8_t *fun_gguf_get_kv_start(const GGufFile *f, uint64_t *count);
-CanReturnError(String) fun_gguf_get_token_string(const GGufFile *f,
-						   uint32_t index,
-						   uint64_t *out_len);
+CanReturnError(String)
+	fun_gguf_get_token_string(const GGufFile *f, uint32_t index,
+							  uint64_t *out_len);
 
-CanReturnError(uint64_t) fun_gguf_get_tensor_offset(GGufFile *f,
-                                                     String name);
+CanReturnError(uint64_t) fun_gguf_get_tensor_offset(GGufFile *f, String name);
 CanReturnError(uint64_t) fun_gguf_get_tensor_size(GGufFile *f, String name);
 CanReturnError(uint32_t) fun_gguf_get_tensor_type(GGufFile *f, String name);
 
-CanReturnError(void) fun_gguf_dequant_f32(GGufFile *f, String name,
-                                            float *out);
+CanReturnError(void) fun_gguf_dequant_f32(GGufFile *f, String name, float *out);
 CanReturnError(void)
-	fun_gguf_dequant_f32_range(GGufFile *f, String name,
-				   uint64_t elem_start, uint64_t elem_count,
-				   float *out);
-CanReturnError(void) fun_gguf_dequant_q8_0(GGufFile *f, String name,
-                                             float *out);
-CanReturnError(void) fun_gguf_dequant_mxfp4(GGufFile *f, String name,
-                                              float *out);
+	fun_gguf_dequant_f32_range(GGufFile *f, String name, uint64_t elem_start,
+							   uint64_t elem_count, float *out);
 CanReturnError(void)
-	fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
-				      uint64_t elem_start,
-				      uint64_t elem_count, float *out);
+	fun_gguf_dequant_q8_0(GGufFile *f, String name, float *out);
+CanReturnError(void)
+	fun_gguf_dequant_mxfp4(GGufFile *f, String name, float *out);
+CanReturnError(void)
+	fun_gguf_dequant_mxfp4_range(GGufFile *f, String name, uint64_t elem_start,
+								 uint64_t elem_count, float *out);
 
 #endif

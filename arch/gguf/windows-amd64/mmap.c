@@ -2,11 +2,10 @@
 #include <windows.h>
 
 void *_gguf_platform_open(const char *path, uint64_t *out_size,
-			   void *handles[2])
+						  void *handles[2])
 {
-	HANDLE hFile =
-		CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
-			    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
+							   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 		return NULL;
 

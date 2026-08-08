@@ -19,25 +19,23 @@ static float half_to_float(uint16_t h)
 			e++;
 		}
 		mant &= 0x3FF;
-		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) |
-			       (mant << 13);
+		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) | (mant << 13);
 		return *(float *)&f32;
 	}
 	if (exp == 31) {
 		uint32_t nan_bits = 0x7FC00000;
 		uint32_t inf_bits = 0x7F800000;
-		return mant ? *(float *)&nan_bits
-			    : (sign ? -*(float *)&inf_bits
-				    : *(float *)&inf_bits);
+		return mant ? *(float *)&nan_bits :
+					  (sign ? -*(float *)&inf_bits : *(float *)&inf_bits);
 	}
 	uint32_t f32 = sign | ((exp + 112) << 23) | (mant << 13);
 	return *(float *)&f32;
 }
 
-static const float kvalues_mxfp4[16] = {
-	0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f, 6.0f,
-	-0.0f, -0.5f, -1.0f, -1.5f, -2.0f, -3.0f, -4.0f, -6.0f
-};
+static const float kvalues_mxfp4[16] = { 0.0f,	0.5f,  1.0f,  1.5f,
+										 2.0f,	3.0f,  4.0f,  6.0f,
+										 -0.0f, -0.5f, -1.0f, -1.5f,
+										 -2.0f, -3.0f, -4.0f, -6.0f };
 
 extern const uint8_t *fun_gguf_get_raw_data(const GGufFile *f);
 
@@ -69,8 +67,8 @@ voidResult fun_gguf_dequant_f32(GGufFile *f, String name, float *out)
 		return result;
 	}
 
-	const float *src = (const float *)(fun_gguf_get_raw_data(f) +
-					   off_res.value);
+	const float *src =
+		(const float *)(fun_gguf_get_raw_data(f) + off_res.value);
 	uint64_t count = sz_res.value / 4;
 	for (uint64_t i = 0; i < count; i++)
 		out[i] = src[i];
@@ -78,8 +76,8 @@ voidResult fun_gguf_dequant_f32(GGufFile *f, String name, float *out)
 }
 
 voidResult fun_gguf_dequant_f32_range(GGufFile *f, String name,
-				      uint64_t elem_start,
-				      uint64_t elem_count, float *out)
+									  uint64_t elem_start, uint64_t elem_count,
+									  float *out)
 {
 	voidResult result;
 	result.error.code = 0;
@@ -91,8 +89,7 @@ voidResult fun_gguf_dequant_f32_range(GGufFile *f, String name,
 		return result;
 	}
 	uint32_tResult tp_res = fun_gguf_get_tensor_type(f, name);
-	if (fun_error_is_error(tp_res.error) ||
-	    tp_res.value != GGUF_TYPE_F32) {
+	if (fun_error_is_error(tp_res.error) || tp_res.value != GGUF_TYPE_F32) {
 		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
 		result.error.message = "Tensor is not F32";
 		return result;
@@ -139,7 +136,7 @@ voidResult fun_gguf_dequant_q8_0(GGufFile *f, String name, float *out)
 
 	for (uint64_t b = 0; b < block_count; b++) {
 		uint16_t d_raw = (uint16_t)src[b * 34] |
-				 ((uint16_t)src[b * 34 + 1] << 8);
+						 ((uint16_t)src[b * 34 + 1] << 8);
 		float d = half_to_float(d_raw);
 		const int8_t *q = (const int8_t *)(src + b * 34 + 2);
 		for (int j = 0; j < 32; j++)
@@ -186,23 +183,20 @@ voidResult fun_gguf_dequant_mxfp4(GGufFile *f, String name, float *out)
 		if (scale == 0)
 			scale_f = 0.0f;
 		else
-			scale_f = *(float *)&(uint32_t){ (uint32_t)scale
-							<< 23 };
+			scale_f = *(float *)&(uint32_t){ (uint32_t)scale << 23 };
 
 		for (int j = 0; j < 16; j++) {
 			uint8_t byte = src[b * 17 + 1 + j];
-			dst[b * 32 + j] =
-				kvalues_mxfp4[byte & 0xF] * scale_f;
-			dst[b * 32 + j + 16] =
-				kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
+			dst[b * 32 + j] = kvalues_mxfp4[byte & 0xF] * scale_f;
+			dst[b * 32 + j + 16] = kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
 		}
 	}
 	return result;
 }
 
 voidResult fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
-					 uint64_t elem_start,
-					 uint64_t elem_count, float *out)
+										uint64_t elem_start,
+										uint64_t elem_count, float *out)
 {
 	voidResult result;
 	result.error.code = 0;
@@ -214,8 +208,7 @@ voidResult fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
 		return result;
 	}
 	uint32_tResult tp_res = fun_gguf_get_tensor_type(f, name);
-	if (fun_error_is_error(tp_res.error) ||
-	    tp_res.value != GGUF_TYPE_MXFP4) {
+	if (fun_error_is_error(tp_res.error) || tp_res.value != GGUF_TYPE_MXFP4) {
 		result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
 		result.error.message = "Tensor is not MXFP4";
 		return result;
@@ -233,14 +226,11 @@ voidResult fun_gguf_dequant_mxfp4_range(GGufFile *f, String name,
 		if (scale == 0)
 			scale_f = 0.0f;
 		else
-			scale_f = *(float *)&(uint32_t){ (uint32_t)scale
-							<< 23 };
+			scale_f = *(float *)&(uint32_t){ (uint32_t)scale << 23 };
 		for (int j = 0; j < 16; j++) {
 			uint8_t byte = src[b * 17 + 1 + j];
-			dst[b * 32 + j] =
-				kvalues_mxfp4[byte & 0xF] * scale_f;
-			dst[b * 32 + j + 16] =
-				kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
+			dst[b * 32 + j] = kvalues_mxfp4[byte & 0xF] * scale_f;
+			dst[b * 32 + j + 16] = kvalues_mxfp4[(byte >> 4) & 0xF] * scale_f;
 		}
 	}
 	return result;

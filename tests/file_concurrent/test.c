@@ -8,10 +8,9 @@
 #include "fundamental/async/async.h"
 
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
-#define ASSERT_ERROR(result)    assert(result.error.code != 0)
+#define ASSERT_ERROR(result) assert(result.error.code != 0)
 
-static bool
-test_lock_file_basic(void)
+static bool test_lock_file_basic(void)
 {
 	FILE *fp = fopen("test_concurrent_lock.txt", "w");
 	if (!fp)
@@ -32,8 +31,7 @@ test_lock_file_basic(void)
 	return success;
 }
 
-static bool
-test_lock_file_with_timeout(void)
+static bool test_lock_file_with_timeout(void)
 {
 	FILE *fp = fopen("test_concurrent_timeout.txt", "w");
 	if (!fp)
@@ -41,9 +39,8 @@ test_lock_file_with_timeout(void)
 	fclose(fp);
 
 	FileLockHandle handle = { .state = NULL };
-	ErrorResult result =
-		fun_file_lock_with_timeout("test_concurrent_timeout.txt", 2000,
-					   &handle);
+	ErrorResult result = fun_file_lock_with_timeout(
+		"test_concurrent_timeout.txt", 2000, &handle);
 
 	bool success = fun_error_is_ok(result);
 	if (success)
@@ -56,8 +53,7 @@ test_lock_file_with_timeout(void)
 	return success;
 }
 
-static bool
-test_lock_already_locked_file(void)
+static bool test_lock_already_locked_file(void)
 {
 	FILE *fp = fopen("test_concurrent_held.txt", "w");
 	if (!fp)
@@ -66,8 +62,7 @@ test_lock_already_locked_file(void)
 
 	FileLockHandle handle1 = { .state = NULL };
 	ErrorResult lock1 =
-		fun_file_lock_with_timeout("test_concurrent_held.txt", 5000,
-					   &handle1);
+		fun_file_lock_with_timeout("test_concurrent_held.txt", 5000, &handle1);
 	if (fun_error_is_error(lock1)) {
 		remove("test_concurrent_held.txt");
 		return false;
@@ -75,8 +70,7 @@ test_lock_already_locked_file(void)
 
 	FileLockHandle handle2 = { .state = NULL };
 	ErrorResult lock2 =
-		fun_file_lock_with_timeout("test_concurrent_held.txt", 200,
-					   &handle2);
+		fun_file_lock_with_timeout("test_concurrent_held.txt", 200, &handle2);
 
 	bool success = fun_error_is_error(lock2);
 
@@ -88,8 +82,7 @@ test_lock_already_locked_file(void)
 	return success;
 }
 
-static bool
-test_lock_after_unlock(void)
+static bool test_lock_after_unlock(void)
 {
 	FILE *fp = fopen("test_concurrent_relock.txt", "w");
 	if (!fp)
@@ -123,8 +116,7 @@ test_lock_after_unlock(void)
 	return success;
 }
 
-static bool
-test_unlock_invalid_handle(void)
+static bool test_unlock_invalid_handle(void)
 {
 	FileLockHandle handle = { .state = NULL };
 	ErrorResult result = fun_unlock_file(handle);
@@ -136,8 +128,7 @@ test_unlock_invalid_handle(void)
 	return success;
 }
 
-static bool
-test_lock_file_null_path(void)
+static bool test_lock_file_null_path(void)
 {
 	FileLockHandle handle = { .state = NULL };
 	ErrorResult result = fun_lock_file(NULL, &handle);
@@ -149,8 +140,7 @@ test_lock_file_null_path(void)
 	return success;
 }
 
-static bool
-test_lock_file_null_handle(void)
+static bool test_lock_file_null_handle(void)
 {
 	FILE *fp = fopen("test_concurrent_null_handle.txt", "w");
 	if (!fp)

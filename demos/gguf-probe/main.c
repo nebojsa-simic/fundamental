@@ -6,8 +6,8 @@
 
 static uint32_t le32(const uint8_t *p)
 {
-	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-	       ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+		   ((uint32_t)p[3] << 24);
 }
 
 static uint64_t le64(const uint8_t *p)
@@ -32,16 +32,14 @@ static float half_to_float(uint16_t h)
 			e++;
 		}
 		mant &= 0x3FF;
-		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) |
-			       (mant << 13);
+		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) | (mant << 13);
 		return *(float *)&f32;
 	}
 	if (exp == 31) {
 		uint32_t nan_bits = 0x7FC00000;
 		uint32_t inf_bits = 0x7F800000;
-		return mant ? *(float *)&nan_bits
-			    : (sign ? -*(float *)&inf_bits
-				    : *(float *)&inf_bits);
+		return mant ? *(float *)&nan_bits :
+					  (sign ? -*(float *)&inf_bits : *(float *)&inf_bits);
 	}
 	uint32_t f32 = sign | ((exp + 112) << 23) | (mant << 13);
 	return *(float *)&f32;
@@ -71,8 +69,8 @@ static void print_u64(String label, uint64_t v)
 static void print_q8(const uint8_t *base, uint64_t abs_off, String label)
 {
 	char buf[256];
-	float d = half_to_float((uint16_t)(base[abs_off] |
-					   (base[abs_off + 1] << 8)));
+	float d =
+		half_to_float((uint16_t)(base[abs_off] | (base[abs_off + 1] << 8)));
 	int8_t q0 = (int8_t)base[abs_off + 2];
 	int8_t q1 = (int8_t)base[abs_off + 3];
 	fun_console_write("    ");
@@ -93,8 +91,8 @@ int main(void)
 	char buf[256];
 	fun_console_write_line("GGUF probe");
 
-	GGufFileHandleResult gr = fun_gguf_open(
-		"../../models/openai_gpt-oss-20b-MXFP4.gguf");
+	GGufFileHandleResult gr =
+		fun_gguf_open("../../models/openai_gpt-oss-20b-MXFP4.gguf");
 	if (fun_error_is_error(gr.error)) {
 		fun_console_error_line("Cannot open model file");
 		return 1;
@@ -223,7 +221,7 @@ int main(void)
 			sz = total * 4;
 		else
 			sz = total * 2;
-if (i < 3) {
+		if (i < 3) {
 			fun_console_write("    tensor[");
 			fun_string_from_int((int64_t)i, 10, buf, 256);
 			fun_console_write(buf);
@@ -234,17 +232,15 @@ if (i < 3) {
 			fun_console_write(nm);
 			fun_console_write("' ");
 			for (uint64_t bi = 0; bi < nlen; bi++) {
-				fun_string_from_int((int64_t)nm[bi] & 0xFF, 16, buf,
-						    256);
+				fun_string_from_int((int64_t)nm[bi] & 0xFF, 16, buf, 256);
 				fun_console_write(buf);
 				fun_console_write(" ");
 			}
 			fun_console_write_line("");
 		}
 		for (uint64_t bi = 0; bi + 4 < nlen && nlen > 6; bi++) {
-			if (nm[bi] == 'b' && nm[bi + 1] == 'l' &&
-			    nm[bi + 2] == 'k' && nm[bi + 3] == '.' &&
-			    nm[bi + 4] == '0' && nm[bi + 5] == '.') {
+			if (nm[bi] == 'b' && nm[bi + 1] == 'l' && nm[bi + 2] == 'k' &&
+				nm[bi + 3] == '.' && nm[bi + 4] == '0' && nm[bi + 5] == '.') {
 				fun_console_write("    tensor[");
 				fun_string_from_int((int64_t)i, 10, buf, 256);
 				fun_console_write(buf);
@@ -292,7 +288,7 @@ if (i < 3) {
 	print_q8(data, aligned_start + out_off, "out at aligned+off");
 
 	uint16_t rd = (uint16_t)(data[aligned_start + emb_off] |
-				 (data[aligned_start + emb_off + 1] << 8));
+							 (data[aligned_start + emb_off + 1] << 8));
 	fun_console_write("    raw half at aligned+emb: 0x");
 	fun_string_from_int((int64_t)rd, 16, buf, 256);
 	fun_console_write_line(buf);

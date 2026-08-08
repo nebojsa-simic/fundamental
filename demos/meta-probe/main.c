@@ -6,8 +6,8 @@
 
 static uint32_t le32(const uint8_t *p)
 {
-	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-	       ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+		   ((uint32_t)p[3] << 24);
 }
 
 static uint64_t le64(const uint8_t *p)
@@ -22,8 +22,8 @@ static uint16_t le16(const uint8_t *p)
 
 int main(void)
 {
-	GGufFileHandleResult gr = fun_gguf_open(
-		"../../models/openai_gpt-oss-20b-MXFP4.gguf");
+	GGufFileHandleResult gr =
+		fun_gguf_open("../../models/openai_gpt-oss-20b-MXFP4.gguf");
 	if (fun_error_is_error(gr.error)) {
 		fun_console_error_line("open failed");
 		return 1;
@@ -50,8 +50,7 @@ int main(void)
 		fun_console_write(msg);
 		fun_console_write("] ");
 		for (uint64_t j = 0; j < klen; j++) {
-			msg[j] = (key[j] >= 32 && key[j] < 127) ? key[j]
-								: '?';
+			msg[j] = (key[j] >= 32 && key[j] < 127) ? key[j] : '?';
 		}
 		msg[klen] = '\0';
 		fun_console_write(msg);
@@ -64,8 +63,8 @@ int main(void)
 		case 1:
 		case 7:
 			fun_console_write(" val=");
-			fun_string_from_int((int64_t)*(const int8_t *)p, 10,
-					    msg, sizeof(msg));
+			fun_string_from_int((int64_t)*(const int8_t *)p, 10, msg,
+								sizeof(msg));
 			fun_console_write_line(msg);
 			p += 1;
 			break;
@@ -79,16 +78,14 @@ int main(void)
 		case 4:
 		case 5:
 			fun_console_write(" val=");
-			fun_string_from_int((int64_t)le32(p), 10, msg,
-					    sizeof(msg));
+			fun_string_from_int((int64_t)le32(p), 10, msg, sizeof(msg));
 			fun_console_write_line(msg);
 			p += 4;
 			break;
 		case 6: {
 			uint32_t b;
 			fun_console_write(" val=0x");
-			fun_string_from_int((int64_t)le32(p), 16, msg,
-					    sizeof(msg));
+			fun_string_from_int((int64_t)le32(p), 16, msg, sizeof(msg));
 			fun_console_write(msg);
 			p += 4;
 			fun_console_write_line("");

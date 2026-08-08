@@ -7,10 +7,9 @@
 #include "fundamental/async/async.h"
 
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
-#define ASSERT_ERROR(result)    assert(result.error.code != 0)
+#define ASSERT_ERROR(result) assert(result.error.code != 0)
 
-static bool
-test_write_with_async_durability(void)
+static bool test_write_with_async_durability(void)
 {
 	remove("test_durability_async.txt");
 
@@ -24,18 +23,18 @@ test_write_with_async_durability(void)
 	memcpy(mem_result.value, data, data_size);
 
 	Write params = { .file_path = "test_durability_async.txt",
-			.input = mem_result.value,
-			.bytes_to_write = data_size,
-			.offset = 0,
-			.mode = FILE_MODE_AUTO,
-			.durability_mode = FILE_DURABILITY_ASYNC,
-			.adaptive = NULL };
+					 .input = mem_result.value,
+					 .bytes_to_write = data_size,
+					 .offset = 0,
+					 .mode = FILE_MODE_AUTO,
+					 .durability_mode = FILE_DURABILITY_ASYNC,
+					 .adaptive = NULL };
 
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result, -1);
 
 	bool success = (result.status == ASYNC_COMPLETED) &&
-		(fun_error_is_ok(result.error));
+				   (fun_error_is_ok(result.error));
 
 	if (success) {
 		FILE *fp = fopen("test_durability_async.txt", "rb");
@@ -43,8 +42,7 @@ test_write_with_async_durability(void)
 			char read_buf[256] = { 0 };
 			size_t n = fread(read_buf, 1, data_size, fp);
 			fclose(fp);
-			if (n != data_size ||
-			    memcmp(read_buf, data, data_size) != 0) {
+			if (n != data_size || memcmp(read_buf, data, data_size) != 0) {
 				success = false;
 			}
 		} else {
@@ -60,8 +58,7 @@ test_write_with_async_durability(void)
 	return success;
 }
 
-static bool
-test_write_with_sync_durability(void)
+static bool test_write_with_sync_durability(void)
 {
 	remove("test_durability_sync.txt");
 
@@ -75,18 +72,18 @@ test_write_with_sync_durability(void)
 	memcpy(mem_result.value, data, data_size);
 
 	Write params = { .file_path = "test_durability_sync.txt",
-			.input = mem_result.value,
-			.bytes_to_write = data_size,
-			.offset = 0,
-			.mode = FILE_MODE_AUTO,
-			.durability_mode = FILE_DURABILITY_SYNC,
-			.adaptive = NULL };
+					 .input = mem_result.value,
+					 .bytes_to_write = data_size,
+					 .offset = 0,
+					 .mode = FILE_MODE_AUTO,
+					 .durability_mode = FILE_DURABILITY_SYNC,
+					 .adaptive = NULL };
 
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result, -1);
 
 	bool success = (result.status == ASYNC_COMPLETED) &&
-		(fun_error_is_ok(result.error));
+				   (fun_error_is_ok(result.error));
 
 	if (success) {
 		FILE *fp = fopen("test_durability_sync.txt", "rb");
@@ -94,8 +91,7 @@ test_write_with_sync_durability(void)
 			char read_buf[256] = { 0 };
 			size_t n = fread(read_buf, 1, data_size, fp);
 			fclose(fp);
-			if (n != data_size ||
-			    memcmp(read_buf, data, data_size) != 0) {
+			if (n != data_size || memcmp(read_buf, data, data_size) != 0) {
 				success = false;
 			}
 		} else {
@@ -111,8 +107,7 @@ test_write_with_sync_durability(void)
 	return success;
 }
 
-static bool
-test_write_with_full_durability(void)
+static bool test_write_with_full_durability(void)
 {
 	remove("test_durability_full.txt");
 
@@ -126,18 +121,18 @@ test_write_with_full_durability(void)
 	memcpy(mem_result.value, data, data_size);
 
 	Write params = { .file_path = "test_durability_full.txt",
-			.input = mem_result.value,
-			.bytes_to_write = data_size,
-			.offset = 0,
-			.mode = FILE_MODE_AUTO,
-			.durability_mode = FILE_DURABILITY_FULL,
-			.adaptive = NULL };
+					 .input = mem_result.value,
+					 .bytes_to_write = data_size,
+					 .offset = 0,
+					 .mode = FILE_MODE_AUTO,
+					 .durability_mode = FILE_DURABILITY_FULL,
+					 .adaptive = NULL };
 
 	AsyncResult result = fun_write_memory_to_file(params);
 	fun_async_await(&result, -1);
 
 	bool success = (result.status == ASYNC_COMPLETED) &&
-		(fun_error_is_ok(result.error));
+				   (fun_error_is_ok(result.error));
 
 	if (success) {
 		FILE *fp = fopen("test_durability_full.txt", "rb");
@@ -145,8 +140,7 @@ test_write_with_full_durability(void)
 			char read_buf[256] = { 0 };
 			size_t n = fread(read_buf, 1, data_size, fp);
 			fclose(fp);
-			if (n != data_size ||
-			    memcmp(read_buf, data, data_size) != 0) {
+			if (n != data_size || memcmp(read_buf, data, data_size) != 0) {
 				success = false;
 			}
 		} else {
@@ -162,8 +156,7 @@ test_write_with_full_durability(void)
 	return success;
 }
 
-static bool
-test_append_with_sync_durability(void)
+static bool test_append_with_sync_durability(void)
 {
 	remove("test_append_durability.txt");
 
@@ -178,12 +171,12 @@ test_append_with_sync_durability(void)
 	memcpy(mem1.value, data1, size1);
 
 	Write write_params = { .file_path = "test_append_durability.txt",
-			.input = mem1.value,
-			.bytes_to_write = size1,
-			.offset = 0,
-			.mode = FILE_MODE_AUTO,
-			.durability_mode = FILE_DURABILITY_ASYNC,
-			.adaptive = NULL };
+						   .input = mem1.value,
+						   .bytes_to_write = size1,
+						   .offset = 0,
+						   .mode = FILE_MODE_AUTO,
+						   .durability_mode = FILE_DURABILITY_ASYNC,
+						   .adaptive = NULL };
 
 	AsyncResult wr = fun_write_memory_to_file(write_params);
 	fun_async_await(&wr, -1);
@@ -202,17 +195,17 @@ test_append_with_sync_durability(void)
 	memcpy(mem2.value, data2, size2);
 
 	Append append_params = { .file_path = "test_append_durability.txt",
-			.input = mem2.value,
-			.bytes_to_append = size2,
-			.mode = FILE_MODE_AUTO,
-			.durability_mode = FILE_DURABILITY_SYNC,
-			.adaptive = NULL };
+							 .input = mem2.value,
+							 .bytes_to_append = size2,
+							 .mode = FILE_MODE_AUTO,
+							 .durability_mode = FILE_DURABILITY_SYNC,
+							 .adaptive = NULL };
 
 	AsyncResult ar = fun_append_memory_to_file(append_params);
 	fun_async_await(&ar, -1);
 
 	bool success = (ar.status == ASYNC_COMPLETED) &&
-		(fun_error_is_ok(ar.error));
+				   (fun_error_is_ok(ar.error));
 
 	if (success) {
 		FILE *fp = fopen("test_append_durability.txt", "rb");

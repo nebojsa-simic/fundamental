@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 void *_gguf_platform_open(const char *path, uint64_t *out_size,
-			   void *handles[2])
+						  void *handles[2])
 {
 	int fd = open(path, O_RDONLY);
 	if (fd < 0)

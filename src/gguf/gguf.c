@@ -15,14 +15,13 @@ struct GGufFile {
 
 static uint32_t read_le32(const uint8_t *p)
 {
-	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-	       ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+	return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+		   ((uint32_t)p[3] << 24);
 }
 
 static uint64_t read_le64(const uint8_t *p)
 {
-	return (uint64_t)read_le32(p) |
-	       ((uint64_t)read_le32(p + 4) << 32);
+	return (uint64_t)read_le32(p) | ((uint64_t)read_le32(p + 4) << 32);
 }
 
 static const uint8_t *skip_str(const uint8_t *p, const uint8_t *end)
@@ -35,7 +34,7 @@ static const uint8_t *skip_str(const uint8_t *p, const uint8_t *end)
 }
 
 static const uint8_t *skip_value(const uint8_t *p, const uint8_t *end,
-				  uint32_t vtype)
+								 uint32_t vtype)
 {
 	switch (vtype) {
 	case 0:
@@ -67,11 +66,11 @@ static const uint8_t *skip_value(const uint8_t *p, const uint8_t *end,
 			}
 			return p;
 		}
-		size_t sz = (et == 0 || et == 1 || et == 7)   ? 1
-			    : (et == 2 || et == 3)		   ? 2
-			    : (et == 4 || et == 5 || et == 6)   ? 4
-			    : (et == 10 || et == 11 || et == 12) ? 8
-								       : 0;
+		size_t sz = (et == 0 || et == 1 || et == 7)	   ? 1 :
+					(et == 2 || et == 3)			   ? 2 :
+					(et == 4 || et == 5 || et == 6)	   ? 4 :
+					(et == 10 || et == 11 || et == 12) ? 8 :
+														 0;
 		p += n * sz;
 		break;
 	}
@@ -120,8 +119,8 @@ static const uint8_t *find_kv(const GGufFile *f, String key, uint32_t *out_type)
 }
 
 static const uint8_t *find_tensor_info(const GGufFile *f, String name,
-					uint64_t *out_offset,
-					uint64_t *out_size, uint32_t *out_type)
+									   uint64_t *out_offset, uint64_t *out_size,
+									   uint32_t *out_type)
 {
 	const uint8_t *p = f->tensor_start;
 	const uint8_t *end = f->data + f->mapped_size;
@@ -162,11 +161,9 @@ static const uint8_t *find_tensor_info(const GGufFile *f, String name,
 					elem_size = 34;
 				else if (ttype == GGUF_TYPE_MXFP4)
 					elem_size = 17;
-				*out_size = total * elem_size / 32 * 34 +
-					    (total % 32 ? 34 : 0);
+				*out_size = total * elem_size / 32 * 34 + (total % 32 ? 34 : 0);
 				if (ttype == GGUF_TYPE_MXFP4)
-					*out_size = total / 32 * 17 +
-						    (total % 32 ? 17 : 0);
+					*out_size = total / 32 * 17 + (total % 32 ? 17 : 0);
 				if (ttype == GGUF_TYPE_F32)
 					*out_size = total * 4;
 				if (ttype == GGUF_TYPE_F16)
@@ -190,7 +187,7 @@ static const uint8_t *find_tensor_info(const GGufFile *f, String name,
 }
 
 extern void *_gguf_platform_open(const char *path, uint64_t *out_size,
-				  void *handles[2]);
+								 void *handles[2]);
 extern void _gguf_platform_close(void *data, void *handles[2]);
 
 GGufFileHandleResult fun_gguf_open(String path)
@@ -289,9 +286,8 @@ GGufFileHandleResult fun_gguf_open(String path)
 			tp += 8;
 		}
 		uint64_t meta_end = (uint64_t)(tp - f->data);
-		uint64_t alignment = (uint64_t)fun_gguf_get_metadata_u32(
-						f, "general.alignment")
-					    .value;
+		uint64_t alignment =
+			(uint64_t)fun_gguf_get_metadata_u32(f, "general.alignment").value;
 		if (alignment == 0)
 			alignment = 32;
 		uint64_t pad = alignment - meta_end % alignment;
@@ -478,7 +474,7 @@ const uint8_t *fun_gguf_get_kv_start(const GGufFile *f, uint64_t *count)
 }
 
 StringResult fun_gguf_get_token_string(const GGufFile *f, uint32_t index,
-					uint64_t *out_len)
+									   uint64_t *out_len)
 {
 	StringResult result;
 	result.error.code = ERROR_CODE_NO_ERROR;
@@ -498,8 +494,7 @@ StringResult fun_gguf_get_token_string(const GGufFile *f, uint32_t index,
 		cached_vp = find_kv(f, "tokenizer.ggml.tokens", &vt);
 		if (!cached_vp || vt != 9) {
 			result.error.code = ERROR_CODE_GGUF_KEY_NOT_FOUND;
-			result.error.message =
-				"tokenizer.ggml.tokens not found";
+			result.error.message = "tokenizer.ggml.tokens not found";
 			return result;
 		}
 		cached_total = read_le64(cached_vp + 4);
@@ -524,8 +519,7 @@ StringResult fun_gguf_get_token_string(const GGufFile *f, uint32_t index,
 			uint64_t len = read_le64(p);
 			p += 8;
 			if (p + len > end) {
-				result.error.code =
-					ERROR_CODE_GGUF_PARSE_ERROR;
+				result.error.code = ERROR_CODE_GGUF_PARSE_ERROR;
 				result.error.message = "Token overflow";
 				return result;
 			}
