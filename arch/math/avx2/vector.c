@@ -3,6 +3,9 @@
 
 #define L2E 1.4426950408889634f
 #define LN2 0.6931471805599453f
+#define PI 3.14159265358979323846f
+#define TWOPI 6.28318530717958647692f
+#define HALFPI 1.57079632679489661923f
 
 static inline __m256 __attribute__((always_inline)) _mm256_exp_ps(__m256 x)
 {
@@ -161,4 +164,171 @@ void fun_math_softmax_f32(float *x, size_t n)
 	}
 	for (; i < n; i++)
 		x[i] /= sum;
+}
+
+static inline __m256 __attribute__((always_inline)) _mm256_log_ps(__m256 x)
+{
+	__m256i bits = _mm256_castps_si256(x);
+
+	__m256i exp_field =
+		_mm256_and_si256(_mm256_srli_epi32(bits, 23), _mm256_set1_epi32(0xFF));
+	__m256i exp_int = _mm256_sub_epi32(exp_field, _mm256_set1_epi32(127));
+	__m256i mant_bits =
+		_mm256_or_si256(_mm256_and_si256(bits, _mm256_set1_epi32(0x7FFFFF)),
+						_mm256_set1_epi32(0x3F800000));
+	__m256 m = _mm256_castsi256_ps(mant_bits);
+
+	__m256 one = _mm256_set1_ps(1.0f);
+	__m256 t = _mm256_div_ps(_mm256_sub_ps(m, one), _mm256_add_ps(m, one));
+	__m256 t2 = _mm256_mul_ps(t, t);
+	__m256 poly = _mm256_set1_ps(0.111111111f);
+	poly = _mm256_fmadd_ps(t2, poly, _mm256_set1_ps(0.142857143f));
+	poly = _mm256_fmadd_ps(t2, poly, _mm256_set1_ps(0.2f));
+	poly = _mm256_fmadd_ps(t2, poly, _mm256_set1_ps(0.333333333f));
+	__m256 bracket = _mm256_fmadd_ps(t2, poly, one);
+	__m256 lg_m =
+		_mm256_mul_ps(_mm256_mul_ps(t, _mm256_set1_ps(2.0f)), bracket);
+
+	return _mm256_fmadd_ps(_mm256_cvtepi32_ps(exp_int), _mm256_set1_ps(LN2),
+						   lg_m);
+}
+
+static inline __m256 __attribute__((always_inline)) _mm256_sin_ps(__m256 x)
+{
+	__m256 nf = _mm256_add_ps(_mm256_mul_ps(x, _mm256_set1_ps(1.0f / TWOPI)),
+							  _mm256_set1_ps(0.5f));
+	__m256i n = _mm256_cvttps_epi32(nf);
+	__m256i less = _mm256_castps_si256(
+		_mm256_cmp_ps(nf, _mm256_cvtepi32_ps(n), _CMP_LT_OQ));
+	n = _mm256_add_epi32(n, _mm256_srai_epi32(less, 31));
+	__m256 xr =
+		_mm256_fnmadd_ps(_mm256_cvtepi32_ps(n), _mm256_set1_ps(TWOPI), x);
+
+	__m256 negate = _mm256_cmp_ps(xr, _mm256_setzero_ps(), _CMP_LT_OQ);
+	__m256 ax =
+		_mm256_blendv_ps(xr, _mm256_sub_ps(_mm256_setzero_ps(), xr), negate);
+
+	__m256 is_big = _mm256_cmp_ps(ax, _mm256_set1_ps(PI), _CMP_GT_OQ);
+	ax = _mm256_blendv_ps(ax, _mm256_sub_ps(_mm256_set1_ps(TWOPI), ax), is_big);
+	__m256 is_hi = _mm256_cmp_ps(ax, _mm256_set1_ps(HALFPI), _CMP_GT_OQ);
+	ax = _mm256_blendv_ps(ax, _mm256_sub_ps(_mm256_set1_ps(PI), ax), is_hi);
+
+	__m256 x2 = _mm256_mul_ps(ax, ax);
+	__m256 x3 = _mm256_mul_ps(x2, ax);
+	__m256 x5 = _mm256_mul_ps(x3, x2);
+	__m256 x7 = _mm256_mul_ps(x5, x2);
+	__m256 x9 = _mm256_mul_ps(x7, x2);
+	__m256 result = ax;
+	result = _mm256_fnmadd_ps(x3, _mm256_set1_ps(0.1666666667f), result);
+	result = _mm256_fmadd_ps(x5, _mm256_set1_ps(0.008333333333f), result);
+	result = _mm256_fnmadd_ps(x7, _mm256_set1_ps(0.0001984126984f), result);
+	result = _mm256_fmadd_ps(x9, _mm256_set1_ps(0.000002755731922f), result);
+
+	return _mm256_blendv_ps(result, _mm256_sub_ps(_mm256_setzero_ps(), result),
+							negate);
+}
+
+void fun_math_matrix_vector_f32(const float *w, const float *x,
+								const float *bias, float *out, size_t rows,
+								size_t cols)
+{
+	for (size_t r = 0; r < rows; r++) {
+		const float *wr = w + r * cols;
+		__m256 sum = _mm256_setzero_ps();
+		size_t c = 0;
+		for (; c + 8 <= cols; c += 8)
+			sum = _mm256_fmadd_ps(_mm256_loadu_ps(wr + c),
+								  _mm256_loadu_ps(x + c), sum);
+		float s = _mm256_hsum_ps(sum);
+		for (; c < cols; c++)
+			s += wr[c] * x[c];
+		out[r] = (bias ? bias[r] : 0.0f) + s;
+	}
+}
+
+float fun_math_dot_f32(const float *a, const float *b, size_t n)
+{
+	__m256 sum = _mm256_setzero_ps();
+	size_t i = 0;
+	for (; i + 8 <= n; i += 8)
+		sum = _mm256_fmadd_ps(_mm256_loadu_ps(a + i), _mm256_loadu_ps(b + i),
+							  sum);
+	float s = _mm256_hsum_ps(sum);
+	for (; i < n; i++)
+		s += a[i] * b[i];
+	return s;
+}
+
+void fun_math_exp_f32(const float *x, float *out, size_t n)
+{
+	size_t i = 0;
+	__m256 lo = _mm256_set1_ps(-87.3365f);
+	__m256 hi = _mm256_set1_ps(88.7228f);
+	__m256 overflow_cmp = _mm256_set1_ps(88.7228f);
+	__m256 underflow_cmp = _mm256_set1_ps(-87.3365f);
+	__m256 pinf = _mm256_castsi256_ps(_mm256_set1_epi32(0x7F800000));
+	__m256 pnan = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FC00000));
+	for (; i + 8 <= n; i += 8) {
+		__m256 v = _mm256_loadu_ps(x + i);
+		__m256 overflow = _mm256_cmp_ps(v, overflow_cmp, _CMP_GE_OQ);
+		__m256 underflow = _mm256_cmp_ps(v, underflow_cmp, _CMP_LE_OQ);
+		__m256 is_nan = _mm256_cmp_ps(v, v, _CMP_UNORD_Q);
+		__m256 vc = _mm256_min_ps(_mm256_max_ps(v, lo), hi);
+		__m256 e = _mm256_exp_ps(vc);
+		e = _mm256_blendv_ps(e, pinf, overflow);
+		e = _mm256_blendv_ps(e, _mm256_setzero_ps(), underflow);
+		e = _mm256_blendv_ps(e, pnan, is_nan);
+		_mm256_storeu_ps(out + i, e);
+	}
+	for (; i < n; i++)
+		out[i] = fun_math_exp(x[i]);
+}
+
+void fun_math_log_f32(const float *x, float *out, size_t n)
+{
+	size_t i = 0;
+	__m256 pneginf = _mm256_castsi256_ps(_mm256_set1_epi32(0xFF800000));
+	__m256 pinf = _mm256_castsi256_ps(_mm256_set1_epi32(0x7F800000));
+	__m256 pnan = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FC00000));
+	for (; i + 8 <= n; i += 8) {
+		__m256 v = _mm256_loadu_ps(x + i);
+		__m256 e = _mm256_log_ps(v);
+		__m256i bits = _mm256_castps_si256(v);
+		__m256 is_zero = _mm256_castsi256_ps(_mm256_cmpeq_epi32(
+			_mm256_slli_epi32(bits, 1), _mm256_setzero_si256()));
+		__m256 is_neg = _mm256_castsi256_ps(
+			_mm256_cmpgt_epi32(_mm256_setzero_si256(), bits));
+		__m256 is_pos_inf = _mm256_castsi256_ps(_mm256_cmpeq_epi32(
+			_mm256_and_si256(bits, _mm256_set1_epi32(0x7FFFFFFF)),
+			_mm256_set1_epi32(0x7F800000)));
+		__m256 is_nan = _mm256_cmp_ps(v, v, _CMP_UNORD_Q);
+		e = _mm256_blendv_ps(e, pneginf, is_zero);
+		e = _mm256_blendv_ps(e, pnan, is_neg);
+		e = _mm256_blendv_ps(e, pinf, is_pos_inf);
+		e = _mm256_blendv_ps(e, pnan, is_nan);
+		_mm256_storeu_ps(out + i, e);
+	}
+	for (; i < n; i++)
+		out[i] = fun_math_log(x[i]);
+}
+
+void fun_math_sin_f32(const float *x, float *out, size_t n)
+{
+	size_t i = 0;
+	for (; i + 8 <= n; i += 8)
+		_mm256_storeu_ps(out + i, _mm256_sin_ps(_mm256_loadu_ps(x + i)));
+	for (; i < n; i++)
+		out[i] = fun_math_sin(x[i]);
+}
+
+void fun_math_cos_f32(const float *x, float *out, size_t n)
+{
+	size_t i = 0;
+	for (; i + 8 <= n; i += 8) {
+		__m256 v = _mm256_loadu_ps(x + i);
+		v = _mm256_add_ps(v, _mm256_set1_ps(HALFPI));
+		_mm256_storeu_ps(out + i, _mm256_sin_ps(v));
+	}
+	for (; i < n; i++)
+		out[i] = fun_math_cos(x[i]);
 }

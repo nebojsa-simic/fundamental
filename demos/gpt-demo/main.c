@@ -5,7 +5,6 @@
 #include "fundamental/string/string.h"
 #include "model.h"
 #include "tokenizer.h"
-#include <stdint.h>
 #include <windows.h>
 
 #define MAX_TOKENS 64
@@ -70,14 +69,12 @@ int main(int argc, char **argv)
 	QueryPerformanceCounter(&t0);
 
 	int generated = 0;
+	char response[2048];
+	size_t resp_len = 0;
 	while (generated < MAX_TOKENS) {
-		QueryPerformanceCounter(&t0);
 		float *logits =
 			(float *)fun_memory_allocate(201088 * sizeof(float)).value;
 		model_forward(&model, tokens, n_tokens, logits);
-		QueryPerformanceCounter(&t1);
-		double fwd_s =
-			(double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
 
 		int next_id = 0;
 		float max_l = logits[0];
@@ -89,38 +86,29 @@ int main(int argc, char **argv)
 		}
 		fun_memory_free((Memory *)&logits);
 
-		if (next_id == tok.eos_id) {
-			fun_console_write_line("  [EOS]");
+		if (next_id == tok.eos_id)
 			break;
-		}
 
 		tokens[n_tokens++] = next_id;
 		generated++;
 
 		char token_str[32];
 		tokenizer_decode(&tok, next_id, token_str, 32);
-
-		fun_console_write("  [");
-		fun_string_from_int(generated, 10, num_buf, 256);
-		fun_console_write(num_buf);
-		fun_console_write("/");
-		fun_string_from_int(MAX_TOKENS, 10, num_buf, 256);
-		fun_console_write(num_buf);
-		fun_console_write("] id=");
-		fun_string_from_int(next_id, 10, num_buf, 256);
-		fun_console_write(num_buf);
-		fun_console_write(" t='");
 		fun_console_write(token_str);
-		fun_console_write("' (");
-		fun_string_from_double(fwd_s, 1, num_buf, 256);
-		fun_console_write(num_buf);
-		fun_console_write_line("s)");
+		if (resp_len + 32 < sizeof(response)) {
+			fun_string_copy(token_str, response + resp_len,
+							sizeof(response) - resp_len);
+			resp_len += (size_t)fun_string_length(token_str);
+		}
 	}
 
 	QueryPerformanceCounter(&t1);
 	double eval_s = (double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
 
 	fun_console_write_line("");
+	fun_console_write_line("");
+	fun_console_write_line("  Final result:");
+	fun_console_write(response);
 	fun_console_write_line("");
 
 	fun_console_write("  Time: ");

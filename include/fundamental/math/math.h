@@ -14,10 +14,20 @@ float fun_math_silu(float x);
 
 void fun_math_silu_f32(const float *x, float *out, size_t n);
 void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-                           size_t n, float eps);
+						   size_t n, float eps);
 void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
-                         size_t n);
+						 size_t n);
 void fun_math_softmax_f32(float *x, size_t n);
+
+void fun_math_matrix_vector_f32(const float *w, const float *x,
+								const float *bias, float *out, size_t rows,
+								size_t cols);
+float fun_math_dot_f32(const float *a, const float *b, size_t n);
+
+void fun_math_exp_f32(const float *x, float *out, size_t n);
+void fun_math_log_f32(const float *x, float *out, size_t n);
+void fun_math_sin_f32(const float *x, float *out, size_t n);
+void fun_math_cos_f32(const float *x, float *out, size_t n);
 
 void fun_math_init(void);
 int fun_math_has_sse2(void);

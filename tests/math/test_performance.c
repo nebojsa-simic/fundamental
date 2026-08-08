@@ -141,6 +141,74 @@ done:
 	free(out);
 }
 
+static void bench_dot(const char *name, int n, int reps)
+{
+	uint64_t best = ~0ULL;
+
+	float *a = malloc(n * sizeof(float));
+	float *b = malloc(n * sizeof(float));
+	if (!a || !b)
+		return;
+
+	for (int i = 0; i < n; i++) {
+		a[i] = (float)(i % 256) * 0.1f - 12.8f;
+		b[i] = (float)(i % 128) * 0.05f - 3.2f;
+	}
+
+	for (int r = 0; r < reps; r++) {
+		uint64_t t0 = _math_test_rdtsc();
+		fun_math_dot_f32(a, b, n);
+		uint64_t t1 = _math_test_rdtsc();
+		uint64_t elapsed = t1 - t0;
+		if (elapsed < best)
+			best = elapsed;
+	}
+
+	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
+		   (double)best / (double)n, (unsigned long long)best, n);
+
+	free(a);
+	free(b);
+}
+
+static void bench_mat_vec(const char *name, int rows, int cols, int reps)
+{
+	uint64_t best = ~0ULL;
+
+	float *w = malloc((size_t)rows * cols * sizeof(float));
+	float *x = malloc(cols * sizeof(float));
+	float *bias = malloc(rows * sizeof(float));
+	float *out = malloc(rows * sizeof(float));
+	if (!w || !x || !bias || !out)
+		goto done;
+
+	for (int i = 0; i < rows * cols; i++)
+		w[i] = (float)(i % 256) * 0.1f - 12.8f;
+	for (int i = 0; i < cols; i++)
+		x[i] = (float)(i % 128) * 0.05f - 3.2f;
+	for (int i = 0; i < rows; i++)
+		bias[i] = 0.5f;
+
+	for (int r = 0; r < reps; r++) {
+		uint64_t t0 = _math_test_rdtsc();
+		fun_math_matrix_vector_f32(w, x, bias, out, rows, cols);
+		uint64_t t1 = _math_test_rdtsc();
+		uint64_t elapsed = t1 - t0;
+		if (elapsed < best)
+			best = elapsed;
+	}
+
+	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
+		   (double)best / (double)((size_t)rows * cols),
+		   (unsigned long long)best, rows * cols);
+
+done:
+	free(w);
+	free(x);
+	free(bias);
+	free(out);
+}
+
 static void bench_noop(void)
 {
 	int n = 65536;
@@ -191,6 +259,12 @@ TestCount test_performance(void)
 	bench_vector("silu_f32", fun_math_silu_f32, 65536, 10000);
 	bench_vector_rms("rms_norm", fun_math_rms_norm_f32, 65536, 1000, 1e-5f);
 	bench_vector_swiglu("swiglu_f32", fun_math_swiglu_f32, 65536, 1000);
+	bench_vector("exp_f32", fun_math_exp_f32, 65536, 1000);
+	bench_vector("log_f32", fun_math_log_f32, 65536, 1000);
+	bench_vector("sin_f32", fun_math_sin_f32, 65536, 1000);
+	bench_vector("cos_f32", fun_math_cos_f32, 65536, 1000);
+	bench_dot("dot_f32", 65536, 1000);
+	bench_mat_vec("mat_vec", 64, 1024, 1000);
 
 	{
 		float *x = malloc(64 * sizeof(float));
