@@ -46,6 +46,7 @@ typedef struct {
 	LayerWeights *layers;
 	float **k_cache;
 	float **v_cache;
+	float *rope_pre;
 	int cached_len;
 } Model;
 

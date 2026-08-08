@@ -153,6 +153,9 @@ void fun_math_log_f32(const float *x, float *out, size_t n);
 void fun_math_sin_f32(const float *x, float *out, size_t n);
 void fun_math_cos_f32(const float *x, float *out, size_t n);
 
+void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
+						 float *out, size_t n_heads, size_t half);
+
 void _math_bench_noop(const float *x, float *out, size_t n);
 
 #endif

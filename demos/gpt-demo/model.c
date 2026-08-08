@@ -169,6 +169,25 @@ void model_load(Model *m, GGufFile *gguf)
 							.value;
 	}
 	m->cached_len = 0;
+
+	int half = m->config.head_dim / 2;
+	float theta_scale = fun_math_exp(fun_math_log(m->config.rope_theta) *
+									 (-2.0f / (float)m->config.head_dim));
+	int corr0 = 8, corr1 = 18;
+	m->rope_pre =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float power = 1.0f;
+	for (int j = 0; j < half; j++) {
+		float y = (float)(j - corr0) / (float)(corr1 - corr0);
+		if (y < 0.0f)
+			y = 0.0f;
+		if (y > 1.0f)
+			y = 1.0f;
+		float ramp = 1.0f - y;
+		float factor = ramp + (1.0f - ramp) / 32.0f;
+		m->rope_pre[j] = power * factor;
+		power *= theta_scale;
+	}
 }
 
 void model_free(Model *m)
@@ -179,6 +198,8 @@ void model_free(Model *m)
 		fun_memory_free((Memory *)&m->output_weight);
 	if (m->output_norm_weight)
 		fun_memory_free((Memory *)&m->output_norm_weight);
+	if (m->rope_pre)
+		fun_memory_free((Memory *)&m->rope_pre);
 	if (m->layers) {
 		fun_memory_free((Memory *)&m->layers);
 	}
@@ -199,64 +220,34 @@ static void rms_norm(float *x, const float *w, int n, float eps)
 	fun_math_rms_norm_f32(x, w, x, (size_t)n, eps);
 }
 
-static void rope_single(float *q, float *k, int pos, float theta, int hd,
-						int n_h, int n_kv_h)
+static void rope_single(Model *m, float *q, float *k, int pos, int n_h,
+						int n_kv_h)
 {
-	float base = theta;
-	float theta_scale = fun_math_exp(fun_math_log(base) * (-2.0f / (float)hd));
-	float mscale = 1.0f + 0.1f * fun_math_log(32.0f);
-	int corr0 = 8, corr1 = 18;
+	int hd = m->config.head_dim;
 	int half = hd / 2;
-	float the_arr[32];
-	float ca[32];
-	float sa[32];
 
-	for (int h = 0; h < n_h; h++) {
-		float *qh = q + h * hd;
-		float the = (float)pos;
-		for (int j = 0; j < half; j++) {
-			float y = (float)(j - corr0) / (float)(corr1 - corr0);
-			if (y < 0.0f)
-				y = 0.0f;
-			if (y > 1.0f)
-				y = 1.0f;
-			float ramp = 1.0f - y;
-			the_arr[j] = (the / 32.0f) * (1.0f - ramp) + the * ramp;
-			the *= theta_scale;
-		}
-		fun_math_cos_f32(the_arr, ca, (size_t)half);
-		fun_math_sin_f32(the_arr, sa, (size_t)half);
-		for (int j = 0; j < half; j++) {
-			ca[j] *= mscale;
-			sa[j] *= mscale;
-			float q0 = qh[j], q1 = qh[j + half];
-			qh[j] = q0 * ca[j] - q1 * sa[j];
-			qh[j + half] = q0 * sa[j] + q1 * ca[j];
-		}
+	float *the_arr =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float *ca =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float *sa =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+
+	for (int j = 0; j < half; j++)
+		the_arr[j] = (float)pos * m->rope_pre[j];
+	fun_math_cos_f32(the_arr, ca, (size_t)half);
+	fun_math_sin_f32(the_arr, sa, (size_t)half);
+	float mscale = 1.0f + 0.1f * fun_math_log(32.0f);
+	for (int j = 0; j < half; j++) {
+		ca[j] *= mscale;
+		sa[j] *= mscale;
 	}
-	for (int h = 0; h < n_kv_h; h++) {
-		float *kh = k + h * hd;
-		float the = (float)pos;
-		for (int j = 0; j < half; j++) {
-			float y = (float)(j - corr0) / (float)(corr1 - corr0);
-			if (y < 0.0f)
-				y = 0.0f;
-			if (y > 1.0f)
-				y = 1.0f;
-			float ramp = 1.0f - y;
-			the_arr[j] = (the / 32.0f) * (1.0f - ramp) + the * ramp;
-			the *= theta_scale;
-		}
-		fun_math_cos_f32(the_arr, ca, (size_t)half);
-		fun_math_sin_f32(the_arr, sa, (size_t)half);
-		for (int j = 0; j < half; j++) {
-			ca[j] *= mscale;
-			sa[j] *= mscale;
-			float k0 = kh[j], k1 = kh[j + half];
-			kh[j] = k0 * ca[j] - k1 * sa[j];
-			kh[j + half] = k0 * sa[j] + k1 * ca[j];
-		}
-	}
+	fun_math_rotary_f32(q, ca, sa, q, (size_t)n_h, (size_t)half);
+	fun_math_rotary_f32(k, ca, sa, k, (size_t)n_kv_h, (size_t)half);
+
+	fun_memory_free((Memory *)&the_arr);
+	fun_memory_free((Memory *)&ca);
+	fun_memory_free((Memory *)&sa);
 }
 
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
@@ -269,7 +260,6 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	int topk = m->config.n_active_experts;
 	int ffn = m->config.ffn_size;
 	float eps = m->config.rms_norm_eps;
-	float th = m->config.rope_theta;
 
 	int kv_dim = n_kv * hd;
 	int q_dim = n_h * hd;
@@ -309,7 +299,7 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 									   (size_t)kv_dim, (size_t)hs);
 			fun_math_matrix_vector_f32(w->v_weight, hidden, w->v_bias, vbuf,
 									   (size_t)kv_dim, (size_t)hs);
-			rope_single(qbuf, kbuf, pos, th, hd, n_h, n_kv);
+			rope_single(m, qbuf, kbuf, pos, n_h, n_kv);
 
 			for (int i = 0; i < kv_dim; i++) {
 				m->k_cache[l][pos * kv_dim + i] = kbuf[i];

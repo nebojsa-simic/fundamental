@@ -332,3 +332,29 @@ void fun_math_cos_f32(const float *x, float *out, size_t n)
 	for (; i < n; i++)
 		out[i] = fun_math_cos(x[i]);
 }
+
+void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
+						 float *out, size_t n_heads, size_t half)
+{
+	for (size_t h = 0; h < n_heads; h++) {
+		const float *xh = x + h * 2 * half;
+		float *oh = out + h * 2 * half;
+		size_t j = 0;
+		for (; j + 8 <= half; j += 8) {
+			__m256 a = _mm256_loadu_ps(xh + j);
+			__m256 b = _mm256_loadu_ps(xh + j + half);
+			__m256 c = _mm256_loadu_ps(cosv + j);
+			__m256 s = _mm256_loadu_ps(sinv + j);
+			_mm256_storeu_ps(oh + j,
+							 _mm256_fmsub_ps(a, c, _mm256_mul_ps(b, s)));
+			_mm256_storeu_ps(oh + j + half,
+							 _mm256_fmadd_ps(a, s, _mm256_mul_ps(b, c)));
+		}
+		for (; j < half; j++) {
+			float a = xh[j];
+			float b = xh[j + half];
+			oh[j] = a * cosv[j] - b * sinv[j];
+			oh[j + half] = a * sinv[j] + b * cosv[j];
+		}
+	}
+}

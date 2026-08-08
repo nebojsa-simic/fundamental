@@ -12,6 +12,7 @@
 #include "test_data/log_f32_golden.h"
 #include "test_data/sin_f32_golden.h"
 #include "test_data/cos_f32_golden.h"
+#include "test_data/rotary_f32_golden.h"
 
 typedef struct {
 	int n;
@@ -144,6 +145,91 @@ static TestCount test_dot_accuracy(void)
 		}
 		free(a);
 		free(b);
+	}
+	return tc;
+}
+
+static void rotary_scalar_ref(const float *x, const float *cosv,
+							  const float *sinv, float *out, size_t n_heads,
+							  size_t half)
+{
+	for (size_t h = 0; h < n_heads; h++) {
+		const float *xh = x + h * 2 * half;
+		float *oh = out + h * 2 * half;
+		for (size_t j = 0; j < half; j++) {
+			oh[j] = xh[j] * cosv[j] - xh[j + half] * sinv[j];
+			oh[j + half] = xh[j] * sinv[j] + xh[j + half] * cosv[j];
+		}
+	}
+}
+
+static TestCount test_rotary_accuracy(void)
+{
+	TestCount tc = math_test_count_init();
+	uint32_t rng = _math_test_lcg_seed(23);
+
+	size_t halves[] = { 1, 7, 8, 9, 15, 16, 31, 32, 33, 64 };
+	int nhalves = sizeof(halves) / sizeof(halves[0]);
+	size_t head_counts[] = { 1, 3, 8, 64 };
+	int nheads = sizeof(head_counts) / sizeof(head_counts[0]);
+
+	for (int trial = 0; trial < 20; trial++) {
+		size_t half = halves[trial % nhalves];
+		size_t nh = head_counts[(trial / nhalves) % nheads];
+		size_t n = nh * 2 * half;
+
+		float *x = malloc(n * sizeof(float));
+		float *c = malloc(half * sizeof(float));
+		float *s = malloc(half * sizeof(float));
+		float *want = malloc(n * sizeof(float));
+		float *got = malloc(n * sizeof(float));
+		if (!x || !c || !s || !want || !got) {
+			tc.failed++;
+			free(x);
+			free(c);
+			free(s);
+			free(want);
+			free(got);
+			continue;
+		}
+
+		for (size_t i = 0; i < n; i++)
+			x[i] = _math_test_lcg_float(&rng, -8.0f, 8.0f);
+		for (size_t i = 0; i < half; i++) {
+			c[i] = _math_test_lcg_float(&rng, -1.0f, 1.0f);
+			s[i] = _math_test_lcg_float(&rng, -1.0f, 1.0f);
+		}
+
+		rotary_scalar_ref(x, c, s, want, nh, half);
+
+		fun_math_rotary_f32(x, c, s, got, nh, half);
+		for (size_t i = 0; i < n; i++) {
+			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
+			math_test_count_add(&tc, ok);
+			if (!ok) {
+				printf("\n      FAIL rotary out[%zu]: got %.6f, expected "
+					   "%.6f\n",
+					   i, (double)got[i], (double)want[i]);
+			}
+		}
+
+		memcpy(got, x, n * sizeof(float));
+		fun_math_rotary_f32(got, c, s, got, nh, half);
+		for (size_t i = 0; i < n; i++) {
+			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
+			math_test_count_add(&tc, ok);
+			if (!ok) {
+				printf("\n      FAIL rotary in-place[%zu]: got %.6f, "
+					   "expected %.6f\n",
+					   i, (double)got[i], (double)want[i]);
+			}
+		}
+
+		free(x);
+		free(c);
+		free(s);
+		free(want);
+		free(got);
 	}
 	return tc;
 }
@@ -301,6 +387,51 @@ TestCount test_vector_accuracy(void)
 	{
 		TestCount tc = test_batch_unary("cos_f32", fun_math_cos_f32,
 										(const BatchUnaryCase *)cos_f32_cases);
+		printf("%d/%d", tc.passed, tc.passed + tc.failed);
+		if (tc.failed)
+			printf(" (%d FAILED)", tc.failed);
+		printf("\n");
+		math_test_count_merge(&total, tc);
+	}
+
+	printf("    rotary_f32: ");
+	{
+		TestCount tc = math_test_count_init();
+		for (int ci = 0; rotary_f32_cases[ci].n_heads > 0; ci++) {
+			size_t nh = (size_t)rotary_f32_cases[ci].n_heads;
+			size_t half = (size_t)rotary_f32_cases[ci].half;
+			size_t n = nh * 2 * half;
+			float *out = malloc(n * sizeof(float));
+			if (!out) {
+				tc.failed += (int)n;
+				continue;
+			}
+			fun_math_rotary_f32(rotary_f32_cases[ci].x,
+								rotary_f32_cases[ci].cosv,
+								rotary_f32_cases[ci].sinv, out, nh, half);
+			for (size_t j = 0; j < n; j++) {
+				int ok = _math_test_check_float(
+					out[j], rotary_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
+				math_test_count_add(&tc, ok);
+				if (!ok) {
+					printf("\n      FAIL rotary golden[%d][%zu]: got %.6f, "
+						   "expected %.6f\n",
+						   ci, j, (double)out[j],
+						   (double)rotary_f32_cases[ci].expected[j]);
+				}
+			}
+			free(out);
+		}
+		printf("%d/%d", tc.passed, tc.passed + tc.failed);
+		if (tc.failed)
+			printf(" (%d FAILED)", tc.failed);
+		printf("\n");
+		math_test_count_merge(&total, tc);
+	}
+
+	printf("    rotary_f32 sweep: ");
+	{
+		TestCount tc = test_rotary_accuracy();
 		printf("%d/%d", tc.passed, tc.passed + tc.failed);
 		if (tc.failed)
 			printf(" (%d FAILED)", tc.failed);

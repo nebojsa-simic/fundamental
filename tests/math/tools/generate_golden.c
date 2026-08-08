@@ -579,6 +579,115 @@ static void gen_vector_softmax(void)
 	printf("  softmax_f32_golden.h (50 cases)\n");
 }
 
+static void gen_vector_rotary(void)
+{
+	char path[256];
+	snprintf(path, sizeof(path), "%s/rotary_f32_golden.h", OUTPUT_DIR);
+	FILE *f = fopen(path, "w");
+	if (!f) {
+		fprintf(stderr, "ERROR: cannot open %s\n", path);
+		exit(1);
+	}
+
+	fprintf(f, "typedef struct { int n_heads; int half; const float *x; "
+			   "const float *cosv; const float *sinv; const float *expected; "
+			   "} rotary_f32_case;\n\n");
+
+	int halves[] = { 1, 7, 8, 9, 31, 32, 33, 64 };
+	int nhalves = sizeof(halves) / sizeof(halves[0]);
+	int heads[] = { 1, 3, 8, 64 };
+	int nheads = sizeof(heads) / sizeof(heads[0]);
+
+	for (int ci = 0; ci < 50; ci++) {
+		int half = halves[ci % nhalves];
+		int nh = heads[(ci / nhalves) % nheads];
+		int nz = nh * 2 * half;
+
+		float *x = malloc(nz * sizeof(float));
+		float *c = malloc(half * sizeof(float));
+		float *s = malloc(half * sizeof(float));
+		float *e = malloc(nz * sizeof(float));
+		if (!x || !c || !s || !e) {
+			fprintf(stderr, "ERROR: out of memory\n");
+			exit(1);
+		}
+
+		for (int j = 0; j < nz; j++)
+			x[j] = (frand() - 0.5f) * 16.0f;
+		for (int j = 0; j < half; j++) {
+			c[j] = (frand() - 0.5f) * 2.0f;
+			s[j] = (frand() - 0.5f) * 2.0f;
+		}
+		for (int h = 0; h < nh; h++) {
+			for (int j = 0; j < half; j++) {
+				int base = h * 2 * half;
+				e[base + j] = x[base + j] * c[j] - x[base + half + j] * s[j];
+				e[base + half + j] =
+					x[base + j] * s[j] + x[base + half + j] * c[j];
+			}
+		}
+
+		fprintf(f, "static float _rotary_x_%d[] = {", ci);
+		for (int j = 0; j < nz; j++) {
+			if (j % 6 == 0)
+				fprintf(f, "\n    ");
+			char buf[32];
+			f32_str(x[j], buf, sizeof(buf));
+			fprintf(f, "%s, ", buf);
+		}
+		fprintf(f, "\n};\n");
+
+		fprintf(f, "static float _rotary_c_%d[] = {", ci);
+		for (int j = 0; j < half; j++) {
+			if (j % 6 == 0)
+				fprintf(f, "\n    ");
+			char buf[32];
+			f32_str(c[j], buf, sizeof(buf));
+			fprintf(f, "%s, ", buf);
+		}
+		fprintf(f, "\n};\n");
+
+		fprintf(f, "static float _rotary_s_%d[] = {", ci);
+		for (int j = 0; j < half; j++) {
+			if (j % 6 == 0)
+				fprintf(f, "\n    ");
+			char buf[32];
+			f32_str(s[j], buf, sizeof(buf));
+			fprintf(f, "%s, ", buf);
+		}
+		fprintf(f, "\n};\n");
+
+		fprintf(f, "static float _rotary_e_%d[] = {", ci);
+		for (int j = 0; j < nz; j++) {
+			if (j % 6 == 0)
+				fprintf(f, "\n    ");
+			char buf[32];
+			f32_str(e[j], buf, sizeof(buf));
+			fprintf(f, "%s, ", buf);
+		}
+		fprintf(f, "\n};\n");
+
+		free(x);
+		free(c);
+		free(s);
+		free(e);
+	}
+
+	fprintf(f, "\nstatic const rotary_f32_case rotary_f32_cases[] = {\n");
+	for (int ci = 0; ci < 50; ci++) {
+		int half = halves[ci % nhalves];
+		int nh = heads[(ci / nhalves) % nheads];
+		fprintf(f,
+				"    { %d, %d, _rotary_x_%d, _rotary_c_%d, _rotary_s_%d, "
+				"_rotary_e_%d },\n",
+				nh, half, ci, ci, ci, ci);
+	}
+	fprintf(f, "    { 0 },\n");
+	fprintf(f, "};\n");
+	fclose(f);
+	printf("  rotary_f32_golden.h (50 cases)\n");
+}
+
 static void gen_harness_self_test(void)
 {
 	char path[256];
@@ -687,6 +796,7 @@ int main(void)
 	gen_vector_unary("log", logf);
 	gen_vector_unary("sin", sinf);
 	gen_vector_unary("cos", cosf);
+	gen_vector_rotary();
 
 	printf("\nHarness self-test:\n");
 	gen_harness_self_test();

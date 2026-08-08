@@ -145,6 +145,10 @@ TestCount test_edge_cases(void)
 		check_int(1, &tc, "sin_f32(n=0) should return");
 		fun_math_cos_f32(&buf, &buf, 0);
 		check_int(1, &tc, "cos_f32(n=0) should return");
+		fun_math_rotary_f32(&buf, &buf, &buf, &buf, 0, 0);
+		check_int(1, &tc, "rotary_f32(n_heads=0) should return");
+		fun_math_rotary_f32(&buf, &buf, &buf, &buf, 1, 0);
+		check_int(1, &tc, "rotary_f32(half=0) should return");
 		check_int(fun_math_dot_f32(&buf, &buf, 0) == 0.0f, &tc,
 				  "dot_f32(n=0) should return 0");
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
@@ -273,6 +277,41 @@ TestCount test_edge_cases(void)
 		}
 		free(ref);
 		free(got);
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* rotary_f32 minimal and single-lane cases */
+	printf("    rotary_f32 edges: ");
+	{
+		int start = tc.passed + tc.failed;
+		float x[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
+		float c[2] = { 1.0f, 0.0f };
+		float s[2] = { 0.0f, 1.0f };
+		float out[4];
+
+		fun_math_rotary_f32(x, c, s, out, 1, 2);
+		check_int(out[0] == 1.0f && out[1] == -4.0f && out[2] == 3.0f &&
+					  out[3] == 2.0f,
+				  &tc, "rotary half=2 matches rotation formula");
+
+		float one[2] = { 5.0f, 6.0f };
+		float c1[1] = { 1.0f };
+		float s1[1] = { 0.0f };
+		float out1[2];
+		fun_math_rotary_f32(one, c1, s1, out1, 1, 1);
+		check_int(out1[0] == 5.0f && out1[1] == 6.0f, &tc,
+				  "rotary half=1 with cos=1/sin=0 is identity");
+
+		float two_heads[8] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
+		float outm[8];
+		fun_math_rotary_f32(two_heads, c, s, outm, 2, 2);
+		check_int(outm[0] == 1.0f && outm[1] == -4.0f && outm[2] == 3.0f &&
+					  outm[3] == 2.0f,
+				  &tc, "rotary head 0 does not touch head 1 data");
+		check_int(outm[4] == 5.0f && outm[5] == -8.0f && outm[6] == 7.0f &&
+					  outm[7] == 6.0f,
+				  &tc, "rotary head 1 rotated with shared tables");
+
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
 	}
 
