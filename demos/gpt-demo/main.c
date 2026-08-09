@@ -5,7 +5,7 @@
 #include "fundamental/string/string.h"
 #include "model.h"
 #include "tokenizer.h"
-#include <windows.h>
+#include <time.h>
 
 #define MAX_TOKENS 64
 #define MAX_SEQ 256
@@ -18,9 +18,7 @@ int main(int argc, char **argv)
 
 	fun_math_init();
 
-	LARGE_INTEGER freq, t0, t1;
-	QueryPerformanceFrequency(&freq);
-	QueryPerformanceCounter(&t0);
+	clock_t t0 = clock();
 
 	fun_console_write_line("Loading model...");
 
@@ -36,10 +34,10 @@ int main(int argc, char **argv)
 	tokenizer_load(&tok, gguf);
 
 	Model model;
-	model_load(&model, gguf);
+	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf");
 
-	QueryPerformanceCounter(&t1);
-	double load_s = (double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
+	clock_t t1 = clock();
+	double load_s = (double)(t1 - t0) / CLOCKS_PER_SEC;
 
 	char buf[256];
 	MemoryResult num_mem = fun_memory_allocate(256);
@@ -66,7 +64,7 @@ int main(int argc, char **argv)
 	fun_console_write_line(prompt);
 	fun_console_write_line("");
 
-	QueryPerformanceCounter(&t0);
+	t0 = clock();
 
 	int generated = 0;
 	char response[2048];
@@ -102,8 +100,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	QueryPerformanceCounter(&t1);
-	double eval_s = (double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart;
+	t1 = clock();
+	double eval_s = (double)(t1 - t0) / CLOCKS_PER_SEC;
 
 	fun_console_write_line("");
 	fun_console_write_line("");

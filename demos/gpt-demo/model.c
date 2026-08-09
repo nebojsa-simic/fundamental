@@ -2,6 +2,7 @@
 #include "fundamental/math/math.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
+#include <immintrin.h>
 #include <stdint.h>
 
 #define MAX_SEQ 256
@@ -97,11 +98,41 @@ static void dequant_layer(Model *m, int layer_idx)
 	w->sinks =
 		(float *)fun_memory_allocate(m->config.n_heads * sizeof(float)).value;
 	fun_gguf_dequant_f32(m->gguf, buf, w->sinks);
+
+	/* Expert tensor raw pointers into the gguf mmap */
+	const uint8_t *rd = fun_gguf_get_raw_data(m->gguf);
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_gate_exps.weight", buf + pre_len, 256 - pre_len);
+	w->experts.gate_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_gate_exps.bias", buf + pre_len, 256 - pre_len);
+	w->experts.gate_b =
+		(const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
+
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_up_exps.weight", buf + pre_len, 256 - pre_len);
+	w->experts.up_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_up_exps.bias", buf + pre_len, 256 - pre_len);
+	w->experts.up_b =
+		(const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
+
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_down_exps.weight", buf + pre_len, 256 - pre_len);
+	w->experts.down_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+
+	buf[pre_len] = '\0';
+	fun_string_copy(".ffn_down_exps.bias", buf + pre_len, 256 - pre_len);
+	w->experts.down_b =
+		(const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
 }
 
-void model_load(Model *m, GGufFile *gguf)
+void model_load(Model *m, GGufFile *gguf, const char *model_path)
 {
 	m->gguf = gguf;
+	fun_string_copy(model_path, m->model_path, sizeof(m->model_path));
 	m->config.hidden_size = 2880;
 	m->config.n_layers = 24;
 	m->config.n_heads = 64;
@@ -114,18 +145,14 @@ void model_load(Model *m, GGufFile *gguf)
 	m->config.max_seq_len = MAX_SEQ;
 	m->config.rope_theta = 150000.0f;
 	m->config.rms_norm_eps = 1e-5f;
+	m->rope_mscale = 1.0f + 0.1f * fun_math_log(32.0f);
 
-	m->tok_embeddings =
-		(float *)fun_memory_allocate(m->config.vocab_size *
-									 m->config.hidden_size * sizeof(float))
-			.value;
-	fun_gguf_dequant_q8_0(gguf, "token_embd.weight", m->tok_embeddings);
+	uint64_t te_off =
+		fun_gguf_get_tensor_offset(gguf, "token_embd.weight").value;
+	m->tok_embeddings = fun_gguf_get_raw_data(gguf) + te_off;
 
-	m->output_weight =
-		(float *)fun_memory_allocate(m->config.vocab_size *
-									 m->config.hidden_size * sizeof(float))
-			.value;
-	fun_gguf_dequant_q8_0(gguf, "output.weight", m->output_weight);
+	uint64_t ow_off = fun_gguf_get_tensor_offset(gguf, "output.weight").value;
+	m->output_weight = fun_gguf_get_raw_data(gguf) + ow_off;
 
 	m->output_norm_weight =
 		(float *)fun_memory_allocate(m->config.hidden_size * sizeof(float))
@@ -192,17 +219,12 @@ void model_load(Model *m, GGufFile *gguf)
 
 void model_free(Model *m)
 {
-	if (m->tok_embeddings)
-		fun_memory_free((Memory *)&m->tok_embeddings);
-	if (m->output_weight)
-		fun_memory_free((Memory *)&m->output_weight);
 	if (m->output_norm_weight)
 		fun_memory_free((Memory *)&m->output_norm_weight);
 	if (m->rope_pre)
 		fun_memory_free((Memory *)&m->rope_pre);
-	if (m->layers) {
+	if (m->layers)
 		fun_memory_free((Memory *)&m->layers);
-	}
 	if (m->k_cache) {
 		for (int i = 0; i < m->config.n_layers; i++)
 			fun_memory_free((Memory *)&m->k_cache[i]);
@@ -220,36 +242,6 @@ static void rms_norm(float *x, const float *w, int n, float eps)
 	fun_math_rms_norm_f32(x, w, x, (size_t)n, eps);
 }
 
-static void rope_single(Model *m, float *q, float *k, int pos, int n_h,
-						int n_kv_h)
-{
-	int hd = m->config.head_dim;
-	int half = hd / 2;
-
-	float *the_arr =
-		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
-	float *ca =
-		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
-	float *sa =
-		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
-
-	for (int j = 0; j < half; j++)
-		the_arr[j] = (float)pos * m->rope_pre[j];
-	fun_math_cos_f32(the_arr, ca, (size_t)half);
-	fun_math_sin_f32(the_arr, sa, (size_t)half);
-	float mscale = 1.0f + 0.1f * fun_math_log(32.0f);
-	for (int j = 0; j < half; j++) {
-		ca[j] *= mscale;
-		sa[j] *= mscale;
-	}
-	fun_math_rotary_f32(q, ca, sa, q, (size_t)n_h, (size_t)half);
-	fun_math_rotary_f32(k, ca, sa, k, (size_t)n_kv_h, (size_t)half);
-
-	fun_memory_free((Memory *)&the_arr);
-	fun_memory_free((Memory *)&ca);
-	fun_memory_free((Memory *)&sa);
-}
-
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 {
 	int hs = m->config.hidden_size;
@@ -260,6 +252,8 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	int topk = m->config.n_active_experts;
 	int ffn = m->config.ffn_size;
 	float eps = m->config.rms_norm_eps;
+	size_t exp_w_bytes = (size_t)ffn * (size_t)hs * FUN_MATH_MXFP4_BLOCK_BYTES /
+						 FUN_MATH_MXFP4_BLOCK_ELEMS;
 
 	int kv_dim = n_kv * hd;
 	int q_dim = n_h * hd;
@@ -278,10 +272,38 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	float *proj = (float *)fun_memory_allocate(hs * sizeof(float)).value;
 	float *expert = (float *)fun_memory_allocate(hs * sizeof(float)).value;
 
+	int half = hd / 2;
+	float *the_arr =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float *cos_arr =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float *sin_arr =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
+	float *mid_buf = (float *)fun_memory_allocate(ffn * sizeof(float)).value;
+	float *gv_buf = (float *)fun_memory_allocate(ffn * sizeof(float)).value;
+	float *uv_buf = (float *)fun_memory_allocate(ffn * sizeof(float)).value;
+	float *eg_buf = (float *)fun_memory_allocate(ffn * sizeof(float)).value;
+	float *dv_buf = (float *)fun_memory_allocate(hs * sizeof(float)).value;
+
+	float inv_sqrt_hd = 1.0f / fun_math_sqrt((float)hd);
+	float mscale = m->rope_mscale;
+
 	for (int pos = start; pos < n_tokens; pos++) {
-		float *emb = m->tok_embeddings + tokens[pos] * hs;
-		for (int i = 0; i < hs; i++)
-			hidden[i] = emb[i];
+		fun_math_q8_dequant_row_f32(
+			m->tok_embeddings +
+				(uint64_t)tokens[pos] *
+					((size_t)hs / FUN_MATH_Q8_BLOCK_ELEMS *
+					 FUN_MATH_Q8_BLOCK_BYTES),
+			hidden, (size_t)hs);
+
+		for (int j = 0; j < half; j++)
+			the_arr[j] = (float)pos * m->rope_pre[j];
+		fun_math_cos_f32(the_arr, cos_arr, (size_t)half);
+		fun_math_sin_f32(the_arr, sin_arr, (size_t)half);
+		for (int j = 0; j < half; j++) {
+			cos_arr[j] *= mscale;
+			sin_arr[j] *= mscale;
+		}
 
 		for (int l = 0; l < m->config.n_layers; l++) {
 			LayerWeights *w = &m->layers[l];
@@ -299,53 +321,36 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 									   (size_t)kv_dim, (size_t)hs);
 			fun_math_matrix_vector_f32(w->v_weight, hidden, w->v_bias, vbuf,
 									   (size_t)kv_dim, (size_t)hs);
-			rope_single(m, qbuf, kbuf, pos, n_h, n_kv);
+			fun_math_rotary_f32(qbuf, cos_arr, sin_arr, qbuf, (size_t)n_h,
+								(size_t)half);
+			fun_math_rotary_f32(kbuf, cos_arr, sin_arr, kbuf, (size_t)n_kv,
+								(size_t)half);
 
 			for (int i = 0; i < kv_dim; i++) {
 				m->k_cache[l][pos * kv_dim + i] = kbuf[i];
 				m->v_cache[l][pos * kv_dim + i] = vbuf[i];
 			}
 
-			for (int i = 0; i < q_dim; i++)
-				attn[i] = 0.0f;
 			int swa = (l % 2 == 0);
 			int swa_len = 128;
 			float *scores =
-				(float *)fun_memory_allocate((size_t)(pos + 1) * sizeof(float))
+				(float *)fun_memory_allocate((size_t)(pos + 2) * sizeof(float))
 					.value;
 			for (int h = 0; h < n_h; h++) {
 				int kvh = h * n_kv / n_h;
 				float *qh = qbuf + h * hd;
-				float inv_sqrt_hd = 1.0f / fun_math_sqrt((float)hd);
-				for (int t = 0; t <= pos; t++) {
-					if (swa && t < pos - swa_len + 1) {
+				fun_math_rows_dot_f32(qh, m->k_cache[l] + kvh * hd, scores,
+									  (size_t)pos + 1, (size_t)hd,
+									  (size_t)kv_dim, inv_sqrt_hd);
+				if (swa && pos >= swa_len) {
+					for (int t = 0; t <= pos - swa_len; t++)
 						scores[t] = -1.0f / 0.0f;
-						continue;
-					}
-					float *kh = m->k_cache[l] + t * kv_dim + kvh * hd;
-					scores[t] =
-						fun_math_dot_f32(qh, kh, (size_t)hd) * inv_sqrt_hd;
 				}
-				float sink = w->sinks[h];
-				float mx = sink;
-				for (int t = 0; t <= pos; t++)
-					if (scores[t] > mx)
-						mx = scores[t];
-				float denom = 0.0f;
-				for (int t = 0; t <= pos; t++)
-					scores[t] -= mx;
-				fun_math_exp_f32(scores, scores, (size_t)pos + 1);
-				for (int t = 0; t <= pos; t++)
-					denom += scores[t];
-				denom += fun_math_exp(sink - mx);
-				for (int t = 0; t <= pos; t++)
-					scores[t] /= denom;
-				for (int t = 0; t <= pos; t++) {
-					float *vh = m->v_cache[l] + t * kv_dim + kvh * hd;
-					float wgt = scores[t];
-					for (int d = 0; d < hd; d++)
-						attn[h * hd + d] += wgt * vh[d];
-				}
+				scores[pos + 1] = w->sinks[h];
+				fun_math_softmax_f32(scores, (size_t)pos + 2);
+				fun_math_weighted_sum_f32(scores, m->v_cache[l] + kvh * hd,
+										  attn + h * hd, (size_t)pos + 1,
+										  (size_t)hd, (size_t)kv_dim);
 			}
 			fun_memory_free((Memory *)&scores);
 
@@ -362,8 +367,8 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 			float rlog[32];
 			for (int e = 0; e < n_exp; e++) {
 				float s = 0.0f;
-				for (int i = 0; i < hs; i++)
-					s += w->router_weight[e * hs + i] * hidden[i];
+				for (int i2 = 0; i2 < hs; i2++)
+					s += w->router_weight[e * hs + i2] * hidden[i2];
 				rlog[e] = s + w->router_bias[e];
 			}
 
@@ -410,107 +415,44 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 			for (int i = 0; i < hs; i++)
 				expert[i] = 0.0f;
 
+			ExpertTensors *et = &w->experts;
 			for (int ex = 0; ex < topk; ex++) {
 				int e = top[ex];
-				uint64_t el_start = (uint64_t)e * ffn * hs;
-				uint64_t el_count = (uint64_t)ffn * hs;
-				char eb[256];
-				int pl = (int)fun_string_length(w->name_prefix);
+				const uint8_t *gw = et->gate_w + (size_t)e * exp_w_bytes;
+				const float *gb = et->gate_b + (size_t)e * ffn;
+				const uint8_t *uw = et->up_w + (size_t)e * exp_w_bytes;
+				const float *ub = et->up_b + (size_t)e * ffn;
+				const uint8_t *dw = et->down_w + (size_t)e * exp_w_bytes;
+				const float *db = et->down_b + (size_t)e * hs;
 
-				for (int c = 0; c < pl; c++)
-					eb[c] = w->name_prefix[c];
-				fun_string_copy(".ffn_gate_exps.weight", eb + pl, 256 - pl);
+				fun_math_matrix_vector_mxfp4_f32(gw, hidden, gb, gv_buf,
+												 (size_t)ffn, (size_t)hs);
+				fun_math_matrix_vector_mxfp4_f32(uw, hidden, ub, uv_buf,
+												 (size_t)ffn, (size_t)hs);
 
-				float *gate_buf =
-					(float *)fun_memory_allocate(el_count * sizeof(float)).value;
-				fun_gguf_dequant_mxfp4_range(m->gguf, eb, el_start, el_count,
-											 gate_buf);
-
-				eb[pl] = '\0';
-				fun_string_copy(".ffn_gate_exps.bias", eb + pl, 256 - pl);
-				float *gbias =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				fun_gguf_dequant_f32_range(m->gguf, eb, (uint64_t)e * ffn, ffn,
-										   gbias);
-
-				eb[pl] = '\0';
-				fun_string_copy(".ffn_up_exps.weight", eb + pl, 256 - pl);
-				float *up_buf =
-					(float *)fun_memory_allocate(el_count * sizeof(float)).value;
-				fun_gguf_dequant_mxfp4_range(m->gguf, eb, el_start, el_count,
-											 up_buf);
-
-				eb[pl] = '\0';
-				fun_string_copy(".ffn_up_exps.bias", eb + pl, 256 - pl);
-				float *ubias =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				fun_gguf_dequant_f32_range(m->gguf, eb, (uint64_t)e * ffn, ffn,
-										   ubias);
-
-				eb[pl] = '\0';
-				fun_string_copy(".ffn_down_exps.weight", eb + pl, 256 - pl);
-				float *down_buf = (float *)fun_memory_allocate(
-									  (uint64_t)hs * ffn * sizeof(float))
-									  .value;
-				fun_gguf_dequant_mxfp4_range(m->gguf, eb, el_start, el_count,
-											 down_buf);
-
-				eb[pl] = '\0';
-				fun_string_copy(".ffn_down_exps.bias", eb + pl, 256 - pl);
-				float *dbias =
-					(float *)fun_memory_allocate(hs * sizeof(float)).value;
-				fun_gguf_dequant_f32_range(m->gguf, eb, (uint64_t)e * hs, hs,
-										   dbias);
-
-				float *mid =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				float *gv =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				float *uv =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				float *eg =
-					(float *)fun_memory_allocate(ffn * sizeof(float)).value;
-				fun_math_matrix_vector_f32(gate_buf, hidden, gbias, gv,
-										   (size_t)ffn, (size_t)hs);
-				fun_math_matrix_vector_f32(up_buf, hidden, ubias, uv,
-										   (size_t)ffn, (size_t)hs);
 				for (int i = 0; i < ffn; i++) {
-					float g = gv[i];
+					float g = gv_buf[i];
 					if (g > 7.0f)
 						g = 7.0f;
-					eg[i] = -1.702f * g;
+					eg_buf[i] = -1.702f * g;
 				}
-				fun_math_exp_f32(eg, eg, (size_t)ffn);
+				fun_math_exp_f32(eg_buf, eg_buf, (size_t)ffn);
 				for (int i = 0; i < ffn; i++) {
-					float g = gv[i];
+					float g = gv_buf[i];
 					if (g > 7.0f)
 						g = 7.0f;
-					float u = uv[i];
+					float u = uv_buf[i];
 					if (u > 7.0f)
 						u = 7.0f;
 					if (u < -7.0f)
 						u = -7.0f;
-					mid[i] = g / (1.0f + eg[i]) * (u + 1.0f);
+					mid_buf[i] = g / (1.0f + eg_buf[i]) * (u + 1.0f);
 				}
 
-				float *dv =
-					(float *)fun_memory_allocate(hs * sizeof(float)).value;
-				fun_math_matrix_vector_f32(down_buf, mid, dbias, dv, (size_t)hs,
-										   (size_t)ffn);
+				fun_math_matrix_vector_mxfp4_f32(dw, mid_buf, db, dv_buf,
+												 (size_t)hs, (size_t)ffn);
 				for (int i = 0; i < hs; i++)
-					expert[i] += rw[ex] * dv[i];
-
-				fun_memory_free((Memory *)&gate_buf);
-				fun_memory_free((Memory *)&gbias);
-				fun_memory_free((Memory *)&up_buf);
-				fun_memory_free((Memory *)&ubias);
-				fun_memory_free((Memory *)&down_buf);
-				fun_memory_free((Memory *)&dbias);
-				fun_memory_free((Memory *)&mid);
-				fun_memory_free((Memory *)&gv);
-				fun_memory_free((Memory *)&uv);
-				fun_memory_free((Memory *)&eg);
-				fun_memory_free((Memory *)&dv);
+					expert[i] += rw[ex] * dv_buf[i];
 			}
 
 			for (int i = 0; i < hs; i++)
@@ -522,12 +464,8 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 
 	rms_norm(hidden, m->output_norm_weight, hs, eps);
 
-	for (int v = 0; v < m->config.vocab_size; v++) {
-		float s = 0.0f;
-		for (int i = 0; i < hs; i++)
-			s += m->output_weight[v * hs + i] * hidden[i];
-		logits[v] = s;
-	}
+	fun_math_q8_matrix_vector_f32(m->output_weight, hidden, logits,
+								  (size_t)m->config.vocab_size, (size_t)hs);
 
 	fun_memory_free((Memory *)&hidden);
 	fun_memory_free((Memory *)&residual);
@@ -538,4 +476,12 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	fun_memory_free((Memory *)&attn);
 	fun_memory_free((Memory *)&proj);
 	fun_memory_free((Memory *)&expert);
+	fun_memory_free((Memory *)&the_arr);
+	fun_memory_free((Memory *)&cos_arr);
+	fun_memory_free((Memory *)&sin_arr);
+	fun_memory_free((Memory *)&mid_buf);
+	fun_memory_free((Memory *)&gv_buf);
+	fun_memory_free((Memory *)&uv_buf);
+	fun_memory_free((Memory *)&eg_buf);
+	fun_memory_free((Memory *)&dv_buf);
 }

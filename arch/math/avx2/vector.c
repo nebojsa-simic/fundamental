@@ -358,3 +358,153 @@ void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
 		}
 	}
 }
+
+void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
+						   size_t n_rows, size_t row_len, size_t row_stride,
+						   float scale)
+{
+	__m256 s256 = _mm256_set1_ps(scale);
+	for (size_t t = 0; t < n_rows; t++) {
+		const float *row = x + t * row_stride;
+		__m256 sum = _mm256_setzero_ps();
+		size_t d = 0;
+		for (; d + 8 <= row_len; d += 8)
+			sum = _mm256_fmadd_ps(_mm256_loadu_ps(q + d),
+								  _mm256_loadu_ps(row + d), sum);
+		float s = _mm256_hsum_ps(sum);
+		for (; d < row_len; d++)
+			s += q[d] * row[d];
+		out[t] = s * scale;
+	}
+}
+
+void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
+							   size_t n_rows, size_t row_len, size_t row_stride)
+{
+	size_t d = 0;
+	for (; d + 8 <= row_len; d += 8) {
+		__m256 acc = _mm256_setzero_ps();
+		for (size_t t = 0; t < n_rows; t++) {
+			__m256 w = _mm256_set1_ps(wgt[t]);
+			acc = _mm256_fmadd_ps(w, _mm256_loadu_ps(x + t * row_stride + d),
+								  acc);
+		}
+		_mm256_storeu_ps(out + d, acc);
+	}
+	for (; d < row_len; d++) {
+		float acc = 0.0f;
+		for (size_t t = 0; t < n_rows; t++)
+			acc += wgt[t] * x[t * row_stride + d];
+		out[d] = acc;
+	}
+}
+
+/* MXFP4 E2M1 kvalue table multiplied by two: the nibble lookup is done with
+ * vpshufb over this table, so the scale byte (a power of two) is applied one
+ * exponent lower: scale_f = bit_cast<float>((scale - 1) << 23). A scale byte
+ * of zero decodes to 0.0f and skips the block entirely; a scale byte of 1
+ * decodes to 2^-127, which the shifted exponent cannot represent (it would
+ * be 0.0f), so it is handled with an explicit subnormal bit pattern. */
+static const int8_t mxfp4_kvalues_x2[16] = { 0, 1,	2,	3,	4,	6,	8,	12,
+											 0, -1, -2, -3, -4, -6, -8, -12 };
+
+void fun_math_matrix_vector_mxfp4_f32(const uint8_t *w, const float *x,
+									  const float *bias, float *out,
+									  size_t rows, size_t cols)
+{
+	fun_math_matrix_vector_mxfp4_f32_strided(w, x, bias, out, rows, cols, 0);
+}
+
+void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
+											  const float *bias, float *out,
+											  size_t rows, size_t cols,
+											  size_t row_stride_bytes)
+{
+	const size_t blocks = cols / FUN_MATH_MXFP4_BLOCK_ELEMS;
+	const size_t row_bytes = blocks * FUN_MATH_MXFP4_BLOCK_BYTES;
+	const size_t stride = row_stride_bytes > 0 ? row_stride_bytes : row_bytes;
+	__m128i tab = _mm_loadu_si128((const __m128i *)mxfp4_kvalues_x2);
+	__m128i mask04 = _mm_set1_epi8(0x0F);
+	__m256 sv_scale1 = _mm256_castsi256_ps(_mm256_set1_epi32(0x00400000u));
+
+	for (size_t r = 0; r < rows; r++) {
+		const uint8_t *bp = w + r * stride;
+		__m256 acc = _mm256_setzero_ps();
+		for (size_t b = 0; b < blocks; b++, bp += FUN_MATH_MXFP4_BLOCK_BYTES) {
+			uint8_t scale = bp[0];
+			if (scale == 0)
+				continue;
+			__m256 sv;
+			if (scale == 1)
+				sv = sv_scale1; /* 2^-128, pairs with the x2 table */
+			else
+				sv = _mm256_castsi256_ps(
+					_mm256_set1_epi32(((uint32_t)(scale - 1)) << 23));
+			__m128i n = _mm_loadu_si128((const __m128i *)(bp + 1));
+			__m128i lo_i = _mm_shuffle_epi8(tab, _mm_and_si128(n, mask04));
+			__m128i hi_i = _mm_shuffle_epi8(
+				tab, _mm_and_si128(_mm_srli_epi16(n, 4), mask04));
+			/* Accumulate block dot-product unscaled first,
+			 * then apply the scale (matching gguf_dequant's
+			 * rounding order: weight = k * sf is exact, FMA
+			 * needs only one rounding). */
+			const float *xv = x + b * FUN_MATH_MXFP4_BLOCK_ELEMS;
+			__m256 k0 = _mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(lo_i));
+			__m256 k1 = _mm256_cvtepi32_ps(
+				_mm256_cvtepi8_epi32(_mm_srli_si128(lo_i, 8)));
+			__m256 k2 = _mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(hi_i));
+			__m256 k3 = _mm256_cvtepi32_ps(
+				_mm256_cvtepi8_epi32(_mm_srli_si128(hi_i, 8)));
+			__m256 bs = _mm256_setzero_ps();
+			bs = _mm256_fmadd_ps(k0, _mm256_loadu_ps(xv), bs);
+			bs = _mm256_fmadd_ps(k1, _mm256_loadu_ps(xv + 8), bs);
+			bs = _mm256_fmadd_ps(k2, _mm256_loadu_ps(xv + 16), bs);
+			bs = _mm256_fmadd_ps(k3, _mm256_loadu_ps(xv + 24), bs);
+			acc = _mm256_fmadd_ps(bs, sv, acc);
+		}
+		float s = _mm256_hsum_ps(acc);
+		out[r] = bias ? s + bias[r] : s;
+	}
+}
+
+void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)
+{
+	size_t blocks = n / FUN_MATH_Q8_BLOCK_ELEMS;
+	for (size_t b = 0; b < blocks; b++) {
+		float d = fun_math_fp16_to_f32(
+			(uint16_t)src[b * FUN_MATH_Q8_BLOCK_BYTES] |
+			((uint16_t)src[b * FUN_MATH_Q8_BLOCK_BYTES + 1] << 8));
+		const int8_t *q = (const int8_t *)(src + b * FUN_MATH_Q8_BLOCK_BYTES +
+										  2);
+		for (size_t j = 0; j < FUN_MATH_Q8_BLOCK_ELEMS; j++)
+			out[b * FUN_MATH_Q8_BLOCK_ELEMS + j] = (float)q[j] * d;
+	}
+}
+
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x,
+								   float *out, size_t rows, size_t cols)
+{
+	const size_t blocks = cols / FUN_MATH_Q8_BLOCK_ELEMS;
+	for (size_t r = 0; r < rows; r++) {
+		const uint8_t *row_src = w + r * blocks * FUN_MATH_Q8_BLOCK_BYTES;
+		__m256 acc = _mm256_setzero_ps();
+		for (size_t b = 0; b < blocks; b++) {
+			const uint8_t *bp =
+				row_src + b * FUN_MATH_Q8_BLOCK_BYTES;
+			float d = fun_math_fp16_to_f32(
+				(uint16_t)bp[0] | ((uint16_t)bp[1] << 8));
+			const int8_t *q = (const int8_t *)(bp + 2);
+			const float *xv = x + b * FUN_MATH_Q8_BLOCK_ELEMS;
+			__m256 block_sum = _mm256_setzero_ps();
+			for (size_t j = 0; j + 8 <= FUN_MATH_Q8_BLOCK_ELEMS; j += 8) {
+				__m256i qi = _mm256_cvtepi8_epi32(
+					_mm_loadl_epi64((const __m128i *)(q + j)));
+				__m256 xvj = _mm256_loadu_ps(xv + j);
+				block_sum = _mm256_fmadd_ps(_mm256_cvtepi32_ps(qi), xvj,
+											block_sum);
+			}
+			acc = _mm256_fmadd_ps(_mm256_set1_ps(d), block_sum, acc);
+		}
+		out[r] = _mm256_hsum_ps(acc);
+	}
+}

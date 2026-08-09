@@ -200,6 +200,36 @@ float fun_math_silu(float x)
 	return x * fun_math_sigmoid(x);
 }
 
+float fun_math_fp16_to_f32(uint16_t h)
+{
+	uint32_t sign = (h >> 15) << 31;
+	uint32_t exp = (h >> 10) & 0x1F;
+	uint32_t mant = h & 0x3FF;
+
+	if (exp == 0) {
+		if (mant == 0) {
+			uint32_t zero = sign;
+			return *(float *)&zero;
+		}
+		int e = 0;
+		while (!(mant & 0x400)) {
+			mant <<= 1;
+			e++;
+		}
+		mant &= 0x3FF;
+		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) | (mant << 13);
+		return *(float *)&f32;
+	}
+	if (exp == 31) {
+		uint32_t nan_bits = 0x7FC00000;
+		uint32_t inf_bits = 0x7F800000;
+		return mant ? *(float *)&nan_bits :
+					  (sign ? -*(float *)&inf_bits : *(float *)&inf_bits);
+	}
+	uint32_t f32 = sign | ((exp + 112) << 23) | (mant << 13);
+	return *(float *)&f32;
+}
+
 void _math_bench_noop(const float *x, float *out, size_t n)
 {
 	for (size_t i = 0; i < n; i++)

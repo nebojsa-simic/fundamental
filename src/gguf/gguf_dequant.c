@@ -1,36 +1,7 @@
 #include "fundamental/gguf/gguf.h"
+#include "fundamental/math/math.h"
 
 #include <stdint.h>
-
-static float half_to_float(uint16_t h)
-{
-	uint32_t sign = (h >> 15) << 31;
-	uint32_t exp = (h >> 10) & 0x1F;
-	uint32_t mant = h & 0x3FF;
-
-	if (exp == 0) {
-		if (mant == 0) {
-			uint32_t zero = sign;
-			return *(float *)&zero;
-		}
-		int e = 0;
-		while (!(mant & 0x400)) {
-			mant <<= 1;
-			e++;
-		}
-		mant &= 0x3FF;
-		uint32_t f32 = sign | ((uint32_t)(113 - e) << 23) | (mant << 13);
-		return *(float *)&f32;
-	}
-	if (exp == 31) {
-		uint32_t nan_bits = 0x7FC00000;
-		uint32_t inf_bits = 0x7F800000;
-		return mant ? *(float *)&nan_bits :
-					  (sign ? -*(float *)&inf_bits : *(float *)&inf_bits);
-	}
-	uint32_t f32 = sign | ((exp + 112) << 23) | (mant << 13);
-	return *(float *)&f32;
-}
 
 static const float kvalues_mxfp4[16] = { 0.0f,	0.5f,  1.0f,  1.5f,
 										 2.0f,	3.0f,  4.0f,  6.0f,
@@ -137,7 +108,7 @@ voidResult fun_gguf_dequant_q8_0(GGufFile *f, String name, float *out)
 	for (uint64_t b = 0; b < block_count; b++) {
 		uint16_t d_raw = (uint16_t)src[b * 34] |
 						 ((uint16_t)src[b * 34 + 1] << 8);
-		float d = half_to_float(d_raw);
+		float d = fun_math_fp16_to_f32(d_raw);
 		const int8_t *q = (const int8_t *)(src + b * 34 + 2);
 		for (int j = 0; j < 32; j++)
 			dst[b * 32 + j] = (float)q[j] * d;

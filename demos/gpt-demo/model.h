@@ -19,6 +19,17 @@ typedef struct {
 	float rms_norm_eps;
 } ModelConfig;
 
+/* Raw pointers into the gguf mmap for expert tensors of one layer.
+ * Weights are MXFP4, biases are F32. */
+typedef struct {
+	const uint8_t *gate_w;
+	const float *gate_b;
+	const uint8_t *up_w;
+	const float *up_b;
+	const uint8_t *down_w;
+	const float *down_b;
+} ExpertTensors;
+
 typedef struct {
 	float *q_weight;
 	float *q_bias;
@@ -33,24 +44,27 @@ typedef struct {
 	float *router_weight;
 	float *router_bias;
 	float *sinks;
+	ExpertTensors experts;
 	GGufFile *gguf;
 	char name_prefix[64];
 } LayerWeights;
 
-typedef struct {
+typedef struct Model {
 	ModelConfig config;
 	GGufFile *gguf;
-	float *tok_embeddings;
-	float *output_weight;
+	const uint8_t *tok_embeddings;
+	const uint8_t *output_weight;
 	float *output_norm_weight;
 	LayerWeights *layers;
 	float **k_cache;
 	float **v_cache;
 	float *rope_pre;
+	float rope_mscale;
+	char model_path[256];
 	int cached_len;
 } Model;
 
-void model_load(Model *m, GGufFile *gguf);
+void model_load(Model *m, GGufFile *gguf, const char *model_path);
 void model_free(Model *m);
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits);
 

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "test_harness.h"
 
 static int check_int(int condition, TestCount *tc, const char *msg)
@@ -149,6 +150,14 @@ TestCount test_edge_cases(void)
 		check_int(1, &tc, "rotary_f32(n_heads=0) should return");
 		fun_math_rotary_f32(&buf, &buf, &buf, &buf, 1, 0);
 		check_int(1, &tc, "rotary_f32(half=0) should return");
+		fun_math_rows_dot_f32(&buf, &buf, &buf, 0, 0, 0, 1.0f);
+		check_int(1, &tc, "rows_dot_f32(n_rows=0) should return");
+		fun_math_rows_dot_f32(&buf, &buf, &buf, 1, 0, 0, 1.0f);
+		check_int(1, &tc, "rows_dot_f32(row_len=0) should return");
+		fun_math_weighted_sum_f32(&buf, &buf, &buf, 0, 0, 0);
+		check_int(1, &tc, "weighted_sum_f32(n_rows=0) should return");
+		fun_math_weighted_sum_f32(&buf, &buf, &buf, 1, 0, 0);
+		check_int(1, &tc, "weighted_sum_f32(row_len=0) should return");
 		check_int(fun_math_dot_f32(&buf, &buf, 0) == 0.0f, &tc,
 				  "dot_f32(n=0) should return 0");
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
@@ -312,6 +321,232 @@ TestCount test_edge_cases(void)
 					  outm[7] == 6.0f,
 				  &tc, "rotary head 1 rotated with shared tables");
 
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* rows_dot_f32 minimal and single-row cases */
+	printf("    rows_dot_f32 edges: ");
+	{
+		int start = tc.passed + tc.failed;
+		float q[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+		float x[8] = { 3.0f, 7.0f, 7.0f, 7.0f, 2.0f, 5.0f, 8.0f, 1.0f };
+		float out[2];
+
+		fun_math_rows_dot_f32(q, x, out, 2, 4, 4, 1.0f);
+		check_int(out[0] == 3.0f && out[1] == 2.0f, &tc,
+				  "rows_dot row stride 4 picks rows 0 and 4");
+		fun_math_rows_dot_f32(q, x, out, 2, 4, 4, 0.0f);
+		check_int(out[0] == 0.0f && out[1] == 0.0f, &tc,
+				  "rows_dot scale=0 produces zeros");
+		fun_math_rows_dot_f32(q, x, out, 1, 4, 4, 2.0f);
+		check_int(out[0] == 6.0f, &tc, "rows_dot single row with scale");
+
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* weighted_sum_f32 minimal and single-row cases */
+	printf("    weighted_sum_f32 edges: ");
+	{
+		int start = tc.passed + tc.failed;
+		float wgt[3] = { 1.0f, 0.0f, 1.0f };
+		float x[6] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+		float out[2];
+		float col[2] = { 3.5f, -2.0f };
+
+		fun_math_weighted_sum_f32(wgt, x, out, 3, 2, 2);
+		check_int(out[0] == 6.0f && out[1] == 8.0f, &tc,
+				  "weighted_sum combines rows 0 and 2");
+		fun_math_weighted_sum_f32(wgt, col, out, 1, 2, 2);
+		check_int(out[0] == col[0] && out[1] == col[1], &tc,
+				  "weighted_sum single row copies through");
+
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* mxfp4_matvec_f32 edge cases */
+	printf("    mxfp4_matvec_f32 edges: ");
+	{
+		int start = tc.passed + tc.failed;
+		const float kv[16] = { 0.0f,  0.5f,	 1.0f,	1.5f,  2.0f,  3.0f,
+							   4.0f,  6.0f,	 -0.0f, -0.5f, -1.0f, -1.5f,
+							   -2.0f, -3.0f, -4.0f, -6.0f };
+		float scale_f = ldexpf(1.0f, 127 - 127); /* scale byte 127 -> 1.0 */
+		uint8_t w1[68];
+		float x1[64];
+		float out[2];
+
+		/* Row 0: scale byte 0 -> whole row decodes to zeros regardless of
+		 * nibbles. Row 1: scale byte 127 (factor 1.0); nibble byte j holds
+		 * kvalue table[j] on the high nibble, 0 on the low nibble. */
+		memset(w1, 0, sizeof(w1));
+		for (int j = 0; j < 16; j++)
+			w1[35 + j] = (uint8_t)(j << 4); /* low 0, high j */
+		w1[34] = 127;
+		for (int j = 0; j < 64; j++)
+			x1[j] = (float)j;
+		float bias1[2] = { 1.0f, 2.0f };
+
+		fun_math_matrix_vector_mxfp4_f32(w1, x1, bias1, out, 2, 64);
+		check_int(out[0] == 1.0f, &tc,
+				  "mxfp4_matvec zero-scale row yields bias only");
+		{
+			float expect = 2.0f;
+			/* Split order: high nibble j provides element at
+			 * position j+16, paired with x1[j+16]. */
+			for (int j = 0; j < 16; j++)
+				expect += kv[j] * scale_f * x1[j + 16];
+			int ok = _math_test_check_float(out[1], expect, 1e-4f, 1e-3f);
+			check_int(ok, &tc, "mxfp4_matvec scale 127 kvalue table row");
+		}
+
+		/* Scale byte 255 (factor 2^127) with kvalue 0 is exact zero. */
+		{
+			uint8_t w2[17];
+			float x2[32];
+			float out2[1];
+			memset(w2, 0, sizeof(w2));
+			w2[0] = 255;
+			for (int j = 0; j < 32; j++)
+				x2[j] = 1.0f;
+			fun_math_matrix_vector_mxfp4_f32(w2, x2, NULL, out2, 1, 32);
+			check_int(out2[0] == 0.0f, &tc,
+					  "mxfp4_matvec kvalue 0 with scale 255 is exact zero");
+		}
+
+		/* Negative kvalues with a fractional scale: nibble 0xFA decodes to
+		 * -1 (even elements) and -6 (odd elements), scale 3 -> 2^-124. */
+		{
+			uint8_t w3[17];
+			float x3[32];
+			float out3[1];
+			memset(w3, 0, sizeof(w3));
+			w3[0] = 3;
+			for (int j = 0; j < 16; j++)
+				w3[1 + j] = 0xFA;
+			for (int j = 0; j < 32; j++)
+				x3[j] = 1.0f;
+			fun_math_matrix_vector_mxfp4_f32(w3, x3, NULL, out3, 1, 32);
+			check_int(out3[0] == -112.0f * ldexpf(1.0f, -124), &tc,
+					  "mxfp4_matvec negative kvalues accumulate exactly");
+		}
+
+		/* Scale byte 1 decodes to 2^-127 (subnormal when paired with the
+		 * x2 lookup); kvalue 0.5 yields exactly 2^-127 per element. */
+		{
+			uint8_t w4[17];
+			float x4[32];
+			float out4[1];
+			memset(w4, 0, sizeof(w4));
+			w4[0] = 1;
+			for (int j = 0; j < 16; j++)
+				w4[1 + j] = 0x11; /* kvalue 0.5 on both nibbles */
+			for (int j = 0; j < 32; j++)
+				x4[j] = 1.0f;
+			fun_math_matrix_vector_mxfp4_f32(w4, x4, NULL, out4, 1, 32);
+			check_int(out4[0] == 32.0f * ldexpf(1.0f, -127), &tc,
+					  "mxfp4_matvec scale byte 1 subnormal is exact");
+		}
+
+		/* Zero rows must not write out of bounds. */
+		{
+			float guard[4] = { 9.0f, 9.0f, 9.0f, 9.0f };
+			fun_math_matrix_vector_mxfp4_f32(w1, x1, bias1, guard, 0, 64);
+			check_int(guard[0] == 9.0f && guard[3] == 9.0f, &tc,
+					  "mxfp4_matvec rows=0 leaves output untouched");
+		}
+
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* fp16_to_f32 edge cases */
+	printf("    fp16_to_f32: ");
+	{
+		int start = tc.passed + tc.failed;
+		check_int(fun_math_fp16_to_f32(0x0000) == 0.0f, &tc,
+				  "fp16 0x0000 should be 0.0");
+		check_int(fun_math_fp16_to_f32(0x8000) == -0.0f &&
+					  _math_test_check_same_sign(fun_math_fp16_to_f32(0x8000),
+												 _math_test_make_neg_zero()),
+				  &tc, "fp16 0x8000 should be -0.0");
+		check_int(fun_math_fp16_to_f32(0x3C00) == 1.0f, &tc,
+				  "fp16 0x3C00 should be 1.0");
+		check_int(fun_math_fp16_to_f32(0xBC00) == -1.0f, &tc,
+				  "fp16 0xBC00 should be -1.0");
+		check_int(_math_test_float_is_inf(fun_math_fp16_to_f32(0x7C00)), &tc,
+				  "fp16 0x7C00 should be +inf");
+		check_int(fun_math_fp16_to_f32(0xFC00) == -__builtin_inff(), &tc,
+				  "fp16 0xFC00 should be -inf");
+		check_int(_math_test_float_is_nan(fun_math_fp16_to_f32(0x7E00)), &tc,
+				  "fp16 0x7E00 should be NaN");
+		check_int(fun_math_fp16_to_f32(0x0001) == 5.960464477539063e-08f, &tc,
+				  "fp16 subnormal 0x0001 exact");
+		check_int(fun_math_fp16_to_f32(0x7BFF) == 65504.0f, &tc,
+				  "fp16 0x7BFF max value");
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* q8_dequant_f32 edge cases */
+	printf("    q8_dequant_f32: ");
+	{
+		int start = tc.passed + tc.failed;
+		{
+			uint8_t src[34] = { 0 };
+			src[0] = 0x00;
+			src[1] = 0x3C;
+			for (int j = 0; j < 32; j++)
+				src[2 + j] = (uint8_t)(j % 127);
+			float out[32];
+			fun_math_q8_dequant_row_f32(src, out, 32);
+			int ok = 1;
+			for (int j = 0; j < 32; j++) {
+				if (!_math_test_check_float(out[j], (float)(j % 127) * 1.0f,
+											1e-4f, 1e-3f))
+					ok = 0;
+			}
+			check_int(ok, &tc, "q8_dequant scale=1.0 matches int8 values");
+		}
+		{
+			uint8_t src[68] = { 0 };
+			src[34] = 0x00;
+			src[34 + 1] = 0x40;
+			for (int j = 0; j < 32; j++)
+				src[34 + 2 + j] = 1;
+			float out[64];
+			fun_math_q8_dequant_row_f32(src, out, 64);
+			check_int(out[0] == 0.0f && out[34] == 2.0f, &tc,
+					  "q8_dequant two blocks, second scale=2.0");
+		}
+		printf("%d ok\n", (tc.passed + tc.failed) - start);
+	}
+
+	/* q8_matrix_vector_f32 edge cases */
+	printf("    q8_matvec_f32: ");
+	{
+		int start = tc.passed + tc.failed;
+		float guard;
+		{
+			uint8_t w[34];
+			float x[32], out[1], guard;
+			memset(w, 0, sizeof(w));
+			w[0] = 0x00;
+			w[1] = 0x3C;
+			for (int j = 0; j < 32; j++) {
+				w[2 + j] = (uint8_t)j;
+				x[j] = 1.0f;
+			}
+			fun_math_q8_matrix_vector_f32(w, x, out, 1, 32);
+			float expect = 0.0f;
+			for (int j = 0; j < 32; j++)
+				expect += (float)j;
+			check_int(_math_test_check_float(out[0], expect, 1e-4f, 1e-3f), &tc,
+					  "q8_matvec single row all-ones x");
+		}
+		{
+			guard = 9.0f;
+			fun_math_q8_matrix_vector_f32(NULL, NULL, &guard, 0, 32);
+			check_int(guard == 9.0f, &tc,
+					  "q8_matvec rows=0 leaves output untouched");
+		}
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
 	}
 

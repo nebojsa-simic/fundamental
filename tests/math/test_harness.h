@@ -156,6 +156,32 @@ void fun_math_cos_f32(const float *x, float *out, size_t n);
 void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
 						 float *out, size_t n_heads, size_t half);
 
+void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
+						   size_t n_rows, size_t row_len, size_t row_stride,
+						   float scale);
+void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
+							   size_t n_rows, size_t row_len,
+							   size_t row_stride);
+
+#define FUN_MATH_MXFP4_BLOCK_ELEMS 32u
+#define FUN_MATH_MXFP4_BLOCK_BYTES 17u
+
+void fun_math_matrix_vector_mxfp4_f32(const uint8_t *w, const float *x,
+									  const float *bias, float *out,
+									  size_t rows, size_t cols);
+void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
+											  const float *bias, float *out,
+											  size_t rows, size_t cols,
+											  size_t row_stride_bytes);
+
+#define FUN_MATH_Q8_BLOCK_ELEMS 32u
+#define FUN_MATH_Q8_BLOCK_BYTES 34u
+
+float fun_math_fp16_to_f32(uint16_t h);
+void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n);
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x,
+								    float *out, size_t rows, size_t cols);
+
 void _math_bench_noop(const float *x, float *out, size_t n);
 
 #endif

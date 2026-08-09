@@ -4,7 +4,7 @@ gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include model.c -o model.o
 gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector.c -o vector_avx2.o
 
-gcc --std=c17 -Os -I ../../include ^
+gcc --std=c17 -Os -mavx2 -mfma -I ../../include ^
     main.c tokenizer.c model.o ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
