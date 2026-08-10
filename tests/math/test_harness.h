@@ -179,8 +179,8 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
 
 float fun_math_fp16_to_f32(uint16_t h);
 void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n);
-void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x,
-								    float *out, size_t rows, size_t cols);
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
+								   size_t rows, size_t cols);
 
 void _math_bench_noop(const float *x, float *out, size_t n);
 

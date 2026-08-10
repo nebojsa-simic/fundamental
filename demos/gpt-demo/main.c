@@ -5,7 +5,7 @@
 #include "fundamental/string/string.h"
 #include "model.h"
 #include "tokenizer.h"
-#include <time.h>
+#include "timing.h"
 
 #define MAX_TOKENS 64
 #define MAX_SEQ 256
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
 	fun_math_init();
 
-	clock_t t0 = clock();
+	double t0 = demo_time_now();
 
 	fun_console_write_line("Loading model...");
 
@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 	Model model;
 	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf");
 
-	clock_t t1 = clock();
-	double load_s = (double)(t1 - t0) / CLOCKS_PER_SEC;
+	double t1 = demo_time_now();
+	double load_s = t1 - t0;
 
 	char buf[256];
 	MemoryResult num_mem = fun_memory_allocate(256);
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 	fun_console_write_line(prompt);
 	fun_console_write_line("");
 
-	t0 = clock();
+	t0 = demo_time_now();
 
 	int generated = 0;
 	char response[2048];
@@ -100,8 +100,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	t1 = clock();
-	double eval_s = (double)(t1 - t0) / CLOCKS_PER_SEC;
+	t1 = demo_time_now();
+	double eval_s = t1 - t0;
 
 	fun_console_write_line("");
 	fun_console_write_line("");

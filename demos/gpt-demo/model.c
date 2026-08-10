@@ -291,9 +291,8 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	for (int pos = start; pos < n_tokens; pos++) {
 		fun_math_q8_dequant_row_f32(
 			m->tok_embeddings +
-				(uint64_t)tokens[pos] *
-					((size_t)hs / FUN_MATH_Q8_BLOCK_ELEMS *
-					 FUN_MATH_Q8_BLOCK_BYTES),
+				(uint64_t)tokens[pos] * ((size_t)hs / FUN_MATH_Q8_BLOCK_ELEMS *
+										 FUN_MATH_Q8_BLOCK_BYTES),
 			hidden, (size_t)hs);
 
 		for (int j = 0; j < half; j++)

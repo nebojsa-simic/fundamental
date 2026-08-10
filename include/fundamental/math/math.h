@@ -65,8 +65,8 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
  * values).  dequant_row decodes n elements into out.  matrix_vector computes
  * out[r] = sum_d w[r][d] * x[d] for rows rows, cols columns (no bias). */
 void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n);
-void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x,
-								    float *out, size_t rows, size_t cols);
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
+								   size_t rows, size_t cols);
 
 void fun_math_init(void);
 int fun_math_has_sse2(void);

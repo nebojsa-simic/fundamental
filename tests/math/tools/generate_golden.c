@@ -928,9 +928,8 @@ static void gen_scalar_fp16_to_f32(void)
 	fprintf(f, "static const fp16_to_f32_case fp16_to_f32_cases[] = {\n");
 
 	uint16_t values[] = {
-		0x0000, 0x8000, 0x3C00, 0xBC00, 0x7C00, 0xFC00,
-		0x7E00, 0xFE00, 0x0001, 0x03FF, 0x0400, 0x3555,
-		0x3BFF, 0x7BFF, 0xFBFF, 0x4000, 0x4400, 0xC400,
+		0x0000, 0x8000, 0x3C00, 0xBC00, 0x7C00, 0xFC00, 0x7E00, 0xFE00, 0x0001,
+		0x03FF, 0x0400, 0x3555, 0x3BFF, 0x7BFF, 0xFBFF, 0x4000, 0x4400, 0xC400,
 	};
 	int nv = sizeof(values) / sizeof(values[0]);
 	for (int i = 0; i < nv; i++) {
@@ -969,9 +968,11 @@ static void gen_vector_q8_dequant(void)
 
 	int lens[] = { 32, 64, 128, 256 };
 	int nlens = sizeof(lens) / sizeof(lens[0]);
+	int saved_n[30];
 
 	for (int ci = 0; ci < 30; ci++) {
 		int nz = lens[rand() % nlens];
+		saved_n[ci] = nz;
 		int blocks = nz / 32;
 		size_t nbytes = (size_t)blocks * 34;
 		uint8_t *src = malloc(nbytes);
@@ -1021,8 +1022,7 @@ static void gen_vector_q8_dequant(void)
 	fprintf(f, "\nstatic const q8_dequant_f32_case q8_dequant_f32_cases[] = "
 			   "{\n");
 	for (int ci = 0; ci < 30; ci++) {
-		int nz = lens[ci % nlens];
-		fprintf(f, "    { %d, _qd_src_%d, _qd_e_%d },\n", nz, ci, ci);
+		fprintf(f, "    { %d, _qd_src_%d, _qd_e_%d },\n", saved_n[ci], ci, ci);
 	}
 	fprintf(f, "    { 0 },\n");
 	fprintf(f, "};\n");
@@ -1087,7 +1087,8 @@ static void gen_vector_q8_matvec(void)
 			for (int t = 0; t < nr; t++) {
 				float s = 0.0f;
 				for (int b = 0; b < blocks; b++) {
-					const uint8_t *blk = w + (size_t)t * row_bytes + (size_t)b * 34;
+					const uint8_t *blk =
+						w + (size_t)t * row_bytes + (size_t)b * 34;
 					uint16_t h = (uint16_t)blk[0] | ((uint16_t)blk[1] << 8);
 					float d = ref_fp16_to_f32(h);
 					const int8_t *q = (const int8_t *)(blk + 2);
@@ -1137,8 +1138,8 @@ static void gen_vector_q8_matvec(void)
 	for (int i = 0; i < ci; i++) {
 		int cols = lens[(i / nnrows) % nlens];
 		int nr = nrows_set[i % nnrows];
-		fprintf(f, "    { %d, %d, _qm_w_%d, _qm_x_%d, _qm_e_%d, 1e-4f },\n",
-				nr, cols, i, i, i);
+		fprintf(f, "    { %d, %d, _qm_w_%d, _qm_x_%d, _qm_e_%d, 1e-4f },\n", nr,
+				cols, i, i, i);
 	}
 	fprintf(f, "    { 0 },\n");
 	fprintf(f, "};\n");

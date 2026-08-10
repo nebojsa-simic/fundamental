@@ -5,7 +5,9 @@ gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector.c -o vector_avx2.o
 
 gcc --std=c17 -Os -mavx2 -mfma -I ../../include ^
-    main.c tokenizer.c model.o ^
+    main.c tokenizer.c ^
+    arch/timing/windows-amd64/timing.c ^
+    model.o ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
     ../../arch/gguf/windows-amd64/mmap.c ^

@@ -719,14 +719,16 @@ TestCount test_vector_accuracy(void)
 			float want = fp16_to_f32_cases[ci].expected;
 			int ok;
 			if (_math_test_float_is_nan(got) || _math_test_float_is_nan(want))
-				ok = _math_test_float_is_nan(got) == _math_test_float_is_nan(want);
+				ok = _math_test_float_is_nan(got) ==
+					 _math_test_float_is_nan(want);
 			else
 				ok = (got == want) ||
 					 _math_test_check_float(got, want, 1e-7f, 1e-7f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL fp16_to_f32 0x%04X: got %.9g, expected %.9g\n",
-					   (unsigned)h, (double)got, (double)want);
+				printf(
+					"\n      FAIL fp16_to_f32 0x%04X: got %.9g, expected %.9g\n",
+					(unsigned)h, (double)got, (double)want);
 			}
 		}
 		printf("%d/%d", tc.passed, tc.passed + tc.failed);
