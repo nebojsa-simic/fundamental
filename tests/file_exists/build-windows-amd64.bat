@@ -24,7 +24,10 @@ set SOURCES=^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\path.c ^
     %PROJECT_ROOT%\arch\memory\windows-amd64\memory.c ^
     %PROJECT_ROOT%\src\string\stringValidation.c ^
-    %PROJECT_ROOT%\src\string\stringOperations.c
+    %PROJECT_ROOT%\src\string\stringOperations.c ^
+    %PROJECT_ROOT%\src\console\console.c ^
+    %PROJECT_ROOT%\arch\console\windows-amd64\console.c ^
+    %PROJECT_ROOT%\src\string\stringConversion.c
 
 REM Build
 echo Building file_exists tests...

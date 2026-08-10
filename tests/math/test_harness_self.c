@@ -1,5 +1,4 @@
-#include <math.h>
-#include <stdio.h>
+#include "fundamental/console/console.h"
 #include "test_harness.h"
 
 #include "test_data/harness_self_test_golden.h"
@@ -12,7 +11,7 @@ TestCount test_harness_self(void)
 {
 	TestCount tc = math_test_count_init();
 
-	printf("\n");
+	fun_console_write_line("");
 	for (int i = 0;; i++) {
 		float input = harness_self_cases[i].input;
 		float expected = harness_self_cases[i].expected;
@@ -27,18 +26,33 @@ TestCount test_harness_self(void)
 		int passed = _math_test_check_float(got, expected, abs_tol, 1e-4f);
 
 		if (passed != should_pass) {
-			printf("    harness self-test: case %d %s (expected %s)\n", i,
-				   passed ? "passed" : "failed", should_pass ? "pass" : "fail");
+			fun_console_write("    harness self-test: case ");
+			char _buf[32];
+			fun_string_from_int(i, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(passed ? " passed (expected " :
+									   " failed (expected ");
+			fun_console_write_line(should_pass ? "pass)" : "fail)");
 			tc.failed++;
 		} else {
 			tc.passed++;
 		}
 	}
 
-	printf("    harness self-test: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    harness self-test: ");
+	char _buf[32];
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 
 	if (tc.failed > 0)
 		return tc;

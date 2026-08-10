@@ -1,6 +1,5 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "fundamental/console/console.h"
+#include "fundamental/memory/memory.h"
 #include "test_harness.h"
 
 static TestCount test_silu_consistency(void)
@@ -8,9 +7,9 @@ static TestCount test_silu_consistency(void)
 	TestCount tc = math_test_count_init();
 	uint32_t rng = _math_test_lcg_seed(42);
 	int n = 1024;
-	float *x = malloc(n * sizeof(float));
-	float *simd = malloc(n * sizeof(float));
-	float *scalar = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *simd = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *scalar = (float *)fun_memory_allocate(n * sizeof(float)).value;
 
 	if (!x || !simd || !scalar) {
 		tc.failed = 1;
@@ -32,9 +31,9 @@ static TestCount test_silu_consistency(void)
 	}
 
 done:
-	free(x);
-	free(simd);
-	free(scalar);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&simd);
+	fun_memory_free((Memory *)&scalar);
 	return tc;
 }
 
@@ -44,10 +43,10 @@ static TestCount test_rms_consistency(void)
 	uint32_t rng = _math_test_lcg_seed(99);
 	int n = 4096;
 	float eps = 1e-5f;
-	float *x = malloc(n * sizeof(float));
-	float *w = malloc(n * sizeof(float));
-	float *simd = malloc(n * sizeof(float));
-	float *scalar_ref = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *w = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *simd = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *scalar_ref = (float *)fun_memory_allocate(n * sizeof(float)).value;
 
 	if (!x || !w || !simd || !scalar_ref) {
 		tc.failed = 1;
@@ -76,10 +75,10 @@ static TestCount test_rms_consistency(void)
 	}
 
 done:
-	free(x);
-	free(w);
-	free(simd);
-	free(scalar_ref);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&w);
+	fun_memory_free((Memory *)&simd);
+	fun_memory_free((Memory *)&scalar_ref);
 	return tc;
 }
 
@@ -91,9 +90,9 @@ test_unary_consistency(const char *name,
 	TestCount tc = math_test_count_init();
 	uint32_t rng = _math_test_lcg_seed(seed);
 	int n = 1024;
-	float *x = malloc(n * sizeof(float));
-	float *simd = malloc(n * sizeof(float));
-	float *scalar = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *simd = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *scalar = (float *)fun_memory_allocate(n * sizeof(float)).value;
 
 	if (!x || !simd || !scalar) {
 		tc.failed = 1;
@@ -118,17 +117,32 @@ test_unary_consistency(const char *name,
 				ok = _math_test_check_float(simd[i], scalar[i], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL %s[%d]: got %.6f, expected %.6f\n", name,
-					   i, (double)simd[i], (double)scalar[i]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL ");
+				fun_console_write(name);
+				fun_console_write("[");
+				char _buf[32];
+				fun_string_from_int(i, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)simd[i], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)scalar[i], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 				break;
 			}
 		}
 	}
 
 done:
-	free(x);
-	free(simd);
-	free(scalar);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&simd);
+	fun_memory_free((Memory *)&scalar);
 	return tc;
 }
 
@@ -136,57 +150,106 @@ TestCount test_consistency(void)
 {
 	TestCount total = math_test_count_init();
 
-	printf("\n");
-	printf("    silu_f32 vs scalar: ");
+	fun_console_write_line("");
+	fun_console_write("    silu_f32 vs scalar: ");
 	TestCount tc = test_silu_consistency();
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	char _buf[32];
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
-	printf("    rms_norm_f32 vs scalar: ");
+	fun_console_write("    rms_norm_f32 vs scalar: ");
 	tc = test_rms_consistency();
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
-	printf("    exp_f32 vs scalar: ");
+	fun_console_write("    exp_f32 vs scalar: ");
 	tc = test_unary_consistency("exp_f32", fun_math_exp_f32, fun_math_exp,
 								-16.0f, 16.0f, 21);
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
-	printf("    log_f32 vs scalar: ");
+	fun_console_write("    log_f32 vs scalar: ");
 	tc = test_unary_consistency("log_f32", fun_math_log_f32, fun_math_log,
 								0.001f, 100.0f, 22);
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
-	printf("    sin_f32 vs scalar: ");
+	fun_console_write("    sin_f32 vs scalar: ");
 	tc = test_unary_consistency("sin_f32", fun_math_sin_f32, fun_math_sin,
 								-50.0f, 50.0f, 23);
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
-	printf("    cos_f32 vs scalar: ");
+	fun_console_write("    cos_f32 vs scalar: ");
 	tc = test_unary_consistency("cos_f32", fun_math_cos_f32, fun_math_cos,
 								-50.0f, 50.0f, 24);
-	printf("%d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	return total;

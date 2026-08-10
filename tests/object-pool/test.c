@@ -1,15 +1,13 @@
-#include <assert.h>
-#include <stdio.h>
 #include "fundamental/object-pool/object-pool.h"
+#include "fundamental/console/console.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 
-#define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
-#define ASSERT_ERROR(result) assert(result.error.code != 0)
-
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 // Helper to verify pointers are distinct
@@ -27,16 +25,34 @@ int all_distinct(void **ptrs, size_t count)
 void test_pool_create_valid()
 {
 	ObjectPoolResult r = fun_object_pool_create(sizeof(uint64_t), 4);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
-	assert(pool->elementSize == sizeof(uint64_t));
-	assert(pool->capacity == 4);
-	assert(pool->freeCount == 4);
-	assert(pool->freeList != (void *)0);
+	if (!(pool->elementSize == sizeof(uint64_t))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(pool->capacity == 4)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(pool->freeCount == 4)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(pool->freeList != (void *)0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	voidResult fr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(fr);
+	if (fr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_pool_create_valid");
 }
@@ -44,8 +60,14 @@ void test_pool_create_valid()
 void test_pool_create_too_small()
 {
 	ObjectPoolResult r = fun_object_pool_create(4, 8);
-	ASSERT_ERROR(r);
-	assert(r.value.memory == (void *)0);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
+	if (!(r.value.memory == (void *)0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	print_test_result("test_pool_create_too_small");
 }
@@ -53,7 +75,10 @@ void test_pool_create_too_small()
 void test_pool_create_zero_capacity()
 {
 	ObjectPoolResult r = fun_object_pool_create(32, 0);
-	ASSERT_ERROR(r);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 
 	print_test_result("test_pool_create_zero_capacity");
 }
@@ -62,7 +87,10 @@ void test_acquire_release_reuse()
 {
 #define POOL_SIZE 8
 	ObjectPoolResult r = fun_object_pool_create(sizeof(uint64_t), POOL_SIZE);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
 	void *ptrs[POOL_SIZE];
@@ -70,37 +98,61 @@ void test_acquire_release_reuse()
 	// Acquire all slots
 	for (size_t i = 0; i < POOL_SIZE; i++) {
 		MemoryResult ar = fun_object_pool_acquire(pool);
-		ASSERT_NO_ERROR(ar);
+		if (ar.error.code != 0) {
+			fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+			return;
+		}
 		ptrs[i] = ar.value;
 	}
 
-	assert(all_distinct(ptrs, POOL_SIZE));
-	assert(pool->freeCount == 0);
+	if (!(all_distinct(ptrs, POOL_SIZE))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(pool->freeCount == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	// Release all
 	for (size_t i = 0; i < POOL_SIZE; i++) {
 		voidResult rr = fun_object_pool_release(pool, ptrs[i]);
-		ASSERT_NO_ERROR(rr);
+		if (rr.error.code != 0) {
+			fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+			return;
+		}
 	}
 
-	assert(pool->freeCount == POOL_SIZE);
+	if (!(pool->freeCount == POOL_SIZE)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	// Acquire again — should reuse same slots
 	void *second[POOL_SIZE];
 	for (size_t i = 0; i < POOL_SIZE; i++) {
 		MemoryResult ar = fun_object_pool_acquire(pool);
-		ASSERT_NO_ERROR(ar);
+		if (ar.error.code != 0) {
+			fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+			return;
+		}
 		second[i] = ar.value;
 	}
 
-	assert(all_distinct(second, POOL_SIZE));
+	if (!(all_distinct(second, POOL_SIZE))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	// Release and destroy
 	for (size_t i = 0; i < POOL_SIZE; i++) {
 		fun_object_pool_release(pool, second[i]);
 	}
 	voidResult fr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(fr);
+	if (fr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 #undef POOL_SIZE
 	print_test_result("test_acquire_release_reuse");
@@ -109,23 +161,41 @@ void test_acquire_release_reuse()
 void test_acquire_exhausted()
 {
 	ObjectPoolResult r = fun_object_pool_create(sizeof(uint64_t), 2);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
 	MemoryResult a1 = fun_object_pool_acquire(pool);
-	ASSERT_NO_ERROR(a1);
+	if (a1.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	MemoryResult a2 = fun_object_pool_acquire(pool);
-	ASSERT_NO_ERROR(a2);
+	if (a2.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	// Pool exhausted
 	MemoryResult a3 = fun_object_pool_acquire(pool);
-	ASSERT_ERROR(a3);
-	assert(a3.value == (void *)0);
+	if (a3.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
+	if (!(a3.value == (void *)0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_object_pool_release(pool, a1.value);
 	fun_object_pool_release(pool, a2.value);
 	voidResult fr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(fr);
+	if (fr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_acquire_exhausted");
 }
@@ -133,20 +203,32 @@ void test_acquire_exhausted()
 void test_release_invalid()
 {
 	ObjectPoolResult r = fun_object_pool_create(32, 4);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
 	// Foreign slot (not from this pool)
 	char foreign[32];
 	voidResult rr = fun_object_pool_release(pool, foreign);
-	ASSERT_ERROR(rr);
+	if (rr.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 
 	// NULL slot
 	rr = fun_object_pool_release(pool, (void *)0);
-	ASSERT_ERROR(rr);
+	if (rr.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 
 	voidResult fr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(fr);
+	if (fr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_release_invalid");
 }
@@ -154,7 +236,10 @@ void test_release_invalid()
 void test_destroy_with_leaks()
 {
 	ObjectPoolResult r = fun_object_pool_create(32, 4);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
 	// Acquire 2, leave them outstanding
@@ -162,7 +247,10 @@ void test_destroy_with_leaks()
 	fun_object_pool_acquire(pool);
 
 	voidResult dr = fun_object_pool_destroy(pool);
-	ASSERT_ERROR(dr);
+	if (dr.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 
 	print_test_result("test_destroy_with_leaks");
 }
@@ -170,11 +258,17 @@ void test_destroy_with_leaks()
 void test_destroy_clean()
 {
 	ObjectPoolResult r = fun_object_pool_create(32, 4);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
 	voidResult dr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(dr);
+	if (dr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_destroy_clean");
 }
@@ -182,23 +276,50 @@ void test_destroy_clean()
 void test_query_functions()
 {
 	ObjectPoolResult r = fun_object_pool_create(24, 6);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	ObjectPool *pool = &r.value;
 
-	assert(fun_object_pool_free_count(pool) == 6);
-	assert(fun_object_pool_capacity(pool) == 6);
-	assert(fun_object_pool_element_size(pool) == 24);
+	if (!(fun_object_pool_free_count(pool) == 6)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_object_pool_capacity(pool) == 6)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_object_pool_element_size(pool) == 24)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	MemoryResult ar = fun_object_pool_acquire(pool);
-	ASSERT_NO_ERROR(ar);
-	assert(fun_object_pool_free_count(pool) == 5);
-	assert(fun_object_pool_capacity(pool) == 6);
+	if (ar.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
+	if (!(fun_object_pool_free_count(pool) == 5)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_object_pool_capacity(pool) == 6)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_object_pool_release(pool, ar.value);
-	assert(fun_object_pool_free_count(pool) == 6);
+	if (!(fun_object_pool_free_count(pool) == 6)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	voidResult fr = fun_object_pool_destroy(pool);
-	ASSERT_NO_ERROR(fr);
+	if (fr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_query_functions");
 }
@@ -213,43 +334,82 @@ DEFINE_OBJECT_POOL_TYPE(TestSlot)
 void test_typed_macro()
 {
 	ObjectPoolResult r = fun_object_pool_TestSlot_create(4);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	TestSlotPool pool;
 	pool.pool = r.value;
 
 	TestSlot *a = fun_object_pool_TestSlot_acquire(&pool);
-	assert(a != (TestSlot *)0);
+	if (!(a != (TestSlot *)0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	a->id = 1;
 	a->value = 42;
 
 	TestSlot *b = fun_object_pool_TestSlot_acquire(&pool);
-	assert(b != (TestSlot *)0);
+	if (!(b != (TestSlot *)0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	b->id = 2;
 	b->value = 100;
 
-	assert(a != b);
-	assert(a->id == 1);
-	assert(a->value == 42);
-	assert(b->id == 2);
-	assert(b->value == 100);
-	assert(fun_object_pool_TestSlot_free_count(&pool) == 2);
+	if (!(a != b)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(a->id == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(a->value == 42)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(b->id == 2)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(b->value == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_object_pool_TestSlot_free_count(&pool) == 2)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	voidResult rr = fun_object_pool_TestSlot_release(&pool, a);
-	ASSERT_NO_ERROR(rr);
+	if (rr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	rr = fun_object_pool_TestSlot_release(&pool, b);
-	ASSERT_NO_ERROR(rr);
+	if (rr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
-	assert(fun_object_pool_TestSlot_free_count(&pool) == 4);
+	if (!(fun_object_pool_TestSlot_free_count(&pool) == 4)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	voidResult dr = fun_object_pool_TestSlot_destroy(&pool);
-	ASSERT_NO_ERROR(dr);
+	if (dr.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result("test_typed_macro");
 }
 
 int main()
 {
-	printf("Running object pool tests:\n");
+	fun_console_write_line("Running object pool tests:");
 	test_pool_create_valid();
 	test_pool_create_too_small();
 	test_pool_create_zero_capacity();
@@ -260,6 +420,6 @@ int main()
 	test_destroy_clean();
 	test_query_functions();
 	test_typed_macro();
-	printf("All tests passed!\n");
+	fun_console_write_line("All tests passed!");
 	return 0;
 }

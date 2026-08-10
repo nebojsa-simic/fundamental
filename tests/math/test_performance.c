@@ -1,6 +1,5 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "fundamental/console/console.h"
+#include "fundamental/memory/memory.h"
 #include "test_harness.h"
 
 static __inline__ uint64_t _math_test_rdtsc(void)
@@ -14,8 +13,8 @@ static void bench_scalar(const char *name, float (*fn)(float), int n, int reps)
 {
 	uint64_t best = ~0ULL;
 
-	float *x = malloc(n * sizeof(float));
-	float *out = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!x || !out)
 		return;
 
@@ -32,11 +31,22 @@ static void bench_scalar(const char *name, float (*fn)(float), int n, int reps)
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)n, (unsigned long long)best, n);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(n, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
-	free(x);
-	free(out);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&out);
 }
 
 static void bench_vector(const char *name,
@@ -45,8 +55,8 @@ static void bench_vector(const char *name,
 {
 	uint64_t best = ~0ULL;
 
-	float *x = malloc(n * sizeof(float));
-	float *out = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!x || !out)
 		return;
 
@@ -62,11 +72,22 @@ static void bench_vector(const char *name,
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)n, (unsigned long long)best, n);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(n, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
-	free(x);
-	free(out);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&out);
 }
 
 static void bench_vector_swiglu(const char *name,
@@ -76,9 +97,9 @@ static void bench_vector_swiglu(const char *name,
 {
 	uint64_t best = ~0ULL;
 
-	float *gate = malloc(n * sizeof(float));
-	float *up = malloc(n * sizeof(float));
-	float *out = malloc(n * sizeof(float));
+	float *gate = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *up = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!gate || !up || !out)
 		goto done;
 
@@ -96,13 +117,24 @@ static void bench_vector_swiglu(const char *name,
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)n, (unsigned long long)best, n);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(n, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
 done:
-	free(gate);
-	free(up);
-	free(out);
+	fun_memory_free((Memory *)&gate);
+	fun_memory_free((Memory *)&up);
+	fun_memory_free((Memory *)&out);
 }
 
 static void bench_vector_rms(const char *name,
@@ -112,9 +144,9 @@ static void bench_vector_rms(const char *name,
 {
 	uint64_t best = ~0ULL;
 
-	float *x = malloc(n * sizeof(float));
-	float *w = malloc(n * sizeof(float));
-	float *out = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *w = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!x || !w || !out)
 		goto done;
 
@@ -132,21 +164,32 @@ static void bench_vector_rms(const char *name,
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)n, (unsigned long long)best, n);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(n, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
 done:
-	free(x);
-	free(w);
-	free(out);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&w);
+	fun_memory_free((Memory *)&out);
 }
 
 static void bench_dot(const char *name, int n, int reps)
 {
 	uint64_t best = ~0ULL;
 
-	float *a = malloc(n * sizeof(float));
-	float *b = malloc(n * sizeof(float));
+	float *a = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *b = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!a || !b)
 		return;
 
@@ -164,21 +207,33 @@ static void bench_dot(const char *name, int n, int reps)
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)n, (unsigned long long)best, n);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(n, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
-	free(a);
-	free(b);
+	fun_memory_free((Memory *)&a);
+	fun_memory_free((Memory *)&b);
 }
 
 static void bench_mat_vec(const char *name, int rows, int cols, int reps)
 {
 	uint64_t best = ~0ULL;
 
-	float *w = malloc((size_t)rows * cols * sizeof(float));
-	float *x = malloc(cols * sizeof(float));
-	float *bias = malloc(rows * sizeof(float));
-	float *out = malloc(rows * sizeof(float));
+	float *w =
+		(float *)fun_memory_allocate((size_t)rows * cols * sizeof(float)).value;
+	float *x = (float *)fun_memory_allocate(cols * sizeof(float)).value;
+	float *bias = (float *)fun_memory_allocate(rows * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(rows * sizeof(float)).value;
 	if (!w || !x || !bias || !out)
 		goto done;
 
@@ -198,15 +253,26 @@ static void bench_mat_vec(const char *name, int rows, int cols, int reps)
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", name,
-		   (double)best / (double)((size_t)rows * cols),
-		   (unsigned long long)best, rows * cols);
+	fun_console_write("    ");
+	fun_console_write(name);
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)((size_t)rows * cols), 2,
+						   _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cyc/el (");
+	fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" cycles / ");
+	fun_string_from_int(rows * cols, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(")");
 
 done:
-	free(w);
-	free(x);
-	free(bias);
-	free(out);
+	fun_memory_free((Memory *)&w);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&bias);
+	fun_memory_free((Memory *)&out);
 }
 
 static void bench_noop(void)
@@ -215,8 +281,8 @@ static void bench_noop(void)
 	int reps = 100;
 	uint64_t best = ~0ULL;
 
-	float *x = malloc(n * sizeof(float));
-	float *out = malloc(n * sizeof(float));
+	float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+	float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 	if (!x || !out)
 		return;
 
@@ -232,19 +298,24 @@ static void bench_noop(void)
 			best = elapsed;
 	}
 
-	printf("    %-10s: %8.2f cyc/el (loop overhead)\n", "noop",
-		   (double)best / (double)n);
+	fun_console_write("    ");
+	fun_console_write("noop");
+	fun_console_write(": ");
+	char _buf[64];
+	fun_string_from_double((double)best / (double)n, 2, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(" cyc/el (loop overhead)");
 
-	free(x);
-	free(out);
+	fun_memory_free((Memory *)&x);
+	fun_memory_free((Memory *)&out);
 }
 
 TestCount test_performance(void)
 {
 	TestCount tc = math_test_count_init();
 
-	printf("\n");
-	printf("    Scalar (n=1024, best of 100000):\n");
+	fun_console_write_line("");
+	fun_console_write_line("    Scalar (n=1024, best of 100000):");
 	bench_scalar("sqrt", fun_math_sqrt, 1024, 100000);
 	bench_scalar("exp", fun_math_exp, 1024, 100000);
 	bench_scalar("log", fun_math_log, 1024, 100000);
@@ -254,7 +325,8 @@ TestCount test_performance(void)
 	bench_scalar("sigmoid", fun_math_sigmoid, 1024, 100000);
 	bench_scalar("silu", fun_math_silu, 1024, 100000);
 
-	printf("\n    Vector (n=65536, best of 10000):\n");
+	fun_console_write_line("");
+	fun_console_write_line("    Vector (n=65536, best of 10000):");
 	bench_noop();
 	bench_vector("silu_f32", fun_math_silu_f32, 65536, 10000);
 	bench_vector_rms("rms_norm", fun_math_rms_norm_f32, 65536, 1000, 1e-5f);
@@ -267,8 +339,8 @@ TestCount test_performance(void)
 	bench_mat_vec("mat_vec", 64, 1024, 1000);
 
 	{
-		float *x = malloc(64 * sizeof(float));
-		float *xcopy = malloc(64 * sizeof(float));
+		float *x = (float *)fun_memory_allocate(64 * sizeof(float)).value;
+		float *xcopy = (float *)fun_memory_allocate(64 * sizeof(float)).value;
 		if (x && xcopy) {
 			uint64_t best = ~0ULL;
 			for (int i = 0; i < 64; i++)
@@ -283,11 +355,20 @@ TestCount test_performance(void)
 				if (t1 - t0 < best)
 					best = t1 - t0;
 			}
-			printf("    %-10s: %8.2f cyc/el (%llu cycles / %d)\n", "softmax",
-				   (double)best / 64.0, (unsigned long long)best, 64);
+			fun_console_write("    ");
+			fun_console_write("softmax");
+			fun_console_write(": ");
+			char _buf[64];
+			fun_string_from_double((double)best / 64.0, 2, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" cyc/el (");
+			fun_string_from_int((int64_t)best, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" cycles / 64)");
+			fun_console_write_line("");
 		}
-		free(x);
-		free(xcopy);
+		fun_memory_free((Memory *)&x);
+		fun_memory_free((Memory *)&xcopy);
 	}
 
 	tc.passed = 1;

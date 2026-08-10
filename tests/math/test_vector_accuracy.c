@@ -1,7 +1,5 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "fundamental/console/console.h"
+#include "fundamental/memory/memory.h"
 #include "test_harness.h"
 
 #include "test_data/silu_f32_golden.h"
@@ -34,7 +32,8 @@ static TestCount test_batch_unary(const char *name,
 
 	for (int ci = 0; cases[ci].n > 0; ci++) {
 		int n = cases[ci].n;
-		float *out = malloc((size_t)n * sizeof(float));
+		float *out =
+			(float *)fun_memory_allocate((size_t)n * sizeof(float)).value;
 		if (!out) {
 			tc.failed += n;
 			continue;
@@ -51,12 +50,28 @@ static TestCount test_batch_unary(const char *name,
 											1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL %s[%d][%d]: got %.6f, expected %.6f\n",
-					   name, ci, j, (double)out[j],
-					   (double)cases[ci].expected[j]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL ");
+				fun_console_write(name);
+				fun_console_write("[");
+				char _buf[32];
+				fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("][");
+				fun_string_from_int(j, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)out[j], 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)cases[ci].expected[j], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
-		free(out);
+		fun_memory_free((Memory *)&out);
 	}
 	return tc;
 }
@@ -73,11 +88,12 @@ static TestCount test_mat_vec_accuracy(void)
 	for (int s = 0; s < nshapes; s++) {
 		size_t rows = shapes[s][0];
 		size_t cols = shapes[s][1];
-		float *w = malloc(rows * cols * sizeof(float));
-		float *x = malloc(cols * sizeof(float));
-		float *bias = malloc(rows * sizeof(float));
-		float *got = malloc(rows * sizeof(float));
-		float *want = malloc(rows * sizeof(float));
+		float *w =
+			(float *)fun_memory_allocate(rows * cols * sizeof(float)).value;
+		float *x = (float *)fun_memory_allocate(cols * sizeof(float)).value;
+		float *bias = (float *)fun_memory_allocate(rows * sizeof(float)).value;
+		float *got = (float *)fun_memory_allocate(rows * sizeof(float)).value;
+		float *want = (float *)fun_memory_allocate(rows * sizeof(float)).value;
 		if (!w || !x || !bias || !got || !want) {
 			tc.failed += (int)rows;
 			continue;
@@ -102,17 +118,35 @@ static TestCount test_mat_vec_accuracy(void)
 				ok = _math_test_check_float(want[r], ref, 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL mat_vec[%zu/%zu][%zu]: got %.6f, "
-						   "expected %.6f\n",
-						   rows, cols, r, (double)want[r], (double)ref);
+					fun_console_write_line("");
+					fun_console_write("      FAIL mat_vec[");
+					char _buf[32];
+					fun_string_from_int((int64_t)rows, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("/");
+					fun_string_from_int((int64_t)cols, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)r, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)want[r], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double((double)ref, 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
 		}
-		free(w);
-		free(x);
-		free(bias);
-		free(got);
-		free(want);
+		fun_memory_free((Memory *)&w);
+		fun_memory_free((Memory *)&x);
+		fun_memory_free((Memory *)&bias);
+		fun_memory_free((Memory *)&got);
+		fun_memory_free((Memory *)&want);
 	}
 	return tc;
 }
@@ -127,8 +161,8 @@ static TestCount test_dot_accuracy(void)
 
 	for (int s = 0; s < nlen; s++) {
 		size_t n = lengths[s];
-		float *a = malloc(n * sizeof(float));
-		float *b = malloc(n * sizeof(float));
+		float *a = (float *)fun_memory_allocate(n * sizeof(float)).value;
+		float *b = (float *)fun_memory_allocate(n * sizeof(float)).value;
 		if (!a || !b) {
 			tc.failed++;
 			continue;
@@ -145,12 +179,23 @@ static TestCount test_dot_accuracy(void)
 			int ok = _math_test_check_float(got, ref, 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL dot[%zu]: got %.6f, expected %.6f\n", n,
-					   (double)got, (double)ref);
+				fun_console_write_line("");
+				fun_console_write("      FAIL dot[");
+				char _buf[32];
+				fun_string_from_int((int64_t)n, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)got, 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)ref, 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
-		free(a);
-		free(b);
+		fun_memory_free((Memory *)&a);
+		fun_memory_free((Memory *)&b);
 	}
 	return tc;
 }
@@ -184,18 +229,18 @@ static TestCount test_rotary_accuracy(void)
 		size_t nh = head_counts[(trial / nhalves) % nheads];
 		size_t n = nh * 2 * half;
 
-		float *x = malloc(n * sizeof(float));
-		float *c = malloc(half * sizeof(float));
-		float *s = malloc(half * sizeof(float));
-		float *want = malloc(n * sizeof(float));
-		float *got = malloc(n * sizeof(float));
+		float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
+		float *c = (float *)fun_memory_allocate(half * sizeof(float)).value;
+		float *s = (float *)fun_memory_allocate(half * sizeof(float)).value;
+		float *want = (float *)fun_memory_allocate(n * sizeof(float)).value;
+		float *got = (float *)fun_memory_allocate(n * sizeof(float)).value;
 		if (!x || !c || !s || !want || !got) {
 			tc.failed++;
-			free(x);
-			free(c);
-			free(s);
-			free(want);
-			free(got);
+			fun_memory_free((Memory *)&x);
+			fun_memory_free((Memory *)&c);
+			fun_memory_free((Memory *)&s);
+			fun_memory_free((Memory *)&want);
+			fun_memory_free((Memory *)&got);
 			continue;
 		}
 
@@ -213,29 +258,51 @@ static TestCount test_rotary_accuracy(void)
 			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL rotary out[%zu]: got %.6f, expected "
-					   "%.6f\n",
-					   i, (double)got[i], (double)want[i]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL rotary out[");
+				char _buf[32];
+				fun_string_from_int((int64_t)i, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)got[i], 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)want[i], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
 
-		memcpy(got, x, n * sizeof(float));
+		fun_memory_copy(x, got, n * sizeof(float));
 		fun_math_rotary_f32(got, c, s, got, nh, half);
 		for (size_t i = 0; i < n; i++) {
 			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL rotary in-place[%zu]: got %.6f, "
-					   "expected %.6f\n",
-					   i, (double)got[i], (double)want[i]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL rotary in-place[");
+				char _buf[32];
+				fun_string_from_int((int64_t)i, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)got[i], 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)want[i], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
 
-		free(x);
-		free(c);
-		free(s);
-		free(want);
-		free(got);
+		fun_memory_free((Memory *)&x);
+		fun_memory_free((Memory *)&c);
+		fun_memory_free((Memory *)&s);
+		fun_memory_free((Memory *)&want);
+		fun_memory_free((Memory *)&got);
 	}
 	return tc;
 }
@@ -256,16 +323,17 @@ static TestCount test_rows_dot_accuracy(void)
 		size_t stride = rl + 3 + (trial % 5);
 		float scale = scales[trial % nscales];
 
-		float *q = malloc(rl * sizeof(float));
-		float *x = malloc(stride * nr * sizeof(float));
-		float *want = malloc(nr * sizeof(float));
-		float *got = malloc(nr * sizeof(float));
+		float *q = (float *)fun_memory_allocate(rl * sizeof(float)).value;
+		float *x =
+			(float *)fun_memory_allocate(stride * nr * sizeof(float)).value;
+		float *want = (float *)fun_memory_allocate(nr * sizeof(float)).value;
+		float *got = (float *)fun_memory_allocate(nr * sizeof(float)).value;
 		if (!q || !x || !want || !got) {
 			tc.failed++;
-			free(q);
-			free(x);
-			free(want);
-			free(got);
+			fun_memory_free((Memory *)&q);
+			fun_memory_free((Memory *)&x);
+			fun_memory_free((Memory *)&want);
+			fun_memory_free((Memory *)&got);
 			continue;
 		}
 
@@ -286,16 +354,30 @@ static TestCount test_rows_dot_accuracy(void)
 			int ok = _math_test_check_float(got[t], want[t], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL rows_dot[%zu][%zu]: got %.6f, expected "
-					   "%.6f\n",
-					   nr, t, (double)got[t], (double)want[t]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL rows_dot[");
+				char _buf[32];
+				fun_string_from_int((int64_t)nr, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("][");
+				fun_string_from_int((int64_t)t, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)got[t], 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)want[t], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
 
-		free(q);
-		free(x);
-		free(want);
-		free(got);
+		fun_memory_free((Memory *)&q);
+		fun_memory_free((Memory *)&x);
+		fun_memory_free((Memory *)&want);
+		fun_memory_free((Memory *)&got);
 	}
 	return tc;
 }
@@ -313,16 +395,17 @@ static TestCount test_weighted_sum_accuracy(void)
 		size_t nr = (size_t)1 << (2 + (trial / nlens) % 6);
 		size_t stride = rl + 2 + (trial % 7);
 
-		float *wgt = malloc(nr * sizeof(float));
-		float *x = malloc(stride * nr * sizeof(float));
-		float *want = malloc(rl * sizeof(float));
-		float *got = malloc(rl * sizeof(float));
+		float *wgt = (float *)fun_memory_allocate(nr * sizeof(float)).value;
+		float *x =
+			(float *)fun_memory_allocate(stride * nr * sizeof(float)).value;
+		float *want = (float *)fun_memory_allocate(rl * sizeof(float)).value;
+		float *got = (float *)fun_memory_allocate(rl * sizeof(float)).value;
 		if (!wgt || !x || !want || !got) {
 			tc.failed++;
-			free(wgt);
-			free(x);
-			free(want);
-			free(got);
+			fun_memory_free((Memory *)&wgt);
+			fun_memory_free((Memory *)&x);
+			fun_memory_free((Memory *)&want);
+			fun_memory_free((Memory *)&got);
 			continue;
 		}
 
@@ -345,16 +428,30 @@ static TestCount test_weighted_sum_accuracy(void)
 			int ok = _math_test_check_float(got[d], want[d], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf("\n      FAIL weighted_sum[%zu][%zu]: got %.6f, "
-					   "expected %.6f\n",
-					   nr, d, (double)got[d], (double)want[d]);
+				fun_console_write_line("");
+				fun_console_write("      FAIL weighted_sum[");
+				char _buf[32];
+				fun_string_from_int((int64_t)nr, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("][");
+				fun_string_from_int((int64_t)d, 10, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write("]: got ");
+				char _buf2[64];
+				fun_string_from_double((double)got[d], 6, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)want[d], 6, _buf2,
+									   sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
 
-		free(wgt);
-		free(x);
-		free(want);
-		free(got);
+		fun_memory_free((Memory *)&wgt);
+		fun_memory_free((Memory *)&x);
+		fun_memory_free((Memory *)&want);
+		fun_memory_free((Memory *)&got);
 	}
 	return tc;
 }
@@ -363,13 +460,13 @@ TestCount test_vector_accuracy(void)
 {
 	TestCount total = math_test_count_init();
 
-	printf("\n");
-	printf("    silu_f32: ");
+	fun_console_write_line("");
+	fun_console_write("    silu_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; silu_f32_cases[ci].n > 0; ci++) {
 			int n = silu_f32_cases[ci].n;
-			float *out = malloc(n * sizeof(float));
+			float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 			if (!out) {
 				tc.failed += n;
 				continue;
@@ -380,21 +477,30 @@ TestCount test_vector_accuracy(void)
 					out[j], silu_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    rms_norm_f32: ");
+	fun_console_write("    rms_norm_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; rms_norm_f32_cases[ci].n > 0; ci++) {
 			int n = rms_norm_f32_cases[ci].n;
-			float *out = malloc(n * sizeof(float));
+			float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 			if (!out) {
 				tc.failed += n;
 				continue;
@@ -407,21 +513,30 @@ TestCount test_vector_accuracy(void)
 					out[j], rms_norm_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    swiglu_f32: ");
+	fun_console_write("    swiglu_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; swiglu_f32_cases[ci].n > 0; ci++) {
 			int n = swiglu_f32_cases[ci].n;
-			float *out = malloc(n * sizeof(float));
+			float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 			if (!out) {
 				tc.failed += n;
 				continue;
@@ -433,26 +548,36 @@ TestCount test_vector_accuracy(void)
 					out[j], swiglu_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    softmax_f32: ");
+	fun_console_write("    softmax_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; softmax_f32_cases[ci].n > 0; ci++) {
 			int n = softmax_f32_cases[ci].n;
-			float *x = malloc(n * sizeof(float));
+			float *x = (float *)fun_memory_allocate(n * sizeof(float)).value;
 			if (!x) {
 				tc.failed += n;
 				continue;
 			}
-			memcpy(x, softmax_f32_cases[ci].input, n * sizeof(float));
+			fun_memory_copy((Memory)softmax_f32_cases[ci].input, (Memory)x,
+							n * sizeof(float));
 			fun_math_softmax_f32(x, n);
 
 			float sum = 0.0f;
@@ -463,70 +588,120 @@ TestCount test_vector_accuracy(void)
 				sum += x[j];
 			}
 			if (!_math_test_check_float(sum, 1.0f, 1e-4f, 1e-4f)) {
-				printf("\n      softmax sum=%.9f (not ~1.0)", (double)sum);
+				fun_console_write_line("");
+				fun_console_write("      softmax sum=");
+				char _buf2[64];
+				fun_string_from_double((double)sum, 9, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(" (not ~1.0)");
 				tc.failed++;
 			}
-			free(x);
+			fun_memory_free((Memory *)&x);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    exp_f32: ");
+	fun_console_write("    exp_f32: ");
 	{
 		TestCount tc = test_batch_unary("exp_f32", fun_math_exp_f32,
 										(const BatchUnaryCase *)exp_f32_cases);
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    log_f32: ");
+	fun_console_write("    log_f32: ");
 	{
 		TestCount tc = test_batch_unary("log_f32", fun_math_log_f32,
 										(const BatchUnaryCase *)log_f32_cases);
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    sin_f32: ");
+	fun_console_write("    sin_f32: ");
 	{
 		TestCount tc = test_batch_unary("sin_f32", fun_math_sin_f32,
 										(const BatchUnaryCase *)sin_f32_cases);
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    cos_f32: ");
+	fun_console_write("    cos_f32: ");
 	{
 		TestCount tc = test_batch_unary("cos_f32", fun_math_cos_f32,
 										(const BatchUnaryCase *)cos_f32_cases);
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    rotary_f32: ");
+	fun_console_write("    rotary_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; rotary_f32_cases[ci].n_heads > 0; ci++) {
 			size_t nh = (size_t)rotary_f32_cases[ci].n_heads;
 			size_t half = (size_t)rotary_f32_cases[ci].half;
 			size_t n = nh * 2 * half;
-			float *out = malloc(n * sizeof(float));
+			float *out = (float *)fun_memory_allocate(n * sizeof(float)).value;
 			if (!out) {
 				tc.failed += (int)n;
 				continue;
@@ -539,38 +714,71 @@ TestCount test_vector_accuracy(void)
 					out[j], rotary_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL rotary golden[%d][%zu]: got %.6f, "
-						   "expected %.6f\n",
-						   ci, j, (double)out[j],
-						   (double)rotary_f32_cases[ci].expected[j]);
+					fun_console_write_line("");
+					fun_console_write("      FAIL rotary golden[");
+					char _buf[32];
+					fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)j, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)out[j], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double(
+						(double)rotary_f32_cases[ci].expected[j], 6, _buf2,
+						sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    rotary_f32 sweep: ");
+	fun_console_write("    rotary_f32 sweep: ");
 	{
 		TestCount tc = test_rotary_accuracy();
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    rows_dot_f32: ");
+	fun_console_write("    rows_dot_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; rows_dot_f32_cases[ci].row_stride != 0; ci++) {
 			size_t nr = (size_t)rows_dot_f32_cases[ci].n_rows;
 			size_t rl = (size_t)rows_dot_f32_cases[ci].row_len;
-			float *out = malloc(nr * sizeof(float));
+			float *out = (float *)fun_memory_allocate(nr * sizeof(float)).value;
 			if (!out) {
 				tc.failed += (int)nr;
 				continue;
@@ -584,38 +792,71 @@ TestCount test_vector_accuracy(void)
 					out[t], rows_dot_f32_cases[ci].expected[t], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL rows_dot golden[%d][%zu]: got %.6f, "
-						   "expected %.6f\n",
-						   ci, t, (double)out[t],
-						   (double)rows_dot_f32_cases[ci].expected[t]);
+					fun_console_write_line("");
+					fun_console_write("      FAIL rows_dot golden[");
+					char _buf[32];
+					fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)t, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)out[t], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double(
+						(double)rows_dot_f32_cases[ci].expected[t], 6, _buf2,
+						sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    rows_dot_f32 sweep: ");
+	fun_console_write("    rows_dot_f32 sweep: ");
 	{
 		TestCount tc = test_rows_dot_accuracy();
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    weighted_sum_f32: ");
+	fun_console_write("    weighted_sum_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; weighted_sum_f32_cases[ci].row_stride != 0; ci++) {
 			size_t nr = (size_t)weighted_sum_f32_cases[ci].n_rows;
 			size_t rl = (size_t)weighted_sum_f32_cases[ci].row_len;
-			float *out = malloc(rl * sizeof(float));
+			float *out = (float *)fun_memory_allocate(rl * sizeof(float)).value;
 			if (!out) {
 				tc.failed += (int)rl;
 				continue;
@@ -629,48 +870,92 @@ TestCount test_vector_accuracy(void)
 					1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL weighted_sum golden[%d][%zu]: got "
-						   "%.6f, expected %.6f\n",
-						   ci, d, (double)out[d],
-						   (double)weighted_sum_f32_cases[ci].expected[d]);
+					fun_console_write_line("");
+					fun_console_write("      FAIL weighted_sum golden[");
+					char _buf[32];
+					fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)d, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)out[d], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double(
+						(double)weighted_sum_f32_cases[ci].expected[d], 6,
+						_buf2, sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    weighted_sum_f32 sweep: ");
+	fun_console_write("    weighted_sum_f32 sweep: ");
 	{
 		TestCount tc = test_weighted_sum_accuracy();
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    matrix_vector_f32: ");
+	fun_console_write("    matrix_vector_f32: ");
 	{
 		TestCount tc = test_mat_vec_accuracy();
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    mxfp4_matvec_f32: ");
+	fun_console_write("    mxfp4_matvec_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; mxfp4_matvec_f32_cases[ci].cols != 0; ci++) {
 			size_t nr = (size_t)mxfp4_matvec_f32_cases[ci].n_rows;
 			size_t cols = (size_t)mxfp4_matvec_f32_cases[ci].cols;
-			float *out = malloc((nr > 0 ? nr : 1) * sizeof(float));
+			float *out =
+				(float *)fun_memory_allocate((nr > 0 ? nr : 1) * sizeof(float))
+					.value;
 			if (!out) {
 				tc.failed += (int)nr;
 				continue;
@@ -685,32 +970,65 @@ TestCount test_vector_accuracy(void)
 					mxfp4_matvec_f32_cases[ci].abs_tol, 1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL mxfp4_matvec golden[%d][%zu]: got "
-						   "%.6f, expected %.6f\n",
-						   ci, t, (double)out[t],
-						   (double)mxfp4_matvec_f32_cases[ci].expected[t]);
+					fun_console_write_line("");
+					fun_console_write("      FAIL mxfp4_matvec golden[");
+					char _buf[32];
+					fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)t, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)out[t], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double(
+						(double)mxfp4_matvec_f32_cases[ci].expected[t], 6,
+						_buf2, sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    dot_f32: ");
+	fun_console_write("    dot_f32: ");
 	{
 		TestCount tc = test_dot_accuracy();
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    fp16_to_f32: ");
+	fun_console_write("    fp16_to_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; fp16_to_f32_cases[ci].abs_tol >= 0.0f; ci++) {
@@ -726,24 +1044,44 @@ TestCount test_vector_accuracy(void)
 					 _math_test_check_float(got, want, 1e-7f, 1e-7f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
-				printf(
-					"\n      FAIL fp16_to_f32 0x%04X: got %.9g, expected %.9g\n",
-					(unsigned)h, (double)got, (double)want);
+				fun_console_write_line("");
+				fun_console_write("      FAIL fp16_to_f32 0x");
+				char _buf[32];
+				fun_string_from_int((unsigned)h, 16, _buf, sizeof(_buf));
+				fun_console_write(_buf);
+				fun_console_write(": got ");
+				char _buf2[64];
+				fun_string_from_double((double)got, 9, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write(", expected ");
+				fun_string_from_double((double)want, 9, _buf2, sizeof(_buf2));
+				fun_console_write(_buf2);
+				fun_console_write_line("");
 			}
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    q8_dequant_f32: ");
+	fun_console_write("    q8_dequant_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; q8_dequant_f32_cases[ci].n > 0; ci++) {
 			int n = q8_dequant_f32_cases[ci].n;
-			float *out = malloc((size_t)n * sizeof(float));
+			float *out =
+				(float *)fun_memory_allocate((size_t)n * sizeof(float)).value;
 			if (!out) {
 				tc.failed += n;
 				continue;
@@ -755,22 +1093,33 @@ TestCount test_vector_accuracy(void)
 					out[j], q8_dequant_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
 				math_test_count_add(&tc, ok);
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 
-	printf("    q8_matvec_f32: ");
+	fun_console_write("    q8_matvec_f32: ");
 	{
 		TestCount tc = math_test_count_init();
 		for (int ci = 0; q8_matvec_f32_cases[ci].cols != 0; ci++) {
 			size_t nr = (size_t)q8_matvec_f32_cases[ci].n_rows;
 			size_t cols = (size_t)q8_matvec_f32_cases[ci].cols;
-			float *out = malloc((nr > 0 ? nr : 1) * sizeof(float));
+			float *out =
+				(float *)fun_memory_allocate((nr > 0 ? nr : 1) * sizeof(float))
+					.value;
 			if (!out) {
 				tc.failed += (int)nr;
 				continue;
@@ -784,18 +1133,42 @@ TestCount test_vector_accuracy(void)
 					q8_matvec_f32_cases[ci].abs_tol, 1e-3f);
 				math_test_count_add(&tc, ok);
 				if (!ok) {
-					printf("\n      FAIL q8_matvec golden[%d][%zu]: got %.6f, "
-						   "expected %.6f\n",
-						   ci, t, (double)out[t],
-						   (double)q8_matvec_f32_cases[ci].expected[t]);
+					fun_console_write_line("");
+					fun_console_write("      FAIL q8_matvec golden[");
+					char _buf[32];
+					fun_string_from_int(ci, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("][");
+					fun_string_from_int((int64_t)t, 10, _buf, sizeof(_buf));
+					fun_console_write(_buf);
+					fun_console_write("]: got ");
+					char _buf2[64];
+					fun_string_from_double((double)out[t], 6, _buf2,
+										   sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write(", expected ");
+					fun_string_from_double(
+						(double)q8_matvec_f32_cases[ci].expected[t], 6, _buf2,
+						sizeof(_buf2));
+					fun_console_write(_buf2);
+					fun_console_write_line("");
 				}
 			}
-			free(out);
+			fun_memory_free((Memory *)&out);
 		}
-		printf("%d/%d", tc.passed, tc.passed + tc.failed);
-		if (tc.failed)
-			printf(" (%d FAILED)", tc.failed);
-		printf("\n");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write("/");
+		fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		if (tc.failed) {
+			fun_console_write(" (");
+			fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(" FAILED)");
+		}
+		fun_console_write_line("");
 		math_test_count_merge(&total, tc);
 	}
 

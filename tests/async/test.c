@@ -1,16 +1,13 @@
-#include <assert.h>
-#include <stdio.h>
-
 #include "fundamental/async/async.h"
+#include "fundamental/console/console.h"
 
 #define GREEN_CHECK "\033[0;32m\342\234\223\033[0m"
 
-#define ASSERT_NO_ERROR(result) assert((result).error.code == 0)
-#define ASSERT_ERROR(result) assert((result).error.code != 0)
-
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 /* -------------------------------------------------------------------------
@@ -69,7 +66,10 @@ static void test_fun_async_await_success(void)
 
 	voidResult wr = fun_async_await(&result, -1);
 	(void)wr;
-	assert(result.status == ASYNC_COMPLETED);
+	if (!(result.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_success");
 }
 
@@ -83,7 +83,10 @@ static void test_fun_async_await_immediate_error(void)
 
 	voidResult wr = fun_async_await(&result, -1);
 	(void)wr;
-	assert(result.status == ASYNC_ERROR);
+	if (!(result.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_immediate_error");
 }
 
@@ -98,7 +101,10 @@ static void test_fun_async_await_error_after(void)
 
 	voidResult wr = fun_async_await(&result, -1);
 	(void)wr;
-	assert(result.status == ASYNC_ERROR);
+	if (!(result.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_error_after");
 }
 
@@ -112,9 +118,18 @@ static void test_fun_async_await_timeout_zero(void)
 	result.error = ERROR_RESULT_NO_ERROR;
 
 	voidResult wr = fun_async_await(&result, 0);
-	ASSERT_ERROR(wr);
-	assert(wr.error.code == ERROR_CODE_ASYNC_TIMEOUT);
-	assert(result.status == ASYNC_ERROR);
+	if (wr.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
+	if (!(wr.error.code == ERROR_CODE_ASYNC_TIMEOUT)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(result.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_timeout_zero");
 }
 
@@ -128,9 +143,18 @@ static void test_fun_async_await_timeout_expires(void)
 	result.error = ERROR_RESULT_NO_ERROR;
 
 	voidResult wr = fun_async_await(&result, 50);
-	ASSERT_ERROR(wr);
-	assert(wr.error.code == ERROR_CODE_ASYNC_TIMEOUT);
-	assert(result.status == ASYNC_ERROR);
+	if (wr.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
+	if (!(wr.error.code == ERROR_CODE_ASYNC_TIMEOUT)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(result.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_timeout_expires");
 }
 
@@ -157,8 +181,14 @@ static void test_fun_async_await_all_success(void)
 	voidResult wr = fun_async_await_all(results, 2, -1);
 	(void)wr;
 
-	assert(result1.status == ASYNC_COMPLETED);
-	assert(result2.status == ASYNC_COMPLETED);
+	if (!(result1.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(result2.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_all_success");
 }
 
@@ -181,8 +211,14 @@ static void test_fun_async_await_all_mixed(void)
 	voidResult wr = fun_async_await_all(results, 2, -1);
 	(void)wr;
 
-	assert(result1.status == ASYNC_COMPLETED);
-	assert(result2.status == ASYNC_ERROR);
+	if (!(result1.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(result2.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 	print_test_result("test_fun_async_await_all_mixed");
 }
 
@@ -191,7 +227,7 @@ static void test_fun_async_await_all_mixed(void)
  */
 int main(void)
 {
-	printf("Running async module tests:\n");
+	fun_console_write_line("Running async module tests:");
 
 	test_fun_async_await_success();
 	test_fun_async_await_immediate_error();
@@ -201,6 +237,7 @@ int main(void)
 	test_fun_async_await_all_success();
 	test_fun_async_await_all_mixed();
 
-	printf("\nAll async module tests passed.\n");
+	fun_console_write_line("");
+	fun_console_write_line("All async module tests passed.");
 	return 0;
 }

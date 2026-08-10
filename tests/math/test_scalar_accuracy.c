@@ -1,5 +1,4 @@
-#include <math.h>
-#include <stdio.h>
+#include "fundamental/console/console.h"
 #include "test_harness.h"
 
 #include "test_data/sqrt_golden.h"
@@ -42,8 +41,20 @@ static TestCount run_1d_test(const char *name, ScalarFn fn, const void *cases,
 		math_test_count_add(&tc, ok);
 
 		if (!ok) {
-			printf("\n    FAIL %s(%.4f): got %.6f, expected %.6f\n", name,
-				   (double)input, (double)got, (double)expected);
+			fun_console_write_line("");
+			fun_console_write("    FAIL ");
+			fun_console_write(name);
+			fun_console_write("(");
+			char _buf[64];
+			fun_string_from_double((double)input, 4, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write("): got ");
+			fun_string_from_double((double)got, 6, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write(", expected ");
+			fun_string_from_double((double)expected, 6, _buf, sizeof(_buf));
+			fun_console_write(_buf);
+			fun_console_write_line("");
 		}
 	}
 	return tc;
@@ -53,65 +64,138 @@ TestCount test_scalar_accuracy(void)
 {
 	TestCount total = math_test_count_init();
 
-	printf("\n");
+	fun_console_write_line("");
 	TestCount tc = run_1d_test("sqrt", fun_math_sqrt, sqrt_cases,
 							   sizeof(sqrt_case), 1e-4f);
-	printf("    sqrt: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    sqrt: ");
+	char _buf[32];
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("exp", fun_math_exp, exp_cases, sizeof(exp_case), 1e-3f);
-	printf("    exp: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    exp: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("log", fun_math_log, log_cases, sizeof(log_case), 1e-3f);
-	printf("    log: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    log: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("sin", fun_math_sin, sin_cases, sizeof(sin_case), 1e-3f);
-	printf("    sin: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    sin: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("cos", fun_math_cos, cos_cases, sizeof(cos_case), 1e-3f);
-	printf("    cos: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    cos: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("tanh", fun_math_tanh, tanh_cases, sizeof(tanh_case),
 					 1e-3f);
-	printf("    tanh: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    tanh: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("sigmoid", fun_math_sigmoid, sigmoid_cases,
 					 sizeof(sigmoid_case), 1e-3f);
-	printf("    sigmoid: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    sigmoid: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	tc = run_1d_test("silu", fun_math_silu, silu_cases, sizeof(silu_case),
 					 1e-3f);
-	printf("    silu: %d/%d", tc.passed, tc.passed + tc.failed);
-	if (tc.failed)
-		printf(" (%d FAILED)", tc.failed);
-	printf("\n");
+	fun_console_write("    silu: ");
+	fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write("/");
+	fun_string_from_int(tc.passed + tc.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	if (tc.failed) {
+		fun_console_write(" (");
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" FAILED)");
+	}
+	fun_console_write_line("");
 	math_test_count_merge(&total, tc);
 
 	return total;

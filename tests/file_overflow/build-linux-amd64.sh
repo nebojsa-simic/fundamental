@@ -17,6 +17,8 @@ gcc \
     ../../src/string/stringTemplate.c \
     ../../src/async/async.c \
     ../../arch/async/linux-amd64/async.c \
+    ../../src/console/console.c \
+    ../../arch/console/linux-amd64/console.c \
     -o test
 
 strip --strip-unneeded test

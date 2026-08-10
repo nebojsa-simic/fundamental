@@ -1,9 +1,8 @@
 #include <assert.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "fundamental/stream/stream.h"
 #include "fundamental/memory/memory.h"
+#include "fundamental/console/console.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
@@ -40,9 +39,8 @@ bool test_fun_stream_can_write_basic(void)
 
 	fun_memory_free(&buffer_result.value);
 
-	remove("testData/can_write_test.txt");
-
-	printf("✓ fun_stream_can_write_basic passed\n");
+	
+	fun_console_write_line("✓ fun_stream_can_write_basic passed");
 	return true;
 }
 
@@ -52,7 +50,7 @@ bool test_fun_stream_can_write_with_null_stream(void)
 	bool result = fun_stream_can_write(NULL, 1024);
 	assert(result == false); // Expectation: NULL stream should return false
 
-	printf("✓ fun_stream_can_write_with_null_stream passed\n");
+	fun_console_write_line("✓ fun_stream_can_write_with_null_stream passed");
 	return true;
 }
 
@@ -86,8 +84,7 @@ bool test_fun_stream_can_write_edge_cases(void)
 
 	fun_memory_free(&buffer_result.value);
 
-	remove("testData/can_write_edge_test.txt");
-
-	printf("✓ fun_stream_can_write_edge_cases passed\n");
+	
+	fun_console_write_line("✓ fun_stream_can_write_edge_cases passed");
 	return true;
 }

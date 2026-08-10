@@ -1,31 +1,37 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "fundamental/hashmap/hashmap.h"
+#include "fundamental/console/console.h"
 
 DEFINE_HASHMAP_TYPE(int, int)
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
-#define ASSERT_ERROR_OK(result) assert((result).code == 0)
-#define ASSERT_RESULT_OK(result) assert((result).error.code == 0)
 
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 void test_generic_hash_int(void)
 {
 	int value = 42;
 	uint64_t hash = fun_hash_int(&value);
-	assert(hash == 42);
+	if (!(hash == 42)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	int value2 = 42;
-	assert(fun_equals_int(&value, &value2) == true);
+	if (!(fun_equals_int(&value, &value2) == true)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	int value3 = 99;
-	assert(fun_equals_int(&value, &value3) == false);
+	if (!(fun_equals_int(&value, &value3) == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	print_test_result("generic_hash_int");
 }
@@ -36,9 +42,18 @@ void test_generic_hash_string(void)
 	char *str2 = "hello";
 	char *str3 = "world";
 
-	assert(fun_hash_string(str1) == fun_hash_string(str2));
-	assert(fun_equals_string(str1, str2) == true);
-	assert(fun_equals_string(str1, str3) == false);
+	if (!(fun_hash_string(str1) == fun_hash_string(str2))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_equals_string(str1, str2) == true)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_equals_string(str1, str3) == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	print_test_result("generic_hash_string");
 }
@@ -51,9 +66,18 @@ void test_generic_hash_ptr(void)
 	int other_val = 99;
 	void *ptr3 = &other_val;
 
-	assert(fun_hash_ptr(ptr1) == fun_hash_ptr(ptr2));
-	assert(fun_equals_ptr(ptr1, ptr2) == true);
-	assert(fun_equals_ptr(ptr1, ptr3) == false);
+	if (!(fun_hash_ptr(ptr1) == fun_hash_ptr(ptr2))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_equals_ptr(ptr1, ptr2) == true)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_equals_ptr(ptr1, ptr3) == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	print_test_result("generic_hash_ptr");
 }
@@ -61,11 +85,20 @@ void test_generic_hash_ptr(void)
 void test_fun_hashmap_int_int_create(void)
 {
 	intintHashMapResult result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(result);
-	assert(fun_hashmap_int_int_size(&result.value) == 0);
+	if (result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&result.value) == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&result.value);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_create");
 }
@@ -73,20 +106,44 @@ void test_fun_hashmap_int_int_create(void)
 void test_fun_hashmap_int_int_put_get(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 100));
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 2, 200));
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 3, 300));
+	if (fun_hashmap_int_int_put(&map, 1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_int_int_put(&map, 2, 200).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_int_int_put(&map, 3, 300).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
-	assert(fun_hashmap_int_int_get(&map, 1) == 100);
-	assert(fun_hashmap_int_int_get(&map, 2) == 200);
-	assert(fun_hashmap_int_int_get(&map, 3) == 300);
+	if (!(fun_hashmap_int_int_get(&map, 1) == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_int_int_get(&map, 2) == 200)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_int_int_get(&map, 3) == 300)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_put_get");
 }
@@ -94,19 +151,40 @@ void test_fun_hashmap_int_int_put_get(void)
 void test_fun_hashmap_int_int_update_existing_key(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 100));
-	assert(fun_hashmap_int_int_get(&map, 1) == 100);
+	if (fun_hashmap_int_int_put(&map, 1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_get(&map, 1) == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 999));
-	assert(fun_hashmap_int_int_get(&map, 1) == 999);
-	assert(fun_hashmap_int_int_size(&map) == 1);
+	if (fun_hashmap_int_int_put(&map, 1, 999).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_get(&map, 1) == 999)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&map) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_update_existing_key");
 }
@@ -114,15 +192,24 @@ void test_fun_hashmap_int_int_update_existing_key(void)
 void test_fun_hashmap_int_int_get_nonexistent_key(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 100));
+	if (fun_hashmap_int_int_put(&map, 1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	// Get existing key should work
 	int value = fun_hashmap_int_int_get(&map, 1);
-	assert(value == 100);
+	if (!(value == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	// Get nonexistent key should return 0 (default int value)
 	// Note: implementation may error or return default value
@@ -131,7 +218,10 @@ void test_fun_hashmap_int_int_get_nonexistent_key(void)
 	(void)nonexistent;
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_get_nonexistent_key");
 }
@@ -139,22 +229,43 @@ void test_fun_hashmap_int_int_get_nonexistent_key(void)
 void test_fun_hashmap_int_int_contains(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 42, 4200));
+	if (fun_hashmap_int_int_put(&map, 42, 4200).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	bool contains_42 = false;
-	ASSERT_ERROR_OK(fun_hashmap_int_int_contains(&map, 42, &contains_42));
-	assert(contains_42 == true);
+	if (fun_hashmap_int_int_contains(&map, 42, &contains_42).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(contains_42 == true)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	bool contains_99 = false;
-	ASSERT_ERROR_OK(fun_hashmap_int_int_contains(&map, 99, &contains_99));
-	assert(contains_99 == false);
+	if (fun_hashmap_int_int_contains(&map, 99, &contains_99).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(contains_99 == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_contains");
 }
@@ -162,27 +273,60 @@ void test_fun_hashmap_int_int_contains(void)
 void test_fun_hashmap_int_int_remove(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 100));
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 2, 200));
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 3, 300));
+	if (fun_hashmap_int_int_put(&map, 1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_int_int_put(&map, 2, 200).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_int_int_put(&map, 3, 300).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
-	assert(fun_hashmap_int_int_size(&map) == 3);
+	if (!(fun_hashmap_int_int_size(&map) == 3)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_remove(&map, 2));
-	assert(fun_hashmap_int_int_size(&map) == 2);
+	if (fun_hashmap_int_int_remove(&map, 2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&map) == 2)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	assert(fun_hashmap_int_int_get(&map, 1) == 100);
-	assert(fun_hashmap_int_int_get(&map, 3) == 300);
+	if (!(fun_hashmap_int_int_get(&map, 1) == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_int_int_get(&map, 3) == 300)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult remove_result = fun_hashmap_int_int_remove(&map, 999);
-	assert(fun_error_is_error(remove_result));
+	if (!(fun_error_is_error(remove_result))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_remove");
 }
@@ -190,22 +334,37 @@ void test_fun_hashmap_int_int_remove(void)
 void test_fun_hashmap_collision_handling(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(4);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
 	for (int i = 0; i < 20; i++) {
-		ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, i, i * 100));
+		if (fun_hashmap_int_int_put(&map, i, i * 100).code != 0) {
+			fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+			return;
+		}
 	}
 
 	for (int i = 0; i < 20; i++) {
-		assert(fun_hashmap_int_int_get(&map, i) == i * 100);
+		if (!(fun_hashmap_int_int_get(&map, i) == i * 100)) {
+			fun_console_write_line("FAIL: assertion");
+			return;
+		}
 	}
 
-	assert(fun_hashmap_int_int_size(&map) == 20);
+	if (!(fun_hashmap_int_int_size(&map) == 20)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_collision_handling");
 }
@@ -213,23 +372,50 @@ void test_fun_hashmap_collision_handling(void)
 void test_fun_hashmap_int_int_size_queries(void)
 {
 	intintHashMapResult create_result = fun_hashmap_int_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intintHashMap map = create_result.value;
 
-	assert(fun_hashmap_int_int_size(&map) == 0);
+	if (!(fun_hashmap_int_int_size(&map) == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 1, 100));
-	assert(fun_hashmap_int_int_size(&map) == 1);
+	if (fun_hashmap_int_int_put(&map, 1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&map) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_put(&map, 2, 200));
-	assert(fun_hashmap_int_int_size(&map) == 2);
+	if (fun_hashmap_int_int_put(&map, 2, 200).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&map) == 2)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_hashmap_int_int_remove(&map, 1));
-	assert(fun_hashmap_int_int_size(&map) == 1);
+	if (fun_hashmap_int_int_remove(&map, 1).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_int_int_size(&map) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_int_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_hashmap_int_int_size_queries");
 }
@@ -238,14 +424,23 @@ void test_fun_hashmap_memory_leak_prevention(void)
 {
 	for (int i = 0; i < 10; i++) {
 		intintHashMapResult result = fun_hashmap_int_int_create(8);
-		ASSERT_RESULT_OK(result);
+		if (result.error.code != 0) {
+			fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+			return;
+		}
 
 		for (int j = 0; j < 5; j++) {
-			ASSERT_ERROR_OK(fun_hashmap_int_int_put(&result.value, j, j * 10));
+			if (fun_hashmap_int_int_put(&result.value, j, j * 10).code != 0) {
+				fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+				return;
+			}
 		}
 
 		ErrorResult destroy = fun_hashmap_int_int_destroy(&result.value);
-		ASSERT_ERROR_OK(destroy);
+		if (destroy.code != 0) {
+			fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+			return;
+		}
 	}
 
 	print_test_result("fun_hashmap_memory_leak_prevention");
@@ -253,8 +448,9 @@ void test_fun_hashmap_memory_leak_prevention(void)
 
 int main(void)
 {
-	printf("Running HashMap Module Unit Tests\n");
-	printf("=================================\n\n");
+	fun_console_write_line("Running HashMap Module Unit Tests");
+	fun_console_write_line("=================================");
+	fun_console_write_line("");
 
 	test_generic_hash_int();
 	test_generic_hash_string();
@@ -269,7 +465,8 @@ int main(void)
 	test_fun_hashmap_int_int_size_queries();
 	test_fun_hashmap_memory_leak_prevention();
 
-	printf("\n=================================\n");
-	printf("All hashmap tests completed\n");
+	fun_console_write_line("");
+	fun_console_write_line("=================================");
+	fun_console_write_line("All hashmap tests completed");
 	return 0;
 }

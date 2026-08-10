@@ -27,6 +27,8 @@ gcc ^
     %PROJECT_ROOT%/src/string/stringConversion.c ^
     %PROJECT_ROOT%/src/string/stringOperations.c ^
     %PROJECT_ROOT%/src/string/stringValidation.c ^
+    %PROJECT_ROOT%/src/console/console.c ^
+    %PROJECT_ROOT%/arch/console/windows-amd64/console.c ^
     -lws2_32 ^
     -o test.exe
 

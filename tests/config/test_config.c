@@ -5,11 +5,10 @@
  * cascade priority, type getters, defaults, and key existence.
  */
 
-#include <stdio.h>
-#include <string.h>
-
 #include "fundamental/config/config.h"
+#include "fundamental/console/console.h"
 #include "fundamental/error/error.h"
+#include "fundamental/string/string.h"
 
 /* Mock environment for tests - simulates env vars set at startup */
 static const char *mock_env[256];
@@ -42,7 +41,10 @@ static void set_mock_env(const char *key, const char *value)
 		}
 		if (j == key_len && e[j] == '=') {
 			/* Replace existing */
-			snprintf(env_storage[storage_idx], 256, "%s=%s", key, value);
+			StringTemplateParam p[] = { { "k", { .stringValue = key } },
+										{ "v", { .stringValue = value } } };
+			fun_string_template("${k}=${v}", p, 2, env_storage[storage_idx],
+								256);
 			mock_env[i] = env_storage[storage_idx];
 			storage_idx = (storage_idx + 1) % 256;
 			return;
@@ -50,7 +52,9 @@ static void set_mock_env(const char *key, const char *value)
 	}
 
 	/* Add new */
-	snprintf(env_storage[storage_idx], 256, "%s=%s", key, value);
+	StringTemplateParam p[] = { { "k", { .stringValue = key } },
+								{ "v", { .stringValue = value } } };
+	fun_string_template("${k}=${v}", p, 2, env_storage[storage_idx], 256);
 	mock_env[mock_env_count++] = env_storage[storage_idx];
 	mock_env[mock_env_count] = NULL;
 	storage_idx = (storage_idx + 1) % 256;
@@ -67,10 +71,14 @@ static int failed = 0;
 static void print_result(const char *name, int ok)
 {
 	if (ok) {
-		printf("%s %s\n", GREEN_CHECK, name);
+		fun_console_write(GREEN_CHECK);
+		fun_console_write(" ");
+		fun_console_write_line(name);
 		passed++;
 	} else {
-		printf("%s %s\n", RED_CROSS, name);
+		fun_console_write(RED_CROSS);
+		fun_console_write(" ");
+		fun_console_write_line(name);
 		failed++;
 	}
 }
@@ -138,7 +146,7 @@ static void test_config_load_from_ini(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "testhost") == 0);
+			  fun_string_compare(sr.value, "testhost") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_load_from_ini", ok);
 }
@@ -190,7 +198,7 @@ static void test_config_ini_whitespace(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "padded");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "value") == 0);
+			  fun_string_compare(sr.value, "value") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_ini_whitespace", ok);
 }
@@ -205,7 +213,7 @@ static void test_config_ini_quoted_values(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "app.name");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "My Application") == 0);
+			  fun_string_compare(sr.value, "My Application") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_ini_quoted_values", ok);
 }
@@ -244,7 +252,7 @@ static void test_config_get_from_env(void)
 
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "envhost") == 0);
+			  fun_string_compare(sr.value, "envhost") == 0);
 
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_from_env", ok);
@@ -266,7 +274,7 @@ static void test_config_env_key_transformation(void)
 
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "transformed") == 0);
+			  fun_string_compare(sr.value, "transformed") == 0);
 
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_key_transformation", ok);
@@ -304,8 +312,8 @@ static void test_config_env_prefix_correct(void)
 	}
 
 	StringResult sr = fun_config_get_string(&result.value, "server.port");
-	int ok =
-		(sr.error.code == ERROR_CODE_NO_ERROR && strcmp(sr.value, "9090") == 0);
+	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
+			  fun_string_compare(sr.value, "9090") == 0);
 
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_prefix_correct", ok);
@@ -325,7 +333,7 @@ static void test_config_get_from_cli(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "localhost") == 0);
+			  fun_string_compare(sr.value, "localhost") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_from_cli", ok);
 }
@@ -342,9 +350,9 @@ static void test_config_cli_multiple_args(void)
 	StringResult sr1 = fun_config_get_string(&result.value, "key1");
 	StringResult sr2 = fun_config_get_string(&result.value, "key2");
 	int ok = (sr1.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr1.value, "val1") == 0 &&
+			  fun_string_compare(sr1.value, "val1") == 0 &&
 			  sr2.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr2.value, "val2") == 0);
+			  fun_string_compare(sr2.value, "val2") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_multiple_args", ok);
 }
@@ -364,7 +372,7 @@ static void test_config_cli_override_env(void)
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	/* CLI should win over env */
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "clihost") == 0);
+			  fun_string_compare(sr.value, "clihost") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_override_env", ok);
 }
@@ -379,7 +387,7 @@ static void test_config_cli_quoted_values(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "conn");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "host=db;port=5432") == 0);
+			  fun_string_compare(sr.value, "host=db;port=5432") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_quoted_values", ok);
 }
@@ -402,7 +410,7 @@ static void test_config_cli_overrides_all(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "database.host");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "clihost") == 0);
+			  fun_string_compare(sr.value, "clihost") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_cli_overrides_all", ok);
 }
@@ -423,7 +431,7 @@ static void test_config_env_overrides_ini(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "level.key");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "envval") == 0);
+			  fun_string_compare(sr.value, "envval") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_env_overrides_ini", ok);
 }
@@ -477,7 +485,7 @@ static void test_config_get_string_success(void)
 	}
 	StringResult sr = fun_config_get_string(&result.value, "my.key");
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
-			  strcmp(sr.value, "hello") == 0);
+			  fun_string_compare(sr.value, "hello") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_string_success", ok);
 }
@@ -588,8 +596,8 @@ static void test_config_get_string_or_default_uses_default(void)
 	}
 	StringResult sr =
 		fun_config_get_string_or_default(&result.value, "missing.key", "dflt");
-	int ok =
-		(sr.error.code == ERROR_CODE_NO_ERROR && strcmp(sr.value, "dflt") == 0);
+	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
+			  fun_string_compare(sr.value, "dflt") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_string_or_default_uses_default", ok);
 }
@@ -604,8 +612,8 @@ static void test_config_get_string_or_default_uses_value(void)
 	}
 	StringResult sr =
 		fun_config_get_string_or_default(&result.value, "app.theme", "light");
-	int ok =
-		(sr.error.code == ERROR_CODE_NO_ERROR && strcmp(sr.value, "dark") == 0);
+	int ok = (sr.error.code == ERROR_CODE_NO_ERROR &&
+			  fun_string_compare(sr.value, "dark") == 0);
 	fun_config_destroy(&result.value);
 	print_result("test_config_get_string_or_default_uses_value", ok);
 }
@@ -689,7 +697,8 @@ static void test_config_has_does_not_return_value(void)
  * ------------------------------------------------------------------ */
 int main(void)
 {
-	printf("=== Config Module Tests ===\n\n");
+	fun_console_write_line("=== Config Module Tests ===");
+	fun_console_write_line("");
 
 	/* Load / init */
 	test_config_load_success();
@@ -743,6 +752,14 @@ int main(void)
 	test_config_has_returns_false();
 	test_config_has_does_not_return_value();
 
-	printf("\n=== Results: %d passed, %d failed ===\n", passed, failed);
+	fun_console_write_line("");
+	fun_console_write("=== Results: ");
+	char num_buf[32];
+	fun_string_from_int(passed, 10, num_buf, sizeof(num_buf));
+	fun_console_write(num_buf);
+	fun_console_write(" passed, ");
+	fun_string_from_int(failed, 10, num_buf, sizeof(num_buf));
+	fun_console_write(num_buf);
+	fun_console_write_line(" failed ===");
 	return failed > 0 ? 1 : 0;
 }

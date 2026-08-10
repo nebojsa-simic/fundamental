@@ -16,7 +16,11 @@ set SOURCES=^
     %PROJECT_ROOT%\src\platform\platform.c ^
     %PROJECT_ROOT%\arch\platform\windows-amd64\platform.c ^
     %PROJECT_ROOT%\src\string\stringOperations.c ^
-    %PROJECT_ROOT%\arch\memory\windows-amd64\memory.c
+    %PROJECT_ROOT%\arch\memory\windows-amd64\memory.c ^
+    %PROJECT_ROOT%\src\console\console.c ^
+    %PROJECT_ROOT%\arch\console\windows-amd64\console.c ^
+    %PROJECT_ROOT%\src\string\stringConversion.c ^
+    %PROJECT_ROOT%\src\string\stringTemplate.c
 
 REM Build
 echo Building platform tests...

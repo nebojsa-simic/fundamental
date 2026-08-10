@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "fundamental/console/console.h"
 #include "test_harness.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
@@ -13,12 +13,26 @@ TestCount test_harness_self(void);
 
 static void run_suite(const char *name, TestCount (*fn)(void), TestCount *total)
 {
-	printf("  %s ... ", name);
+	fun_console_write("  ");
+	fun_console_write(name);
+	fun_console_write(" ... ");
 	TestCount tc = fn();
 	if (math_test_count_ok(tc)) {
-		printf("%s passed (%d)\n", GREEN_CHECK, tc.passed);
+		fun_console_write(GREEN_CHECK);
+		fun_console_write(" passed (");
+		char _buf[32];
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write_line(")");
 	} else {
-		printf("%s %d failed, %d passed\n", RED_CROSS, tc.failed, tc.passed);
+		fun_console_write(RED_CROSS);
+		char _buf[32];
+		fun_string_from_int(tc.failed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write(" failed, ");
+		fun_string_from_int(tc.passed, 10, _buf, sizeof(_buf));
+		fun_console_write(_buf);
+		fun_console_write_line(" passed");
 	}
 	math_test_count_merge(total, tc);
 }
@@ -29,11 +43,11 @@ int main(void)
 {
 	TestCount total = math_test_count_init();
 
-	printf("Math module tests:\n");
+	fun_console_write_line("Math module tests:");
 
-	printf("  Stubs ... ");
+	fun_console_write("  Stubs ... ");
 	math_test_noop();
-	printf("%s\n", GREEN_CHECK);
+	fun_console_write_line(GREEN_CHECK);
 
 	run_suite("scalar accuracy", test_scalar_accuracy, &total);
 	run_suite("vector accuracy", test_vector_accuracy, &total);
@@ -42,13 +56,21 @@ int main(void)
 	run_suite("performance", test_performance, &total);
 	run_suite("harness self-test", test_harness_self, &total);
 
-	printf("\nSummary: %d passed, %d failed\n", total.passed, total.failed);
+	fun_console_write_line("");
+	fun_console_write("Summary: ");
+	char _buf[32];
+	fun_string_from_int(total.passed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write(" passed, ");
+	fun_string_from_int(total.failed, 10, _buf, sizeof(_buf));
+	fun_console_write(_buf);
+	fun_console_write_line(" failed");
 
 	if (total.failed > 0) {
-		printf("FAIL\n");
+		fun_console_write_line("FAIL");
 		return 1;
 	}
 
-	printf("All tests passed!\n");
+	fun_console_write_line("All tests passed!");
 	return 0;
 }

@@ -1,11 +1,4 @@
-/*
- * Tests for the network module — async TCP/UDP interface.
- *
- * stdio.h and assert.h are permitted in test files.
- */
-
-#include <assert.h>
-#include <stdio.h>
+#include "fundamental/console/console.h"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -25,12 +18,12 @@
 #include "fundamental/network/network.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
-#define ASSERT_NO_ERROR(r) assert((r).error.code == 0)
-#define ASSERT_ERROR(r) assert((r).error.code != 0)
 
 static void print_ok(const char *name)
 {
-	printf("%s %s\n", GREEN_CHECK, name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(name);
 }
 
 /* ================================================================
@@ -112,48 +105,96 @@ static void test_address_parse(void)
 	/* Valid IPv4 */
 	{
 		NetworkAddressResult r = fun_network_address_parse("127.0.0.1:8080");
-		ASSERT_NO_ERROR(r);
-		assert(r.value.family == NETWORK_ADDRESS_IPV4);
-		assert(r.value.bytes[0] == 127);
-		assert(r.value.bytes[1] == 0);
-		assert(r.value.bytes[2] == 0);
-		assert(r.value.bytes[3] == 1);
-		assert(r.value.port == 8080);
+		if (r.error.code != 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.family == NETWORK_ADDRESS_IPV4)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.bytes[0] == 127)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.bytes[1] == 0)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.bytes[2] == 0)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.bytes[3] == 1)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.port == 8080)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Valid IPv6 */
 	{
 		NetworkAddressResult r = fun_network_address_parse("[::1]:9000");
-		ASSERT_NO_ERROR(r);
-		assert(r.value.family == NETWORK_ADDRESS_IPV6);
-		assert(r.value.port == 9000);
+		if (r.error.code != 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.family == NETWORK_ADDRESS_IPV6)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
+		if (!(r.value.port == 9000)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 		for (int i = 0; i < 15; i++)
-			assert(r.value.bytes[i] == 0);
-		assert(r.value.bytes[15] == 1);
+			if (!(r.value.bytes[i] == 0)) {
+				fun_console_write_line("FAIL: check");
+				return;
+			}
+		if (!(r.value.bytes[15] == 1)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Missing port */
 	{
 		NetworkAddressResult r = fun_network_address_parse("127.0.0.1");
-		ASSERT_ERROR(r);
+		if (r.error.code == 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Octet > 255 */
 	{
 		NetworkAddressResult r = fun_network_address_parse("999.0.0.1:80");
-		ASSERT_ERROR(r);
+		if (r.error.code == 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Hostname rejected */
 	{
 		NetworkAddressResult r = fun_network_address_parse("example.com:80");
-		ASSERT_ERROR(r);
+		if (r.error.code == 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Port > 65535 */
 	{
 		NetworkAddressResult r = fun_network_address_parse("1.2.3.4:65536");
-		ASSERT_ERROR(r);
+		if (r.error.code == 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	print_ok("test_address_parse");
@@ -168,16 +209,18 @@ static void test_address_format(void)
 	/* Format IPv4 */
 	{
 		NetworkAddressResult parse = fun_network_address_parse("10.0.0.1:3000");
-		ASSERT_NO_ERROR(parse);
+		if (parse.error.code != 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 		char buf[64];
 		voidResult fmt =
 			fun_network_address_to_string(parse.value, buf, sizeof(buf));
-		ASSERT_NO_ERROR(fmt);
-		/* Verify the formatted string contains the expected IP and port */
+		if (fmt.error.code != 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 		int ok = 0;
-		/* Simple manual strcmp — no string.h in test allowed? Actually
-		 * test files may use standard headers per the instructions.
-		 * We use assert with manual check to avoid string.h dependency. */
 		const char *expected = "10.0.0.1:3000";
 		const char *a = buf;
 		const char *b = expected;
@@ -186,18 +229,27 @@ static void test_address_format(void)
 			b++;
 		}
 		ok = (*a == '\0' && *b == '\0');
-		assert(ok);
+		if (!ok) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	/* Buffer too small */
 	{
 		NetworkAddressResult parse =
 			fun_network_address_parse("127.0.0.1:8080");
-		ASSERT_NO_ERROR(parse);
+		if (parse.error.code != 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 		char tiny[5];
 		voidResult fmt =
 			fun_network_address_to_string(parse.value, tiny, sizeof(tiny));
-		ASSERT_ERROR(fmt);
+		if (fmt.error.code == 0) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 
 	print_ok("test_address_format");
@@ -211,13 +263,18 @@ static void test_address_format(void)
 static void test_connect_fails(void)
 {
 	NetworkAddressResult ar = fun_network_address_parse("127.0.0.1:1");
-	ASSERT_NO_ERROR(ar);
+	if (ar.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	TcpNetworkConnection conn = (TcpNetworkConnection)0;
 	AsyncResult result = fun_network_tcp_connect(ar.value, &conn);
-	/* Wait up to 1000ms */
 	fun_async_await(&result, 1000);
-	assert(result.status == ASYNC_ERROR);
+	if (!(result.status == ASYNC_ERROR)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_ok("test_connect_fails");
 }
@@ -232,15 +289,12 @@ static void test_tcp_round_trip(void)
 {
 	uint16_t port = start_server();
 
-	/* Build connect address */
 	char addr_str[32];
-	/* Manually build "127.0.0.1:NNNNN" */
 	{
 		char *p = addr_str;
 		const char *prefix = "127.0.0.1:";
 		while (*prefix)
 			*p++ = *prefix++;
-		/* Convert port to decimal */
 		char tmp[8];
 		int tlen = 0;
 		uint16_t pv = port;
@@ -262,44 +316,86 @@ static void test_tcp_round_trip(void)
 	}
 
 	NetworkAddressResult ar = fun_network_address_parse(addr_str);
-	ASSERT_NO_ERROR(ar);
+	if (ar.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	TcpNetworkConnection conn = (TcpNetworkConnection)0;
 	AsyncResult cr = fun_network_tcp_connect(ar.value, &conn);
 	fun_async_await(&cr, 3000);
-	assert(cr.status == ASYNC_COMPLETED);
-	assert(conn != (TcpNetworkConnection)0);
+	if (!(cr.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(conn != (TcpNetworkConnection)0)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
-	/* Server sends 8 bytes and closes */
 	server_send_and_close("ABCDEFGH", 8);
 
-	/* First receive_exact(4): should get "ABCD" */
 	char buf1[4];
 	NetworkBuffer nb1;
 	nb1.data = buf1;
 	nb1.length = 0;
 	AsyncResult rr1 = fun_network_tcp_receive_exact(conn, &nb1, 4);
 	fun_async_await(&rr1, 3000);
-	assert(rr1.status == ASYNC_COMPLETED);
-	assert(nb1.length == 4);
-	assert(buf1[0] == 'A');
-	assert(buf1[1] == 'B');
-	assert(buf1[2] == 'C');
-	assert(buf1[3] == 'D');
+	if (!(rr1.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(nb1.length == 4)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf1[0] == 'A')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf1[1] == 'B')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf1[2] == 'C')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf1[3] == 'D')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
-	/* Second receive_exact(4): should get "EFGH" from rx_buf (server closed) */
 	char buf2[4];
 	NetworkBuffer nb2;
 	nb2.data = buf2;
 	nb2.length = 0;
 	AsyncResult rr2 = fun_network_tcp_receive_exact(conn, &nb2, 4);
 	fun_async_await(&rr2, 3000);
-	assert(rr2.status == ASYNC_COMPLETED);
-	assert(nb2.length == 4);
-	assert(buf2[0] == 'E');
-	assert(buf2[1] == 'F');
-	assert(buf2[2] == 'G');
-	assert(buf2[3] == 'H');
+	if (!(rr2.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(nb2.length == 4)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf2[0] == 'E')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf2[1] == 'F')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf2[2] == 'G')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(buf2[3] == 'H')) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_network_tcp_close(conn);
 
@@ -314,11 +410,17 @@ static void test_tcp_round_trip(void)
 static void test_udp_send(void)
 {
 	NetworkAddressResult ar = fun_network_address_parse("127.0.0.1:12345");
-	ASSERT_NO_ERROR(ar);
+	if (ar.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	const char *msg = "hello";
 	AsyncResult result = fun_network_udp_send(ar.value, msg, 5);
-	assert(result.status == ASYNC_COMPLETED);
+	if (!(result.status == ASYNC_COMPLETED)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_ok("test_udp_send");
 }
@@ -335,6 +437,7 @@ int main(void)
 	test_tcp_round_trip();
 	test_udp_send();
 
-	printf("\nAll tests passed.\n");
+	fun_console_write_line("");
+	fun_console_write_line("All tests passed.");
 	return 0;
 }

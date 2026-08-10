@@ -1,6 +1,7 @@
 #include "fundamental/json/json.h"
-#include <stdio.h>
-#include <string.h>
+#include "fundamental/string/string.h"
+#include "fundamental/memory/memory.h"
+#include "fundamental/console/console.h"
 #include <assert.h>
 #include <stdbool.h>
 
@@ -13,10 +14,14 @@ static int tests_failed = 0;
 static void print_test_result(const char *test_name, int passed)
 {
 	if (passed) {
-		printf("%s %s\n", GREEN_CHECK, test_name);
+		fun_console_write(GREEN_CHECK);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 		tests_passed++;
 	} else {
-		printf("%s %s\n", RED_CROSS, test_name);
+		fun_console_write(RED_CROSS);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 		tests_failed++;
 	}
 }
@@ -77,10 +82,10 @@ static void test_simple_object(void)
 
 	fun_json_next(&state, &t);
 	ok = ok && (t.type == FUN_JSON_KEY && t.length == 3 &&
-				memcmp(t.value, "key", 3) == 0);
+				fun_memory_compare(t.value, "key", 3).value == 0);
 
 	fun_json_next(&state, &t);
-	ok = ok && (t.type == FUN_JSON_STRING && memcmp(t.value, "value", 5) == 0);
+	ok = ok && (t.type == FUN_JSON_STRING && fun_memory_compare(t.value, "value", 5).value == 0);
 
 	fun_json_next(&state, &t);
 	ok = ok && (t.type == FUN_JSON_OBJECT_END);
@@ -138,7 +143,7 @@ static void test_string_value(void)
 	fun_json_next(&state, &t);
 
 	int ok = (t.type == FUN_JSON_STRING && t.length == 11 &&
-			  memcmp(t.value, "hello world", 11) == 0);
+			  fun_memory_compare(t.value, "hello world", 11).value == 0);
 	print_test_result("fun_json_next string value", ok);
 }
 
@@ -152,7 +157,7 @@ static void test_integer_value(void)
 	fun_json_next(&state, &t);
 
 	int ok = (t.type == FUN_JSON_NUMBER && t.length == 2 &&
-			  memcmp(t.value, "42", 2) == 0);
+			  fun_memory_compare(t.value, "42", 2).value == 0);
 	print_test_result("fun_json_next integer", ok);
 }
 
@@ -166,7 +171,7 @@ static void test_negative_number(void)
 	fun_json_next(&state, &t);
 
 	int ok = (t.type == FUN_JSON_NUMBER && t.length == 3 &&
-			  memcmp(t.value, "-17", 3) == 0);
+			  fun_memory_compare(t.value, "-17", 3).value == 0);
 	print_test_result("fun_json_next negative number", ok);
 }
 
@@ -180,7 +185,7 @@ static void test_float_number(void)
 	fun_json_next(&state, &t);
 
 	int ok = (t.type == FUN_JSON_NUMBER && t.length == 4 &&
-			  memcmp(t.value, "3.14", 4) == 0);
+			  fun_memory_compare(t.value, "3.14", 4).value == 0);
 	print_test_result("fun_json_next float", ok);
 }
 
@@ -363,7 +368,8 @@ static void test_copy_string(void)
 
 	char out[32];
 	ErrorResult r = fun_json_token_copy_string(&t, out, sizeof(out));
-	int ok = (!fun_error_is_error(r) && strcmp(out, "hello world") == 0);
+	int ok =
+		(!fun_error_is_error(r) && fun_string_compare(out, "hello world") == 0);
 	print_test_result("fun_json_token_copy_string", ok);
 }
 
@@ -391,7 +397,7 @@ static void test_query_deep_string(void)
 	ErrorResult r = fun_json_query(data, fun_string_length(data),
 								   "apps.http.servers.restic.handler", &t);
 	int ok = (!fun_error_is_error(r) && t.type == FUN_JSON_STRING &&
-			  t.length == 6 && memcmp(t.value, "restic", 6) == 0);
+			  t.length == 6 && fun_memory_compare(t.value, "restic", 6).value == 0);
 
 	print_test_result("fun_json_query deep string", ok);
 }
@@ -414,7 +420,7 @@ static void test_query_string_combinator(void)
 	char out[64];
 	ErrorResult r = fun_json_query_string(data, fun_string_length(data), "name",
 										  out, sizeof(out));
-	int ok = (!fun_error_is_error(r) && strcmp(out, "Alice") == 0);
+	int ok = (!fun_error_is_error(r) && fun_string_compare(out, "Alice") == 0);
 
 	int64_tResult ir = fun_json_query_int(data, fun_string_length(data), "age");
 	ok = ok && (!fun_error_is_error(ir.error) && ir.value == 30);
@@ -468,11 +474,11 @@ static void test_string_array(void)
 
 	// Walk buffer: strings are \0-separated
 	char *p = buf;
-	ok = ok && (strcmp(p, "a.com") == 0);
-	p += strlen(p) + 1;
-	ok = ok && (strcmp(p, "b.com") == 0);
-	p += strlen(p) + 1;
-	ok = ok && (strcmp(p, "c.com") == 0);
+	ok = ok && (fun_string_compare(p, "a.com") == 0);
+	p += fun_string_length(p) + 1;
+	ok = ok && (fun_string_compare(p, "b.com") == 0);
+	p += fun_string_length(p) + 1;
+	ok = ok && (fun_string_compare(p, "c.com") == 0);
 
 	print_test_result("fun_json_query_string_array", ok);
 }
@@ -564,7 +570,7 @@ static void test_find_key(void)
 
 	ErrorResult r = fun_json_find_key(&state, 1, "target", &t);
 	int ok = (!fun_error_is_error(r) && t.type == FUN_JSON_STRING &&
-			  t.length == 5 && memcmp(t.value, "found", 5) == 0);
+			  t.length == 5 && fun_memory_compare(t.value, "found", 5).value == 0);
 
 	print_test_result("fun_json_find_key", ok);
 }
@@ -581,7 +587,8 @@ static void test_query_idempotent(void)
 	ErrorResult r2 = fun_json_query_string(data, len, "b", out2, sizeof(out2));
 
 	int ok = (!fun_error_is_error(r1) && !fun_error_is_error(r2) &&
-			  strcmp(out1, "val1") == 0 && strcmp(out2, "val2") == 0);
+			  fun_string_compare(out1, "val1") == 0 &&
+			  fun_string_compare(out2, "val2") == 0);
 	print_test_result("fun_json_query idempotent", ok);
 }
 
@@ -662,7 +669,8 @@ static void test_for_each_empty(void)
 
 int main(void)
 {
-	printf("=== JSON Module Tests ===\n\n");
+	fun_console_write_line("=== JSON Module Tests ===");
+	fun_console_write_line("");
 
 	test_init_null();
 	test_init_empty();
@@ -702,7 +710,18 @@ int main(void)
 	test_for_each_objects();
 	test_for_each_empty();
 
-	printf("\nResults: %d passed, %d failed, %d total\n", tests_passed,
-		   tests_failed, tests_passed + tests_failed);
+	fun_console_write_line("");
+	fun_console_write("Results: ");
+	char num_buf[32];
+	fun_string_from_int(tests_passed, 10, num_buf, sizeof(num_buf));
+	fun_console_write(num_buf);
+	fun_console_write(" passed, ");
+	fun_string_from_int(tests_failed, 10, num_buf, sizeof(num_buf));
+	fun_console_write(num_buf);
+	fun_console_write(" failed, ");
+	int total = tests_passed + tests_failed;
+	fun_string_from_int(total, 10, num_buf, sizeof(num_buf));
+	fun_console_write(num_buf);
+	fun_console_write_line(" total");
 	return tests_failed > 0 ? 1 : 0;
 }

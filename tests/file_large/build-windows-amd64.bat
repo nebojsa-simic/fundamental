@@ -17,4 +17,6 @@ gcc ^
     ../../src\async\async.c ^
     ../../arch\async\windows-amd64\async.c ^
     ../../arch\memory\windows-amd64\memory.c ^
+    ../../src\console\console.c ^
+    ../../arch\console\windows-amd64\console.c ^
     -o test.exe

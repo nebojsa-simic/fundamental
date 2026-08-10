@@ -1,6 +1,6 @@
+#include "fundamental/console/console.h"
+#include "fundamental/string/string.h"
 #include "fundamental/tsv/tsv.h"
-#include <stdio.h>
-#include <string.h>
 #include <stdbool.h>
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
@@ -9,9 +9,13 @@
 static void print_test_result(const char *test_name, int passed)
 {
 	if (passed) {
-		printf("%s %s\n", GREEN_CHECK, test_name);
+		fun_console_write(GREEN_CHECK);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 	} else {
-		printf("%s %s\n", RED_CROSS, test_name);
+		fun_console_write(RED_CROSS);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 	}
 }
 
@@ -29,9 +33,9 @@ static void test_fun_tsv_single_row(void)
 	FunTsvRow row;
 	boolResult r = fun_tsv_next(&state, &row);
 
-	int passed =
-		(r.value == true && row.count == 2 && strcmp(row.fields[0], "F") == 0 &&
-		 strcmp(row.fields[1], "file.txt") == 0);
+	int passed = (r.value == true && row.count == 2 &&
+				  fun_string_compare(row.fields[0], "F") == 0 &&
+				  fun_string_compare(row.fields[1], "file.txt") == 0);
 	print_test_result("fun_tsv_single_row", passed);
 }
 
@@ -47,22 +51,25 @@ static void test_fun_tsv_multiple_rows(void)
 	int all_ok = 1;
 
 	boolResult r = fun_tsv_next(&state, &row);
-	if (!r.value || row.count != 2 || strcmp(row.fields[0], "D") != 0 ||
-		strcmp(row.fields[1], "sub") != 0) {
+	if (!r.value || row.count != 2 ||
+		fun_string_compare(row.fields[0], "D") != 0 ||
+		fun_string_compare(row.fields[1], "sub") != 0) {
 		all_ok = 0;
 	}
 	row_count++;
 
 	r = fun_tsv_next(&state, &row);
-	if (!r.value || row.count != 2 || strcmp(row.fields[0], "F") != 0 ||
-		strcmp(row.fields[1], "a.c") != 0) {
+	if (!r.value || row.count != 2 ||
+		fun_string_compare(row.fields[0], "F") != 0 ||
+		fun_string_compare(row.fields[1], "a.c") != 0) {
 		all_ok = 0;
 	}
 	row_count++;
 
 	r = fun_tsv_next(&state, &row);
-	if (!r.value || row.count != 2 || strcmp(row.fields[0], "F") != 0 ||
-		strcmp(row.fields[1], "b.c") != 0) {
+	if (!r.value || row.count != 2 ||
+		fun_string_compare(row.fields[0], "F") != 0 ||
+		fun_string_compare(row.fields[1], "b.c") != 0) {
 		all_ok = 0;
 	}
 	row_count++;
@@ -98,10 +105,10 @@ static void test_fun_tsv_extra_columns(void)
 	FunTsvRow row;
 	boolResult r = fun_tsv_next(&state, &row);
 
-	int passed =
-		(r.value == true && row.count == 3 && strcmp(row.fields[0], "D") == 0 &&
-		 strcmp(row.fields[1], "subdir") == 0 &&
-		 strcmp(row.fields[2], "12345") == 0);
+	int passed = (r.value == true && row.count == 3 &&
+				  fun_string_compare(row.fields[0], "D") == 0 &&
+				  fun_string_compare(row.fields[1], "subdir") == 0 &&
+				  fun_string_compare(row.fields[2], "12345") == 0);
 	print_test_result("fun_tsv_extra_columns", passed);
 }
 
@@ -129,7 +136,8 @@ static void test_fun_tsv_null(void)
 
 int main(void)
 {
-	printf("=== TSV Module Tests ===\n\n");
+	fun_console_write_line("=== TSV Module Tests ===");
+	fun_console_write_line("");
 
 	test_fun_tsv_single_row();
 	test_fun_tsv_multiple_rows();
@@ -137,6 +145,7 @@ int main(void)
 	test_fun_tsv_extra_columns();
 	test_fun_tsv_null();
 
-	printf("\nTests completed.\n");
+	fun_console_write_line("");
+	fun_console_write_line("Tests completed.");
 	return 0;
 }

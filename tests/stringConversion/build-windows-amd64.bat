@@ -9,6 +9,8 @@ gcc ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringValidation.c ^
     ../../src/string/stringConversion.c ^
+    ../../src/console/console.c ^
+    ../../arch/console/windows-amd64/console.c ^
     -o test.exe 
 
 REM Strip unnecessary symbols

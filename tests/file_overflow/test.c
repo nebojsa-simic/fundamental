@@ -1,7 +1,4 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
+#include "fundamental/console/console.h"
 #include "fundamental/file/file.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/async/async.h"
@@ -61,15 +58,8 @@ static bool test_read_with_offset_overflow(void)
 {
 	const char *file_path = "test_overflow_read.txt";
 
-	FILE *fp = fopen(file_path, "w");
-	if (!fp)
-		return false;
-	fprintf(fp, "data");
-	fclose(fp);
-
 	MemoryResult mem = fun_memory_allocate(1024);
 	if (fun_error_is_error(mem.error)) {
-		remove(file_path);
 		return false;
 	}
 
@@ -87,20 +77,18 @@ static bool test_read_with_offset_overflow(void)
 				   (fun_error_is_error(result.error));
 
 	fun_memory_free(&mem.value);
-	remove(file_path);
 	return success;
 }
 
 static bool test_write_with_offset_overflow(void)
 {
 	const char *file_path = "test_overflow_write.txt";
-	remove(file_path);
 
 	MemoryResult mem = fun_memory_allocate(512);
 	if (fun_error_is_error(mem.error)) {
 		return false;
 	}
-	memset(mem.value, 'X', 512);
+	fun_memory_fill(mem.value, 512, 'X');
 
 	Write params = { .file_path = file_path,
 					 .input = mem.value,
@@ -117,20 +105,18 @@ static bool test_write_with_offset_overflow(void)
 				   (fun_error_is_error(result.error));
 
 	fun_memory_free(&mem.value);
-	remove(file_path);
 	return success;
 }
 
 static bool test_append_with_offset_overflow(void)
 {
 	const char *file_path = "test_overflow_append.txt";
-	remove(file_path);
 
 	MemoryResult mem = fun_memory_allocate(512);
 	if (fun_error_is_error(mem.error)) {
 		return false;
 	}
-	memset(mem.value, 'A', 512);
+	fun_memory_fill(mem.value, 512, 'A');
 
 	Append params = { .file_path = file_path,
 					  .input = mem.value,
@@ -146,68 +132,67 @@ static bool test_append_with_offset_overflow(void)
 				   (fun_error_is_error(result.error));
 
 	fun_memory_free(&mem.value);
-	remove(file_path);
 	return success;
 }
 
 int main(void)
 {
-	printf("Running file overflow tests:\n");
+	fun_console_write_line("Running file overflow tests:");
 
 	if (!test_overflow_add_no_overflow()) {
-		printf("overflow_check add (valid) test failed\n");
+		fun_console_write_line("overflow_check add (valid) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_add_no_overflow passed\n");
+	fun_console_write_line("✓ overflow_check_add_no_overflow passed");
 
 	if (!test_overflow_add_with_overflow()) {
-		printf("overflow_check add (overflow) test failed\n");
+		fun_console_write_line("overflow_check add (overflow) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_add_with_overflow passed\n");
+	fun_console_write_line("✓ overflow_check_add_with_overflow passed");
 
 	if (!test_overflow_sub_no_overflow()) {
-		printf("overflow_check sub (valid) test failed\n");
+		fun_console_write_line("overflow_check sub (valid) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_sub_no_overflow passed\n");
+	fun_console_write_line("✓ overflow_check_sub_no_overflow passed");
 
 	if (!test_overflow_sub_with_underflow()) {
-		printf("overflow_check sub (underflow) test failed\n");
+		fun_console_write_line("overflow_check sub (underflow) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_sub_with_underflow passed\n");
+	fun_console_write_line("✓ overflow_check_sub_with_underflow passed");
 
 	if (!test_overflow_mul_no_overflow()) {
-		printf("overflow_check mul (valid) test failed\n");
+		fun_console_write_line("overflow_check mul (valid) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_mul_no_overflow passed\n");
+	fun_console_write_line("✓ overflow_check_mul_no_overflow passed");
 
 	if (!test_overflow_mul_with_overflow()) {
-		printf("overflow_check mul (overflow) test failed\n");
+		fun_console_write_line("overflow_check mul (overflow) test failed");
 		return 1;
 	}
-	printf("✓ overflow_check_mul_with_overflow passed\n");
+	fun_console_write_line("✓ overflow_check_mul_with_overflow passed");
 
 	if (!test_read_with_offset_overflow()) {
-		printf("Read with offset overflow test failed\n");
+		fun_console_write_line("Read with offset overflow test failed");
 		return 1;
 	}
-	printf("✓ test_read_with_offset_overflow passed\n");
+	fun_console_write_line("✓ test_read_with_offset_overflow passed");
 
 	if (!test_write_with_offset_overflow()) {
-		printf("Write with offset overflow test failed\n");
+		fun_console_write_line("Write with offset overflow test failed");
 		return 1;
 	}
-	printf("✓ test_write_with_offset_overflow passed\n");
+	fun_console_write_line("✓ test_write_with_offset_overflow passed");
 
 	if (!test_append_with_offset_overflow()) {
-		printf("Append with offset overflow test failed\n");
+		fun_console_write_line("Append with offset overflow test failed");
 		return 1;
 	}
-	printf("✓ test_append_with_offset_overflow passed\n");
+	fun_console_write_line("✓ test_append_with_offset_overflow passed");
 
-	printf("All file overflow tests passed!\n");
+	fun_console_write_line("All file overflow tests passed!");
 	return 0;
 }

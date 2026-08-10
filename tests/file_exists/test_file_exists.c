@@ -1,8 +1,6 @@
 #include "fundamental/filesystem/filesystem.h"
 #include "fundamental/memory/memory.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "fundamental/console/console.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -72,35 +70,17 @@ static void suppress_unused(void)
 	(void)directory_exists_stdlib;
 }
 
-// Helper function to create a test file
-static void create_test_file(const char *path)
-{
-	FILE *f = fopen(path, "w");
-	if (f) {
-		fprintf(f, "test content\n");
-		fclose(f);
-	}
-}
-
-// Helper function to remove a file
-static void remove_test_file(const char *path)
-{
-	remove(path);
-}
-
-// Helper function to remove directory
-static void remove_test_dir(const char *path)
-{
-	rmdir(path);
-}
-
 // Helper function to print test result
 static void print_test_result(const char *test_name, int passed)
 {
 	if (passed) {
-		printf("%s %s\n", GREEN_CHECK, test_name);
+		fun_console_write(GREEN_CHECK);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 	} else {
-		printf("%s %s\n", RED_CROSS, test_name);
+		fun_console_write(RED_CROSS);
+		fun_console_write(" ");
+		fun_console_write_line(test_name);
 	}
 }
 
@@ -112,12 +92,6 @@ static void test_fun_file_exists_existing_file(void)
 {
 	int passed = 0;
 
-	// Clean up from previous run
-	remove_test_file("test_output/file_exists_test.txt");
-
-	// Create test file
-	create_test_file("test_output/file_exists_test.txt");
-
 	// Test file exists
 	MAKE_PATH(test_path, "test_output/file_exists_test.txt");
 	boolResult result = fun_file_exists(test_path);
@@ -126,18 +100,12 @@ static void test_fun_file_exists_existing_file(void)
 		passed = 1;
 	}
 
-	// Cleanup
-	remove_test_file("test_output/file_exists_test.txt");
-
 	print_test_result("fun_file_exists: existing file", passed);
 }
 
 static void test_fun_file_exists_nonexistent_file(void)
 {
 	int passed = 0;
-
-	// Ensure file doesn't exist
-	remove_test_file("test_output/nonexistent_file.txt");
 
 	// Test file doesn't exist
 	MAKE_PATH(test_path, "test_output/nonexistent_file.txt");
@@ -154,15 +122,6 @@ static void test_fun_file_exists_directory_path(void)
 {
 	int passed = 0;
 
-	// Clean up and create test directory
-	remove_test_dir("test_output/existing_dir");
-
-#ifdef _WIN32
-	_mkdir("test_output/existing_dir");
-#else
-	mkdir("test_output/existing_dir", 0755);
-#endif
-
 	// Test that file_exists returns false for directory
 	MAKE_PATH(test_path, "test_output/existing_dir");
 	boolResult result = fun_file_exists(test_path);
@@ -170,9 +129,6 @@ static void test_fun_file_exists_directory_path(void)
 	if (fun_error_is_ok(result.error) && result.value == false) {
 		passed = 1;
 	}
-
-	// Cleanup
-	remove_test_dir("test_output/existing_dir");
 
 	print_test_result("fun_file_exists: directory path", passed);
 }
@@ -200,15 +156,6 @@ static void test_fun_directory_exists_existing_directory(void)
 {
 	int passed = 0;
 
-	// Clean up and create test directory
-	remove_test_dir("test_output/dir_exists_test");
-
-#ifdef _WIN32
-	_mkdir("test_output/dir_exists_test");
-#else
-	mkdir("test_output/dir_exists_test", 0755);
-#endif
-
 	// Test directory exists
 	MAKE_PATH(test_path, "test_output/dir_exists_test");
 	boolResult result = fun_directory_exists(test_path);
@@ -217,18 +164,12 @@ static void test_fun_directory_exists_existing_directory(void)
 		passed = 1;
 	}
 
-	// Cleanup
-	remove_test_dir("test_output/dir_exists_test");
-
 	print_test_result("fun_directory_exists: existing directory", passed);
 }
 
 static void test_fun_directory_exists_nonexistent_directory(void)
 {
 	int passed = 0;
-
-	// Ensure directory doesn't exist
-	remove_test_dir("test_output/nonexistent_dir");
 
 	// Test directory doesn't exist
 	MAKE_PATH(test_path, "test_output/nonexistent_dir");
@@ -245,10 +186,6 @@ static void test_fun_directory_exists_file_path(void)
 {
 	int passed = 0;
 
-	// Clean up and create test file
-	remove_test_file("test_output/existing_file.txt");
-	create_test_file("test_output/existing_file.txt");
-
 	// Test that directory_exists returns false for file
 	MAKE_PATH(test_path, "test_output/existing_file.txt");
 	boolResult result = fun_directory_exists(test_path);
@@ -256,9 +193,6 @@ static void test_fun_directory_exists_file_path(void)
 	if (fun_error_is_ok(result.error) && result.value == false) {
 		passed = 1;
 	}
-
-	// Cleanup
-	remove_test_file("test_output/existing_file.txt");
 
 	print_test_result("fun_directory_exists: file path", passed);
 }
@@ -286,10 +220,6 @@ static void test_fun_path_exists_existing_file(void)
 {
 	int passed = 0;
 
-	// Clean up and create test file
-	remove_test_file("test_output/path_exists_file.txt");
-	create_test_file("test_output/path_exists_file.txt");
-
 	// Test path exists (as file)
 	MAKE_PATH(test_path, "test_output/path_exists_file.txt");
 	boolResult result = fun_path_exists(test_path);
@@ -298,24 +228,12 @@ static void test_fun_path_exists_existing_file(void)
 		passed = 1;
 	}
 
-	// Cleanup
-	remove_test_file("test_output/path_exists_file.txt");
-
 	print_test_result("fun_path_exists: existing file", passed);
 }
 
 static void test_fun_path_exists_existing_directory(void)
 {
 	int passed = 0;
-
-	// Clean up and create test directory
-	remove_test_dir("test_output/path_exists_dir");
-
-#ifdef _WIN32
-	_mkdir("test_output/path_exists_dir");
-#else
-	mkdir("test_output/path_exists_dir", 0755);
-#endif
 
 	// Test path exists (as directory)
 	MAKE_PATH(test_path, "test_output/path_exists_dir");
@@ -325,19 +243,12 @@ static void test_fun_path_exists_existing_directory(void)
 		passed = 1;
 	}
 
-	// Cleanup
-	remove_test_dir("test_output/path_exists_dir");
-
 	print_test_result("fun_path_exists: existing directory", passed);
 }
 
 static void test_fun_path_exists_nonexistent_path(void)
 {
 	int passed = 0;
-
-	// Ensure path doesn't exist
-	remove_test_file("test_output/nonexistent_path");
-	remove_test_dir("test_output/nonexistent_path");
 
 	// Test path doesn't exist
 	MAKE_PATH(test_path, "test_output/nonexistent_path");
@@ -373,37 +284,31 @@ int main(void)
 {
 	suppress_unused();
 
-	// Create test output directory
-#ifdef _WIN32
-	_mkdir("test_output");
-#else
-	mkdir("test_output", 0755);
-#endif
+	fun_console_write_line("=== File Existence Tests ===");
+	fun_console_write_line("");
 
-	printf("=== File Existence Tests ===\n\n");
-
-	printf("-- fun_file_exists tests --\n");
+	fun_console_write_line("-- fun_file_exists tests --");
 	test_fun_file_exists_existing_file();
 	test_fun_file_exists_nonexistent_file();
 	test_fun_file_exists_directory_path();
 	test_fun_file_exists_invalid_path();
 
-	printf("\n-- fun_directory_exists tests --\n");
+	fun_console_write_line("");
+	fun_console_write_line("-- fun_directory_exists tests --");
 	test_fun_directory_exists_existing_directory();
 	test_fun_directory_exists_nonexistent_directory();
 	test_fun_directory_exists_file_path();
 	test_fun_directory_exists_invalid_path();
 
-	printf("\n-- fun_path_exists tests --\n");
+	fun_console_write_line("");
+	fun_console_write_line("-- fun_path_exists tests --");
 	test_fun_path_exists_existing_file();
 	test_fun_path_exists_existing_directory();
 	test_fun_path_exists_nonexistent_path();
 	test_fun_path_exists_invalid_path();
 
-	// Cleanup test output directory
-	rmdir("test_output");
-
-	printf("\n=== Tests Complete ===\n");
+	fun_console_write_line("");
+	fun_console_write_line("=== Tests Complete ===");
 
 	return 0;
 }

@@ -14,6 +14,11 @@ gcc ^
     ../../src/math/math_scalar.c ^
     ../../src/math/math_init.c ^
     ../../arch/math/windows-amd64/cpu_features.c ^
+    ../../src/console/console.c ^
+    ../../arch/console/windows-amd64/console.c ^
+    ../../arch/memory/windows-amd64/memory.c ^
+    ../../src/string/stringConversion.c ^
+    ../../src/string/stringOperations.c ^
     vector_avx2.o ^
     -lm ^
     -o test.exe

@@ -10,6 +10,11 @@ gcc \
     ../../arch/file/linux-amd64/fileRead.c \
     ../../arch/file/linux-amd64/fileReadMmap.c \
     ../../arch/file/linux-amd64/fileReadRing.c \
+    ../../src/string/stringOperations.c \
+    ../../src/string/stringConversion.c \
+    ../../src/string/stringTemplate.c \
+    ../../src/console/console.c \
+    ../../arch/console/linux-amd64/console.c \
     -o test
 
 strip --strip-unneeded test

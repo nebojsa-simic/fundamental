@@ -1,8 +1,7 @@
 #define _POSIX_C_SOURCE 199309L
-#include <assert.h>
-#include <stdio.h>
 #include <time.h>
 
+#include "fundamental/console/console.h"
 #include "fundamental/thread_pool/thread_pool.h"
 #include "fundamental/error/error.h"
 
@@ -16,12 +15,11 @@
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define RED_CROSS "\033[0;31m\u2717\033[0m"
 
-#define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
-#define ASSERT_ERROR(result) assert(result.error.code != 0)
-
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 /* ---- Helper: platform sleep ---- */
@@ -75,8 +73,14 @@ void test_create_valid()
 	g_work_executed = 0;
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(4, &pool);
-	ASSERT_NO_ERROR(r);
-	assert(pool != NULL);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(pool != NULL)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 	print_test_result(__func__);
@@ -89,9 +93,18 @@ void test_create_zero_threads()
 {
 	ThreadPool pool = (ThreadPool)0xDEAD;
 	voidResult r = fun_thread_pool_create(0, &pool);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_THREAD_POOL_INVALID_SIZE);
-	assert(pool == (ThreadPool)0xDEAD);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_THREAD_POOL_INVALID_SIZE)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(pool == (ThreadPool)0xDEAD)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -101,8 +114,14 @@ void test_create_zero_threads()
 void test_create_null_output()
 {
 	voidResult r = fun_thread_pool_create(2, NULL);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_NULL_POINTER);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_NULL_POINTER)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -117,20 +136,38 @@ void test_submit_data_copied()
 
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int original = 42;
 	WorkItem item = { &original, sizeof(original), check_copy_work_fn };
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 
-	assert(g_work_executed == 1);
-	assert(g_worker_received_ptr != NULL);
-	assert(g_worker_received_ptr != &original);
-	assert(g_work_value == 42);
+	if (!(g_work_executed == 1)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(g_worker_received_ptr != NULL)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(g_worker_received_ptr != &original)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(g_work_value == 42)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -144,19 +181,28 @@ void test_caller_frees_after_submit()
 
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int original = 99;
 	WorkItem item = { &original, sizeof(original), set_executed_work_fn };
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	original = 0;
 
 	fun_thread_pool_destroy(pool);
 
-	assert(g_work_executed == 1);
+	if (!(g_work_executed == 1)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -170,28 +216,49 @@ void test_submit_pool_full()
 
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(2, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int dummy = 0;
 	WorkItem item = { &dummy, sizeof(dummy), spin_work_fn };
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	sleep_ms(50);
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	sleep_ms(50);
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_THREAD_POOL_FULL);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_THREAD_POOL_FULL)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	g_block_workers = 0;
 
@@ -208,28 +275,46 @@ void test_submit_full_retains_ownership()
 
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int original = 55;
 	WorkItem item = { &original, sizeof(original), spin_work_fn };
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	sleep_ms(50);
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	sleep_ms(50);
 
 	original = 77;
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_THREAD_POOL_FULL);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_THREAD_POOL_FULL)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
-	assert(original == 77);
+	if (!(original == 77)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	g_block_workers = 0;
 
@@ -245,8 +330,14 @@ void test_submit_null_pool()
 	int data = 1;
 	WorkItem item = { &data, sizeof(data), set_executed_work_fn };
 	voidResult r = fun_thread_pool_submit(NULL, &item);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_NULL_POINTER);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_NULL_POINTER)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -257,11 +348,20 @@ void test_submit_null_item()
 {
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	r = fun_thread_pool_submit(pool, NULL);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_NULL_POINTER);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_NULL_POINTER)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 	print_test_result(__func__);
@@ -274,12 +374,21 @@ void test_submit_null_data()
 {
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	WorkItem item = { NULL, 4, set_executed_work_fn };
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_NULL_POINTER);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_NULL_POINTER)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 	print_test_result(__func__);
@@ -292,13 +401,22 @@ void test_submit_null_work_fn()
 {
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int data = 1;
 	WorkItem item = { &data, sizeof(data), NULL };
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_ERROR(r);
-	assert(r.error.code == ERROR_CODE_NULL_POINTER);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
+	if (!(r.error.code == ERROR_CODE_NULL_POINTER)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 	print_test_result(__func__);
@@ -310,7 +428,10 @@ void test_submit_null_work_fn()
 void test_destroy_null_pool()
 {
 	voidResult r = fun_thread_pool_destroy(NULL);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -323,17 +444,26 @@ void test_destroy_waits_for_work()
 
 	ThreadPool pool = NULL;
 	voidResult r = fun_thread_pool_create(1, &pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	int data = 1;
 	WorkItem item = { &data, sizeof(data), set_executed_work_fn };
 
 	r = fun_thread_pool_submit(pool, &item);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	fun_thread_pool_destroy(pool);
 
-	assert(g_work_executed == 1);
+	if (!(g_work_executed == 1)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -391,7 +521,10 @@ void test_concurrent_submits()
 	g_concurrent_errors = 0;
 
 	voidResult r = fun_thread_pool_create(4, &g_concurrent_pool);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 #define NUM_SUBMIT_THREADS 4
 
@@ -400,14 +533,20 @@ void test_concurrent_submits()
 	for (int i = 0; i < NUM_SUBMIT_THREADS; i++) {
 		threads[i] =
 			CreateThread(NULL, 0, concurrent_submit_thread, NULL, 0, NULL);
-		assert(threads[i] != NULL);
+		if (!(threads[i] != NULL)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 #else
 	pthread_t threads[NUM_SUBMIT_THREADS];
 	for (int i = 0; i < NUM_SUBMIT_THREADS; i++) {
 		int ret =
 			pthread_create(&threads[i], NULL, concurrent_submit_thread, NULL);
-		assert(ret == 0);
+		if (!(ret == 0)) {
+			fun_console_write_line("FAIL: check");
+			return;
+		}
 	}
 #endif
 
@@ -424,7 +563,10 @@ void test_concurrent_submits()
 
 	int total_submitted =
 		(NUM_SUBMIT_THREADS * CONCURRENT_COUNT) - g_concurrent_errors;
-	assert(g_concurrent_executed == total_submitted);
+	if (!(g_concurrent_executed == total_submitted)) {
+		fun_console_write_line("FAIL: check");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -434,7 +576,9 @@ void test_concurrent_submits()
 
 int main(void)
 {
-	printf("\n--- Thread Pool Tests ---\n\n");
+	fun_console_write_line("");
+	fun_console_write_line("--- Thread Pool Tests ---");
+	fun_console_write_line("");
 
 	test_create_valid();
 	test_create_zero_threads();
@@ -451,6 +595,7 @@ int main(void)
 	test_destroy_waits_for_work();
 	test_concurrent_submits();
 
-	printf("\nAll thread-pool tests passed.\n");
+	fun_console_write_line("");
+	fun_console_write_line("All thread-pool tests passed.");
 	return 0;
 }

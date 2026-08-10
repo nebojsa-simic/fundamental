@@ -17,6 +17,8 @@ gcc \
     ../../src/async/async.c \
     ../../arch/async/linux-amd64/async.c \
     ../../arch/memory/linux-amd64/memory.c \
+    ../../src/console/console.c \
+    ../../arch/console/linux-amd64/console.c \
     -lpthread \
     -o test
 

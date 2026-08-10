@@ -1,8 +1,8 @@
 #include <assert.h>
-#include <stdio.h>
 
 #include "fundamental/stream/stream.h"
 #include "fundamental/memory/memory.h"
+#include "fundamental/console/console.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
@@ -25,9 +25,6 @@ bool test_stream_read_small_file(void)
 	// Read the file
 	AsyncResult read_result = fun_stream_read(stream, &bytes_read);
 	fun_async_await(&read_result, -1);
-	printf("Bytes read: %lu\n", bytes_read);
-	printf("error code: %d\n", read_result.error.code);
-	printf("error: %s\n", read_result.error.message);
 	ASSERT_NO_ERROR(read_result);
 
 	bool success = (read_result.status == ASYNC_COMPLETED) &&

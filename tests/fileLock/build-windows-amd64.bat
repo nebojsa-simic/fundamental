@@ -6,7 +6,9 @@ set SOURCES=test.c
 set ARCH_FILES=../../arch/file/windows-amd64/fileLock.c 
 set DEPENDENCIES=../../arch/memory/windows-amd64/memory.c ../../src/async/async.c ../../arch/async/windows-amd64/async.c
 set OTHER_DEPS=../../arch/file/windows-amd64/fileRead.c ../../arch/file/windows-amd64/fileReadMmap.c ../../arch/file/windows-amd64/fileReadRing.c
+set STRING_DEPS=../../src/string/stringOperations.c ../../src/string/stringConversion.c ../../src/string/stringTemplate.c
+set CONSOLE_DEPS=../../src/console/console.c ../../arch/console/windows-amd64/console.c
 set OUTPUT=test.exe
 set LIBS=-lkernel32 -ladvapi32
 
-%CC% %CFLAGS% %INCLUDES% %SOURCES% %ARCH_FILES% %DEPENDENCIES% %OTHER_DEPS% %LIBS% -o %OUTPUT%
+%CC% %CFLAGS% %INCLUDES% %SOURCES% %ARCH_FILES% %DEPENDENCIES% %OTHER_DEPS% %STRING_DEPS% %CONSOLE_DEPS% %LIBS% -o %OUTPUT%

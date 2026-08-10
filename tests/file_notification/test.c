@@ -1,7 +1,4 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
+#include "fundamental/console/console.h"
 #include "fundamental/file/file.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/async/async.h"
@@ -27,7 +24,7 @@ static bool test_register_notification_success(void)
 	}
 
 	if (success)
-		printf("✓ test_register_notification_success passed\n");
+		fun_console_write_line("✓ test_register_notification_success passed");
 	return success;
 }
 
@@ -40,7 +37,7 @@ static bool test_register_notification_null_path(void)
 				   (fun_error_is_error(result.error));
 
 	if (success)
-		printf("✓ test_register_notification_null_path passed\n");
+		fun_console_write_line("✓ test_register_notification_null_path passed");
 	return success;
 }
 
@@ -53,7 +50,8 @@ static bool test_register_notification_null_callback(void)
 				   (fun_error_is_error(result.error));
 
 	if (success)
-		printf("✓ test_register_notification_null_callback passed\n");
+		fun_console_write_line(
+			"✓ test_register_notification_null_callback passed");
 	return success;
 }
 
@@ -65,7 +63,8 @@ static bool test_unregister_notification_null_state(void)
 				   (fun_error_is_error(result.error));
 
 	if (success)
-		printf("✓ test_unregister_notification_null_state passed\n");
+		fun_console_write_line(
+			"✓ test_unregister_notification_null_state passed");
 	return success;
 }
 
@@ -84,47 +83,35 @@ static bool test_register_and_unregister(void)
 				   (fun_error_is_ok(unreg.error));
 
 	if (success)
-		printf("✓ test_register_and_unregister passed\n");
+		fun_console_write_line("✓ test_register_and_unregister passed");
 	return success;
 }
 
 int main(void)
 {
-	FILE *fp = fopen("./test_notify_file.txt", "w");
-	if (fp) {
-		fprintf(fp, "notification test\n");
-		fclose(fp);
-	}
-
-	printf("Running file notification module tests:\n");
+	fun_console_write_line("Running file notification module tests:");
 
 	if (!test_register_notification_success()) {
-		printf("Register notification test failed\n");
-		remove("./test_notify_file.txt");
+		fun_console_write_line("Register notification test failed");
 		return 1;
 	}
 	if (!test_register_notification_null_path()) {
-		printf("Register null path test failed\n");
-		remove("./test_notify_file.txt");
+		fun_console_write_line("Register null path test failed");
 		return 1;
 	}
 	if (!test_register_notification_null_callback()) {
-		printf("Register null callback test failed\n");
-		remove("./test_notify_file.txt");
+		fun_console_write_line("Register null callback test failed");
 		return 1;
 	}
 	if (!test_unregister_notification_null_state()) {
-		printf("Unregister null state test failed\n");
-		remove("./test_notify_file.txt");
+		fun_console_write_line("Unregister null state test failed");
 		return 1;
 	}
 	if (!test_register_and_unregister()) {
-		printf("Register and unregister test failed\n");
-		remove("./test_notify_file.txt");
+		fun_console_write_line("Register and unregister test failed");
 		return 1;
 	}
 
-	remove("./test_notify_file.txt");
-	printf("All file notification tests passed!\n");
+	fun_console_write_line("All file notification tests passed!");
 	return 0;
 }

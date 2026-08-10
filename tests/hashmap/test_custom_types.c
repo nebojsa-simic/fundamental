@@ -1,8 +1,5 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "fundamental/hashmap/hashmap.h"
+#include "fundamental/console/console.h"
 
 typedef struct {
 	int x;
@@ -29,18 +26,21 @@ static inline bool fun_equals_Point(const void *k1, const void *k2)
 DEFINE_HASHMAP_TYPE_CUSTOM(Point, int, fun_hash_Point, fun_equals_Point)
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
-#define ASSERT_ERROR_OK(result) assert((result).code == 0)
-#define ASSERT_RESULT_OK(result) assert((result).error.code == 0)
 
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 void test_point_hashmap_put_get(void)
 {
 	PointintHashMapResult create_result = fun_hashmap_Point_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	PointintHashMap map = create_result.value;
 
@@ -48,16 +48,37 @@ void test_point_hashmap_put_get(void)
 	Point p2 = { 30, 40 };
 	Point p3 = { 50, 60 };
 
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p1, 100));
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p2, 200));
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p3, 300));
+	if (fun_hashmap_Point_int_put(&map, p1, 100).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_Point_int_put(&map, p2, 200).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_Point_int_put(&map, p3, 300).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
-	assert(fun_hashmap_Point_int_get(&map, p1) == 100);
-	assert(fun_hashmap_Point_int_get(&map, p2) == 200);
-	assert(fun_hashmap_Point_int_get(&map, p3) == 300);
+	if (!(fun_hashmap_Point_int_get(&map, p1) == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_get(&map, p2) == 200)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_get(&map, p3) == 300)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_Point_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("point_hashmap_put_get");
 }
@@ -65,19 +86,34 @@ void test_point_hashmap_put_get(void)
 void test_point_hashmap_same_coordinates(void)
 {
 	PointintHashMapResult create_result = fun_hashmap_Point_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	PointintHashMap map = create_result.value;
 
 	Point p1 = { 5, 5 };
 	Point p2 = { 5, 5 }; // Same coordinates
 
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p1, 42));
-	assert(fun_hashmap_Point_int_get(&map, p2) == 42);
-	assert(fun_hashmap_Point_int_size(&map) == 1);
+	if (fun_hashmap_Point_int_put(&map, p1, 42).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_get(&map, p2) == 42)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_size(&map) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_Point_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("point_hashmap_same_coordinates");
 }
@@ -85,33 +121,53 @@ void test_point_hashmap_same_coordinates(void)
 void test_point_hashmap_update_value(void)
 {
 	PointintHashMapResult create_result = fun_hashmap_Point_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	PointintHashMap map = create_result.value;
 
 	Point p = { 100, 200 };
 
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p, 1000));
-	ASSERT_ERROR_OK(fun_hashmap_Point_int_put(&map, p, 9999));
-	assert(fun_hashmap_Point_int_get(&map, p) == 9999);
-	assert(fun_hashmap_Point_int_size(&map) == 1);
+	if (fun_hashmap_Point_int_put(&map, p, 1000).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_hashmap_Point_int_put(&map, p, 9999).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_get(&map, p) == 9999)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(fun_hashmap_Point_int_size(&map) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_hashmap_Point_int_destroy(&map);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("point_hashmap_update_value");
 }
 
 int main(void)
 {
-	printf("Running HashMap Custom Type Tests (Point struct)\n");
-	printf("================================================\n\n");
+	fun_console_write_line("Running HashMap Custom Type Tests (Point struct)");
+	fun_console_write_line("================================================");
+	fun_console_write_line("");
 
 	test_point_hashmap_put_get();
 	test_point_hashmap_same_coordinates();
 	test_point_hashmap_update_value();
 
-	printf("\n================================================\n");
-	printf("All custom type tests completed\n");
+	fun_console_write_line("");
+	fun_console_write_line("================================================");
+	fun_console_write_line("All custom type tests completed");
 	return 0;
 }

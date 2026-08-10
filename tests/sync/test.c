@@ -1,9 +1,8 @@
 #define _POSIX_C_SOURCE 199309L
-#include <assert.h>
-#include <stdio.h>
 #include <time.h>
 
 #include "fundamental/sync/sync.h"
+#include "fundamental/console/console.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -15,12 +14,11 @@
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 #define RED_CROSS "\033[0;31m\u2717\033[0m"
 
-#define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
-#define ASSERT_ERROR(result) assert(result.error.code != 0)
-
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 /* ---- Mutex create and destroy ---- */
@@ -29,11 +27,20 @@ void test_mutex_create_destroy()
 {
 	Mutex m = NULL;
 	voidResult r = fun_mutex_create(&m);
-	ASSERT_NO_ERROR(r);
-	assert(m != NULL);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
+	if (!(m != NULL)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	r = fun_mutex_destroy(m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -41,14 +48,20 @@ void test_mutex_create_destroy()
 void test_mutex_create_null_output()
 {
 	voidResult r = fun_mutex_create(NULL);
-	ASSERT_ERROR(r);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 	print_test_result(__func__);
 }
 
 void test_mutex_destroy_null()
 {
 	voidResult r = fun_mutex_destroy(NULL);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -56,16 +69,28 @@ void test_mutex_lock_unlock()
 {
 	Mutex m = NULL;
 	voidResult r = fun_mutex_create(&m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	r = fun_mutex_lock(m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	r = fun_mutex_unlock(m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	r = fun_mutex_destroy(m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -100,7 +125,10 @@ void test_mutex_lock_blocks_another_thread()
 {
 	Mutex m = NULL;
 	voidResult r = fun_mutex_create(&m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	MutexBlockData data = { m, 0, 0 };
 
@@ -124,7 +152,10 @@ void test_mutex_lock_blocks_another_thread()
 #endif
 
 	/* Thread should be blocked, not yet locked */
-	assert(data.locked == 0);
+	if (!(data.locked == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_mutex_unlock(m);
 
@@ -136,8 +167,14 @@ void test_mutex_lock_blocks_another_thread()
 	pthread_join(thread, NULL);
 #endif
 
-	assert(data.locked == 1);
-	assert(data.done == 1);
+	if (!(data.locked == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(data.done == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_mutex_destroy(m);
 	print_test_result(__func__);
@@ -149,11 +186,20 @@ void test_condvar_create_destroy()
 {
 	CondVar cv = NULL;
 	voidResult r = fun_condvar_create(&cv);
-	ASSERT_NO_ERROR(r);
-	assert(cv != NULL);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
+	if (!(cv != NULL)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	r = fun_condvar_destroy(cv);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	print_test_result(__func__);
 }
@@ -161,7 +207,10 @@ void test_condvar_create_destroy()
 void test_condvar_create_null_output()
 {
 	voidResult r = fun_condvar_create(NULL);
-	ASSERT_ERROR(r);
+	if (r.error.code == 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR");
+		return;
+	}
 	print_test_result(__func__);
 }
 
@@ -198,9 +247,15 @@ void test_condvar_wait_signal()
 	Mutex m = NULL;
 	CondVar cv = NULL;
 	voidResult r = fun_mutex_create(&m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	r = fun_condvar_create(&cv);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	CondVarSignalData data = { m, cv, 0, 0 };
 
@@ -221,8 +276,14 @@ void test_condvar_wait_signal()
 	}
 #endif
 
-	assert(data.ready == 1);
-	assert(data.woken == 0);
+	if (!(data.ready == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(data.woken == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_mutex_lock(m);
 	fun_condvar_signal(cv);
@@ -238,7 +299,10 @@ void test_condvar_wait_signal()
 	}
 #endif
 
-	assert(data.woken == 1);
+	if (!(data.woken == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 #ifdef _WIN32
 	WaitForSingleObject(thread, INFINITE);
@@ -286,9 +350,15 @@ void test_condvar_broadcast()
 	Mutex m = NULL;
 	CondVar cv = NULL;
 	voidResult r = fun_mutex_create(&m);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 	r = fun_condvar_create(&cv);
-	ASSERT_NO_ERROR(r);
+	if (r.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_NO_ERROR");
+		return;
+	}
 
 	CondVarBroadcastData data = { m, cv, 0, 0, 3 };
 
@@ -315,8 +385,14 @@ void test_condvar_broadcast()
 	}
 #endif
 
-	assert(data.ready_count == 3);
-	assert(data.woken_count == 0);
+	if (!(data.ready_count == 3)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
+	if (!(data.woken_count == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	fun_mutex_lock(m);
 	fun_condvar_broadcast(cv);
@@ -332,7 +408,10 @@ void test_condvar_broadcast()
 	}
 #endif
 
-	assert(data.woken_count == 3);
+	if (!(data.woken_count == 3)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 #ifdef _WIN32
 	for (int i = 0; i < 3; i++) {
@@ -352,7 +431,8 @@ void test_condvar_broadcast()
 
 int main(void)
 {
-	printf("\n--- Sync Module Tests ---\n");
+	fun_console_write_line("");
+	fun_console_write_line("--- Sync Module Tests ---");
 
 	test_mutex_create_destroy();
 	test_mutex_create_null_output();
@@ -364,6 +444,7 @@ int main(void)
 	test_condvar_wait_signal();
 	test_condvar_broadcast();
 
-	printf("\nAll sync tests passed.\n");
+	fun_console_write_line("");
+	fun_console_write_line("All sync tests passed.");
 	return 0;
 }

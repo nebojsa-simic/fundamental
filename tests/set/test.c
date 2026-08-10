@@ -1,41 +1,65 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "fundamental/set/set.h"
+#include "fundamental/console/console.h"
 
 DEFINE_SET_TYPE(int)
 
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
-#define ASSERT_ERROR_OK(result) assert((result).code == 0)
-#define ASSERT_RESULT_OK(result) assert((result).error.code == 0)
 
 void print_test_result(const char *test_name)
 {
-	printf("%s %s\n", GREEN_CHECK, test_name);
+	fun_console_write(GREEN_CHECK);
+	fun_console_write(" ");
+	fun_console_write_line(test_name);
 }
 
 void test_fun_set_int_add_contains(void)
 {
 	intSetResult create_result = fun_set_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intSet set = create_result.value;
 
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 10));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 20));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 30));
+	if (fun_set_int_add(&set, 10).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 20).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 30).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	bool contains_10 = false;
-	ASSERT_ERROR_OK(fun_set_int_contains(&set, 10, &contains_10));
-	assert(contains_10 == true);
+	if (fun_set_int_contains(&set, 10, &contains_10).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(contains_10 == true)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	bool contains_99 = false;
-	ASSERT_ERROR_OK(fun_set_int_contains(&set, 99, &contains_99));
-	assert(contains_99 == false);
+	if (fun_set_int_contains(&set, 99, &contains_99).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(contains_99 == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_set_int_destroy(&set);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_set_int_add_contains");
 }
@@ -43,19 +67,37 @@ void test_fun_set_int_add_contains(void)
 void test_fun_set_int_no_duplicates(void)
 {
 	intSetResult create_result = fun_set_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intSet set = create_result.value;
 
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 42));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 42));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 42));
+	if (fun_set_int_add(&set, 42).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 42).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 42).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	// Size should still be 1 (no duplicates)
-	assert(fun_set_int_size(&set) == 1);
+	if (!(fun_set_int_size(&set) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_set_int_destroy(&set);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_set_int_no_duplicates");
 }
@@ -63,28 +105,61 @@ void test_fun_set_int_no_duplicates(void)
 void test_fun_set_int_remove(void)
 {
 	intSetResult create_result = fun_set_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intSet set = create_result.value;
 
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 1));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 2));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 3));
+	if (fun_set_int_add(&set, 1).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 3).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
-	assert(fun_set_int_size(&set) == 3);
+	if (!(fun_set_int_size(&set) == 3)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_set_int_remove(&set, 2));
-	assert(fun_set_int_size(&set) == 2);
+	if (fun_set_int_remove(&set, 2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_set_int_size(&set) == 2)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	bool contains_2 = true;
-	ASSERT_ERROR_OK(fun_set_int_contains(&set, 2, &contains_2));
-	assert(contains_2 == false);
+	if (fun_set_int_contains(&set, 2, &contains_2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(contains_2 == false)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult remove_result = fun_set_int_remove(&set, 999);
-	assert(fun_error_is_error(remove_result));
+	if (!(fun_error_is_error(remove_result))) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_set_int_destroy(&set);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_set_int_remove");
 }
@@ -92,25 +167,58 @@ void test_fun_set_int_remove(void)
 void test_fun_set_int_size(void)
 {
 	intSetResult create_result = fun_set_int_create(16);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intSet set = create_result.value;
 
-	assert(fun_set_int_size(&set) == 0);
+	if (!(fun_set_int_size(&set) == 0)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 1));
-	assert(fun_set_int_size(&set) == 1);
+	if (fun_set_int_add(&set, 1).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_set_int_size(&set) == 1)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 2));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 3));
-	ASSERT_ERROR_OK(fun_set_int_add(&set, 4));
-	assert(fun_set_int_size(&set) == 4);
+	if (fun_set_int_add(&set, 2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 3).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (fun_set_int_add(&set, 4).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_set_int_size(&set) == 4)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
-	ASSERT_ERROR_OK(fun_set_int_remove(&set, 2));
-	assert(fun_set_int_size(&set) == 3);
+	if (fun_set_int_remove(&set, 2).code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
+	if (!(fun_set_int_size(&set) == 3)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_set_int_destroy(&set);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_set_int_size");
 }
@@ -118,41 +226,66 @@ void test_fun_set_int_size(void)
 void test_fun_set_int_many_elements(void)
 {
 	intSetResult create_result = fun_set_int_create(32);
-	ASSERT_RESULT_OK(create_result);
+	if (create_result.error.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_RESULT_OK");
+		return;
+	}
 
 	intSet set = create_result.value;
 
 	// Add 100 elements
 	for (int i = 0; i < 100; i++) {
-		ASSERT_ERROR_OK(fun_set_int_add(&set, i));
+		if (fun_set_int_add(&set, i).code != 0) {
+			fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+			return;
+		}
 	}
 
-	assert(fun_set_int_size(&set) == 100);
+	if (!(fun_set_int_size(&set) == 100)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	// Verify all elements present
 	for (int i = 0; i < 100; i++) {
 		bool contains = false;
-		ASSERT_ERROR_OK(fun_set_int_contains(&set, i, &contains));
-		assert(contains == true);
+		if (fun_set_int_contains(&set, i, &contains).code != 0) {
+			fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+			return;
+		}
+		if (!(contains == true)) {
+			fun_console_write_line("FAIL: assertion");
+			return;
+		}
 	}
 
 	// Remove half
 	for (int i = 0; i < 50; i++) {
-		ASSERT_ERROR_OK(fun_set_int_remove(&set, i));
+		if (fun_set_int_remove(&set, i).code != 0) {
+			fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+			return;
+		}
 	}
 
-	assert(fun_set_int_size(&set) == 50);
+	if (!(fun_set_int_size(&set) == 50)) {
+		fun_console_write_line("FAIL: assertion");
+		return;
+	}
 
 	ErrorResult destroy = fun_set_int_destroy(&set);
-	ASSERT_ERROR_OK(destroy);
+	if (destroy.code != 0) {
+		fun_console_write_line("FAIL: ASSERT_ERROR_OK");
+		return;
+	}
 
 	print_test_result("fun_set_int_many_elements");
 }
 
 int main(void)
 {
-	printf("Running Set Module Unit Tests\n");
-	printf("==============================\n\n");
+	fun_console_write_line("Running Set Module Unit Tests");
+	fun_console_write_line("==============================");
+	fun_console_write_line("");
 
 	test_fun_set_int_add_contains();
 	test_fun_set_int_no_duplicates();
@@ -160,7 +293,8 @@ int main(void)
 	test_fun_set_int_size();
 	test_fun_set_int_many_elements();
 
-	printf("\n==============================\n");
-	printf("All set tests completed\n");
+	fun_console_write_line("");
+	fun_console_write_line("==============================");
+	fun_console_write_line("All set tests completed");
 	return 0;
 }

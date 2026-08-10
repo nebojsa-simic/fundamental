@@ -1,9 +1,9 @@
 #include <assert.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "fundamental/stream/stream.h"
 #include "fundamental/memory/memory.h"
+#include "fundamental/file/file.h"
+#include "fundamental/console/console.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
@@ -31,7 +31,7 @@ bool test_fun_stream_write_basic(void)
 
 	// Prepare data to write
 	char test_data[] = "Hello, Stream!";
-	size_t data_size = strlen(test_data);
+	size_t data_size = fun_string_length(test_data);
 
 	// Write data to stream
 	AsyncResult write_result = fun_stream_write(stream, test_data, data_size);
@@ -57,19 +57,21 @@ bool test_fun_stream_write_basic(void)
 	fun_memory_free(&buffer_result.value);
 
 	// Verify file was actually written correctly by checking if we can read it back
-	FILE *fp = fopen("testData/test_output.txt", "rb");
-	if (fp) {
-		char read_buffer[512];
-		fseek(fp, 0, SEEK_SET);
-		int read_bytes = fread(read_buffer, 1, data_size, fp);
-		fclose(fp);
-		if (read_bytes != data_size ||
-			memcmp(read_buffer, test_data, data_size) != 0) {
+	{
+		char read_buffer[512] = { 0 };
+		Read rp = { .file_path = "testData/test_output.txt",
+				    .output = read_buffer,
+				    .bytes_to_read = data_size,
+				    .offset = 0 };
+		AsyncResult rr = fun_read_file_in_memory(rp);
+		fun_async_await(&rr, -1);
+		if (rr.status != ASYNC_COMPLETED ||
+			fun_memory_compare(read_buffer, test_data, data_size).value != 0) {
 			return false;
 		}
 	}
 
-	printf("✓ fun_stream_write_basic passed\n");
+	fun_console_write_line("✓ fun_stream_write_basic passed");
 	return true;
 }
 
@@ -120,17 +122,21 @@ bool test_fun_stream_write_large_data(void)
 	fun_memory_free(&buffer_result.value);
 
 	// Verification by reading back
-	FILE *fp = fopen("testData/large_output.txt", "rb");
-	if (fp) {
-		unsigned char read_buffer[2048];
-		int read_bytes = fread(read_buffer, 1, 2048, fp);
-		fclose(fp);
-		if (read_bytes != 2048 || memcmp(read_buffer, large_data, 2048) != 0) {
+	{
+		unsigned char read_buffer[2048] = { 0 };
+		Read rp2 = { .file_path = "testData/large_output.txt",
+					 .output = read_buffer,
+					 .bytes_to_read = 2048,
+					 .offset = 0 };
+		AsyncResult rr = fun_read_file_in_memory(rp2);
+		fun_async_await(&rr, -1);
+		if (rr.status != ASYNC_COMPLETED ||
+			fun_memory_compare(read_buffer, large_data, 2048).value != 0) {
 			return false;
 		}
 	}
 
-	printf("✓ fun_stream_write_large_data passed\n");
+	fun_console_write_line("✓ fun_stream_write_large_data passed");
 	return true;
 }
 
@@ -178,6 +184,6 @@ bool test_fun_stream_write_null_parameters(void)
 
 	fun_memory_free(&buffer_result.value);
 
-	printf("✓ fun_stream_write_null_parameters passed\n");
+	fun_console_write_line("✓ fun_stream_write_null_parameters passed");
 	return true;
 }

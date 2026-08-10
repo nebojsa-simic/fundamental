@@ -1,8 +1,8 @@
 #include <assert.h>
-#include <stdio.h>
 
 #include "fundamental/stream/stream.h"
 #include "fundamental/memory/memory.h"
+#include "fundamental/console/console.h"
 
 // Helper function to check if an error occurred
 #define ASSERT_NO_ERROR(result) assert(result.error.code == 0)
@@ -12,7 +12,6 @@ bool test_stream_create_valid_file(void)
 {
 	// Allocate buffer (caller responsibility)
 	MemoryResult buffer_result = fun_memory_allocate(1024);
-	printf("Buffer alloc error.code: %d\n", buffer_result.error.code);
 	ASSERT_NO_ERROR(buffer_result);
 
 	// Create stream for existing test file
@@ -21,19 +20,11 @@ bool test_stream_create_valid_file(void)
 	ASSERT_NO_ERROR(stream_result);
 	fun_async_await(&stream_result, -1);
 
-	printf("After await error.code: %d\n", stream_result.error.code);
-	printf("After await status: %d\n", stream_result.status);
 	bool success = (stream_result.status == ASYNC_COMPLETED) &&
 				   (fun_error_is_ok(stream_result.error));
-	printf("Success: %d\n", success);
 	assert(success);
 
 	FileStream *stream = (FileStream *)stream_result.state;
-	printf("stream->mode = %d, expected STREAM_READ_ONLY = %d\n", stream->mode,
-		   STREAM_READ_ONLY);
-	printf("stream->buffer_size = %lu\n", stream->buffer_size);
-	printf("stream->current_position = %lu\n", stream->current_position);
-	printf("stream->end_of_stream = %d\n", stream->end_of_stream);
 	// Verify stream properties
 	success = (stream->mode == STREAM_READ_ONLY) &&
 			  (stream->buffer_size == 1024) &&

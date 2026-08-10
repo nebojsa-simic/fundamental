@@ -28,7 +28,11 @@ set SOURCES=^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\path.c ^
     %PROJECT_ROOT%\arch\filesystem\windows-amd64\file_exists.c ^
     %PROJECT_ROOT%\src\filesystem\file_exists.c ^
-    %PROJECT_ROOT%\arch\filesystem\windows-amd64\directory.c
+    %PROJECT_ROOT%\arch\filesystem\windows-amd64\directory.c ^
+    %PROJECT_ROOT%\src\console\console.c ^
+    %PROJECT_ROOT%\arch\console\windows-amd64\console.c ^
+    %PROJECT_ROOT%\src\string\stringConversion.c ^
+    %PROJECT_ROOT%\src\string\stringTemplate.c
 
 REM Build
 echo Building config tests...
