@@ -21,3 +21,7 @@ tests/*/reproduce*
 models/
 models/
 *.o
+
+# OpenCode tooling
+.opencode/package.json
+.opencode/package-lock.json
