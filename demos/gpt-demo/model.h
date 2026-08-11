@@ -1,6 +1,7 @@
 #ifndef GPT_DEMO_MODEL_H
 #define GPT_DEMO_MODEL_H
 
+#include "fundamental/compute/compute.h"
 #include "fundamental/gguf/gguf.h"
 #include <stdint.h>
 
@@ -19,8 +20,6 @@ typedef struct {
 	float rms_norm_eps;
 } ModelConfig;
 
-/* Raw pointers into the gguf mmap for expert tensors of one layer.
- * Weights are MXFP4, biases are F32. */
 typedef struct {
 	const uint8_t *gate_w;
 	const float *gate_b;
@@ -62,6 +61,36 @@ typedef struct Model {
 	float rope_mscale;
 	char model_path[256];
 	int cached_len;
+
+	FunComputeGraph graph;
+	void *graph_mem;
+	FunComputeTask *tasks;
+	int n_tasks;
+
+	void *scratch_mem;
+	float *logits;
+
+	void *ctx_embed;
+	void *ctx_rope;
+	void *ctx_embed_residual;
+	void *ctx_out_norm;
+	void *ctx_logits;
+	void **ctx_norms;
+	void **ctx_q;
+	void **ctx_k;
+	void **ctx_v;
+	void **ctx_rq;
+	void **ctx_rk;
+	void **ctx_kv;
+	void **ctx_attn;
+	void **ctx_o;
+	void **ctx_res;
+	void **ctx_copy_attn;
+	void **ctx_norms2;
+	void **ctx_router;
+	void **ctx_expert;
+	void **ctx_acc;
+	void **ctx_copy_res;
 } Model;
 
 void model_load(Model *m, GGufFile *gguf, const char *model_path);
