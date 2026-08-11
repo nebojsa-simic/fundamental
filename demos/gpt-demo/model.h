@@ -93,7 +93,8 @@ typedef struct Model {
 	void **ctx_copy_res;
 } Model;
 
-void model_load(Model *m, GGufFile *gguf, const char *model_path);
+void model_load(Model *m, GGufFile *gguf, const char *model_path,
+		int n_threads);
 void model_free(Model *m);
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits);
 

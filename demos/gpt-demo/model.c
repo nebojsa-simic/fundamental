@@ -554,7 +554,8 @@ static void scratch_free(Scratch *sc)
 	fun_memory_free((Memory *)&sc->sin);
 }
 
-void model_load(Model *m, GGufFile *gguf, const char *model_path)
+void model_load(Model *m, GGufFile *gguf, const char *model_path,
+		int n_threads)
 {
 	m->gguf = gguf;
 	fun_string_copy(model_path, m->model_path, sizeof(m->model_path));
@@ -716,10 +717,10 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path)
 	int n_layers = m->config.n_layers;
 	int max_tasks = 6 + n_layers * 22;
 	int max_edges = 8 + n_layers * 30;
-	size_t graph_bytes = fun_compute_graph_memory_required(max_tasks, max_edges, 4);
+	size_t graph_bytes = fun_compute_graph_memory_required(max_tasks, max_edges, n_threads);
 	m->graph_mem = fun_memory_allocate(graph_bytes).value;
 	m->graph = fun_compute_graph_init(m->graph_mem, graph_bytes,
-					   max_tasks, max_edges, 4);
+					   max_tasks, max_edges, n_threads);
 
 	m->n_tasks = max_tasks;
 	m->tasks = (FunComputeTask *)fun_memory_allocate(

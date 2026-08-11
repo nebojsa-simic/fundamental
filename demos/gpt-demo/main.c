@@ -19,14 +19,28 @@ static void _trace_output(const char *line)
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fun_console_write_line("Usage: demo.exe \"your prompt\" [--trace]");
+		fun_console_write_line(
+			"Usage: demo.exe \"your prompt\" [--trace] [--threads N]");
 		return 1;
 	}
 
 	fun_math_init();
 
 	char *prompt = argv[1];
-	bool do_trace = (argc > 2 && fun_string_compare(argv[2], "--trace") == 0);
+	bool do_trace = false;
+	int n_threads = 4;
+
+	for (int i = 2; i < argc; i++) {
+		if (fun_string_compare(argv[i], "--trace") == 0)
+			do_trace = true;
+		else if (fun_string_compare(argv[i], "--threads") == 0 &&
+			 i + 1 < argc) {
+			n_threads = 0;
+			const char *ns = argv[++i];
+			while (*ns >= '0' && *ns <= '9')
+				n_threads = n_threads * 10 + (*ns++ - '0');
+		}
+	}
 
 	double t0 = (double)fun_timing_now_ns() / 1e9;
 
@@ -49,7 +63,8 @@ int main(int argc, char **argv)
 		fun_trace_init(trace_mem, trace_sz, 16);
 
 	Model model;
-	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf");
+	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf",
+		   n_threads);
 
 	double t1 = (double)fun_timing_now_ns() / 1e9;
 	double load_s = t1 - t0;
