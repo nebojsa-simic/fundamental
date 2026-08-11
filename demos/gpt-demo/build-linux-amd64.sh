@@ -6,12 +6,13 @@ gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include \
 
 gcc --std=c17 -Os -mavx2 -mfma -I ../../include \
     main.c tokenizer.c \
-    arch/timing/linux-amd64/timing.c \
     model.o \
     ../../src/compute/compute_graph.c \
     ../../src/thread_pool/thread_pool.c \
     ../../arch/thread_pool/linux-amd64/thread_pool.c \
     ../../arch/sync/linux-amd64/sync.c \
+    ../../src/trace/trace.c \
+    ../../arch/timing/linux-amd64/timing.c \
     ../../src/gguf/gguf.c \
     ../../src/gguf/gguf_dequant.c \
     ../../arch/gguf/linux-amd64/mmap.c \

@@ -3,10 +3,19 @@
 #include "fundamental/math/math.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
+#include "fundamental/trace/trace.h"
 #include <immintrin.h>
 #include <stdint.h>
 
 #define MAX_SEQ 256
+
+static FunSpanId SPAN_INFERENCE;
+static FunSpanId SPAN_ATTENTION;
+static FunSpanId SPAN_EXPERT;
+static FunSpanId SPAN_ROUTER;
+static FunSpanId SPAN_OUTPUT;
+static FunSpanId SPAN_EMBED;
+static FunSpanId SPAN_ROPE;
 
 typedef struct {
 	int token_id;
@@ -224,27 +233,34 @@ static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
 
 static void _exec_rms_norm(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxRmsNorm *c = (CtxRmsNorm *)ctx;
 	if (c->layer && !c->layer->q_weight)
 		dequant_layer(c->layer, c->gguf, c->layer_idx);
 	fun_math_rms_norm_f32(c->x, c->weight, c->out, c->n, c->eps);
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_matvec_f32(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxMatvecF32 *c = (CtxMatvecF32 *)ctx;
 	fun_math_matrix_vector_f32(*c->w_ptr, c->x, *c->bias_ptr, c->out,
 				   c->rows, c->cols);
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_rotary(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxRotary *c = (CtxRotary *)ctx;
 	fun_math_rotary_f32(c->x, c->cos, c->sin, c->x, c->n_heads, c->half);
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_kvstore(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxKvStore *c = (CtxKvStore *)ctx;
 	size_t kv_dim = c->kv_dim;
 	int pos = c->pos;
@@ -252,10 +268,12 @@ static void _exec_kvstore(void *ctx)
 		c->kcache[pos * kv_dim + i] = c->kbuf[i];
 		c->vcache[pos * kv_dim + i] = c->vbuf[i];
 	}
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_attention(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxAttention *c = (CtxAttention *)ctx;
 	int pos = c->pos;
 	int n_h = c->n_heads;
@@ -281,24 +299,30 @@ static void _exec_attention(void *ctx)
 					  (size_t)(pos + 1), (size_t)hd,
 					  (size_t)kv_dim);
 	}
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_add(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxAdd *c = (CtxAdd *)ctx;
 	for (size_t i = 0; i < c->n; i++)
 		c->out[i] = c->a[i] + c->b[i];
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_copy(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxAdd *c = (CtxAdd *)ctx;
 	for (size_t i = 0; i < c->n; i++)
 		c->out[i] = c->a[i];
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_router(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ROUTER);
 	CtxRouter *c = (CtxRouter *)ctx;
 	int n_exp = c->n_exp;
 	int hs = c->hs;
@@ -339,10 +363,12 @@ static void _exec_router(void *ctx)
 	}
 	for (int i = 0; i < topk; i++)
 		c->rweights[i] /= rsum;
+	fun_trace_span_end(SPAN_ROUTER);
 }
 
 static void _exec_expert(void *ctx)
 {
+	fun_trace_span_begin(SPAN_EXPERT);
 	CtxExpert *c = (CtxExpert *)ctx;
 	size_t ffn = c->ffn;
 	size_t hs = c->hs;
@@ -373,10 +399,14 @@ static void _exec_expert(void *ctx)
 		c->mid[i] = g / (1.0f + c->eg[i]) * (u + 1.0f);
 	}
 	fun_math_matrix_vector_mxfp4_f32(dw, c->mid, db, c->dv, hs, ffn);
+	fun_trace_span_attribute_i64(SPAN_EXPERT, "expert_idx",
+				      c->expert_idx);
+	fun_trace_span_end(SPAN_EXPERT);
 }
 
 static void _exec_expert_accum(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxExpertAccum *c = (CtxExpertAccum *)ctx;
 	float *dv[4] = { c->dv0, c->dv1, c->dv2, c->dv3 };
 	for (size_t i = 0; i < c->hs; i++)
@@ -388,18 +418,22 @@ static void _exec_expert_accum(void *ctx)
 	}
 	for (size_t i = 0; i < c->hs; i++)
 		c->hidden[i] = c->attn_res[i] + c->expert_out[i];
+	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 static void _exec_embed(void *ctx)
 {
+	fun_trace_span_begin(SPAN_EMBED);
 	CtxEmbed *c = (CtxEmbed *)ctx;
 	fun_math_q8_dequant_row_f32(
 		c->embeddings + (size_t)(c->token_id) * c->emb_stride,
 		c->hidden, c->hs);
+	fun_trace_span_end(SPAN_EMBED);
 }
 
 static void _exec_rope_pre(void *ctx)
 {
+	fun_trace_span_begin(SPAN_ROPE);
 	CtxRopePre *c = (CtxRopePre *)ctx;
 	size_t half = c->half;
 	int pos = c->pos;
@@ -411,12 +445,15 @@ static void _exec_rope_pre(void *ctx)
 		c->cos[j] *= c->mscale;
 		c->sin[j] *= c->mscale;
 	}
+	fun_trace_span_end(SPAN_ROPE);
 }
 
 static void _exec_output_proj(void *ctx)
 {
+	fun_trace_span_begin(SPAN_OUTPUT);
 	CtxOutputProj *c = (CtxOutputProj *)ctx;
 	fun_math_q8_matrix_vector_f32(c->w, c->x, c->out, c->vocab, c->hs);
+	fun_trace_span_end(SPAN_OUTPUT);
 }
 
 static void _bind_embed(void *task_ctx, void *submit_ctx)
@@ -521,6 +558,14 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path)
 {
 	m->gguf = gguf;
 	fun_string_copy(model_path, m->model_path, sizeof(m->model_path));
+
+	SPAN_INFERENCE = fun_trace_span_register("inference");
+	SPAN_ATTENTION = fun_trace_span_register("attention");
+	SPAN_EXPERT    = fun_trace_span_register("expert");
+	SPAN_ROUTER    = fun_trace_span_register("router");
+	SPAN_OUTPUT    = fun_trace_span_register("output");
+	SPAN_EMBED     = fun_trace_span_register("embed");
+	SPAN_ROPE      = fun_trace_span_register("rope");
 	m->config.hidden_size = 2880;
 	m->config.n_layers = 24;
 	m->config.n_heads = 64;
@@ -671,7 +716,7 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path)
 	int n_layers = m->config.n_layers;
 	int max_tasks = 6 + n_layers * 22;
 	int max_edges = 8 + n_layers * 30;
-	size_t graph_bytes = fun_compute_graph_memory_required(max_tasks, max_edges, 0);
+	size_t graph_bytes = fun_compute_graph_memory_required(max_tasks, max_edges, 4);
 	m->graph_mem = fun_memory_allocate(graph_bytes).value;
 	m->graph = fun_compute_graph_init(m->graph_mem, graph_bytes,
 					   max_tasks, max_edges, 4);
@@ -916,8 +961,10 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 		start = 0;
 	for (int pos = start; pos < n_tokens; pos++) {
 		SubmitCtx sctx = { .token_id = tokens[pos], .pos = pos };
+		fun_trace_span_begin(SPAN_INFERENCE);
 		fun_compute_graph_submit(m->graph, &sctx);
 		fun_compute_graph_wait(m->graph);
+		fun_trace_span_end(SPAN_INFERENCE);
 		m->cached_len = n_tokens;
 		for (size_t i = 0; i < m->config.vocab_size; i++)
 			logits[i] = m->logits[i];
