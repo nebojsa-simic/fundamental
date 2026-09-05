@@ -60,9 +60,9 @@ bool test_fun_stream_write_basic(void)
 	{
 		char read_buffer[512] = { 0 };
 		Read rp = { .file_path = "testData/test_output.txt",
-				    .output = read_buffer,
-				    .bytes_to_read = data_size,
-				    .offset = 0 };
+					.output = read_buffer,
+					.bytes_to_read = data_size,
+					.offset = 0 };
 		AsyncResult rr = fun_read_file_in_memory(rp);
 		fun_async_await(&rr, -1);
 		if (rr.status != ASYNC_COMPLETED ||

@@ -39,7 +39,6 @@ bool test_fun_stream_can_write_basic(void)
 
 	fun_memory_free(&buffer_result.value);
 
-	
 	fun_console_write_line("✓ fun_stream_can_write_basic passed");
 	return true;
 }
@@ -84,7 +83,6 @@ bool test_fun_stream_can_write_edge_cases(void)
 
 	fun_memory_free(&buffer_result.value);
 
-	
 	fun_console_write_line("✓ fun_stream_can_write_edge_cases passed");
 	return true;
 }

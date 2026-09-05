@@ -35,8 +35,7 @@ static _Thread_local uint64_t _trace_t0 = 0;
 
 size_t fun_trace_memory_required(int max_spans)
 {
-	return sizeof(FunTracerInternal) +
-	       (size_t)max_spans * sizeof(SpanSlot);
+	return sizeof(FunTracerInternal) + (size_t)max_spans * sizeof(SpanSlot);
 }
 
 void fun_trace_init(void *memory, size_t memory_size, int max_spans)
@@ -61,7 +60,10 @@ void fun_trace_init(void *memory, size_t memory_size, int max_spans)
 	g_tracer = t;
 }
 
-void fun_trace_destroy(void) { g_tracer = NULL; }
+void fun_trace_destroy(void)
+{
+	g_tracer = NULL;
+}
 
 FunSpanId fun_trace_span_register(const char *name)
 {
@@ -89,15 +91,13 @@ void fun_trace_span_end(FunSpanId id)
 		return;
 	uint64_t dt = fun_timing_now_ns() - _trace_t0;
 	int idx = (int)id - 1;
-	__atomic_fetch_add(&g_tracer->slots[idx].total_ns, dt,
-			   __ATOMIC_RELAXED);
-	__atomic_fetch_add(&g_tracer->slots[idx].call_count, 1,
-			   __ATOMIC_RELAXED);
+	__atomic_fetch_add(&g_tracer->slots[idx].total_ns, dt, __ATOMIC_RELAXED);
+	__atomic_fetch_add(&g_tracer->slots[idx].call_count, 1, __ATOMIC_RELAXED);
 }
 
 static void _trace_set_attribute(SpanSlot *slot, const char *key, int type,
-				  int64_t i64_val, double f64_val,
-				  const char *str_val)
+								 int64_t i64_val, double f64_val,
+								 const char *str_val)
 {
 	for (int i = 0; i < slot->n_attrs; i++) {
 		if (fun_string_compare(slot->attrs[i].key, key) == 0) {
@@ -118,30 +118,26 @@ static void _trace_set_attribute(SpanSlot *slot, const char *key, int type,
 	slot->attrs[a].str_val = str_val;
 }
 
-void fun_trace_span_attribute_i64(FunSpanId id, const char *key,
-				   int64_t value)
+void fun_trace_span_attribute_i64(FunSpanId id, const char *key, int64_t value)
 {
 	if (!g_tracer || id == 0 || (int)id > g_tracer->n_spans)
 		return;
-	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 1, value, 0,
-			     NULL);
+	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 1, value, 0, NULL);
 }
 
 void fun_trace_span_attribute_f64(FunSpanId id, const char *key, double value)
 {
 	if (!g_tracer || id == 0 || (int)id > g_tracer->n_spans)
 		return;
-	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 2, 0, value,
-			     NULL);
+	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 2, 0, value, NULL);
 }
 
 void fun_trace_span_attribute_str(FunSpanId id, const char *key,
-				   const char *value)
+								  const char *value)
 {
 	if (!g_tracer || id == 0 || (int)id > g_tracer->n_spans)
 		return;
-	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 3, 0, 0.0,
-			     value);
+	_trace_set_attribute(&g_tracer->slots[(int)id - 1], key, 3, 0, 0.0, value);
 }
 
 void fun_trace_span_add_event(FunSpanId id, const char *event_name)
@@ -160,8 +156,7 @@ void fun_trace_counter_add(FunSpanId id, int64_t delta)
 	if (!g_tracer || id == 0 || (int)id > g_tracer->n_spans)
 		return;
 	int idx = (int)id - 1;
-	__atomic_fetch_add(&g_tracer->slots[idx].counter, delta,
-			   __ATOMIC_RELAXED);
+	__atomic_fetch_add(&g_tracer->slots[idx].counter, delta, __ATOMIC_RELAXED);
 }
 
 void fun_trace_report(FunTraceReportFn out)
@@ -174,43 +169,38 @@ void fun_trace_report(FunTraceReportFn out)
 	char line[256];
 
 	fun_string_copy("Span                 Total(ms)  Count   Avg(us)     %",
-			line, 256);
+					line, 256);
 	out(line);
 	fun_string_copy("-------------------------------------------"
-			"---------------",
-			line, 256);
+					"---------------",
+					line, 256);
 	out(line);
 
 	for (int i = 0; i < g_tracer->n_spans; i++) {
 		SpanSlot *s = &g_tracer->slots[i];
 		double ms = (double)s->total_ns / 1e6;
 		double avg_us = s->call_count > 0 ?
-					(double)s->total_ns /
-						(double)s->call_count / 1e3 :
-					0.0;
-		double pct = total_ns > 0 ? 100.0 * (double)s->total_ns /
-						   (double)total_ns :
-					   0.0;
+							(double)s->total_ns / (double)s->call_count / 1e3 :
+							0.0;
+		double pct =
+			total_ns > 0 ? 100.0 * (double)s->total_ns / (double)total_ns : 0.0;
 
 		StringTemplateParam params[] = {
-			{ "name", { .stringValue = s->name ? s->name :
-								"?" } },
+			{ "name", { .stringValue = s->name ? s->name : "?" } },
 			{ "ms", { .doubleValue = ms } },
 			{ "count", { .intValue = (int64_t)s->call_count } },
 			{ "avg", { .doubleValue = avg_us } },
 			{ "pct", { .doubleValue = pct } },
 		};
 
-		fun_string_template(
-			"  ${name}  %{ms}  #{count}  %{avg}  %{pct}",
-			params, 5, line, 256);
+		fun_string_template("  ${name}  %{ms}  #{count}  %{avg}  %{pct}",
+							params, 5, line, 256);
 		out(line);
 
 		if (i == 0) {
-			fun_string_copy(
-				"-------------------------------------"
-				"---------------------",
-				line, 256);
+			fun_string_copy("-------------------------------------"
+							"---------------------",
+							line, 256);
 			out(line);
 			continue;
 		}
@@ -222,18 +212,17 @@ void fun_trace_report(FunTraceReportFn out)
 		double oh_ms = (double)oh_ns / 1e6;
 		double oh_pct = 100.0 * (double)oh_ns / (double)total_ns;
 
-		fun_string_copy(
-			"---------------------------------------------"
-			"-------------",
-			line, 256);
+		fun_string_copy("---------------------------------------------"
+						"-------------",
+						line, 256);
 		out(line);
 
 		StringTemplateParam oparams[] = {
 			{ "ms", { .doubleValue = oh_ms } },
 			{ "pct", { .doubleValue = oh_pct } },
 		};
-		fun_string_template("  overhead  %{ms}ms  %{pct}%", oparams,
-				    2, line, 256);
+		fun_string_template("  overhead  %{ms}ms  %{pct}%", oparams, 2, line,
+							256);
 		out(line);
 	}
 }

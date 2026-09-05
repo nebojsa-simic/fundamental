@@ -85,7 +85,8 @@ static void test_simple_object(void)
 				fun_memory_compare(t.value, "key", 3).value == 0);
 
 	fun_json_next(&state, &t);
-	ok = ok && (t.type == FUN_JSON_STRING && fun_memory_compare(t.value, "value", 5).value == 0);
+	ok = ok && (t.type == FUN_JSON_STRING &&
+				fun_memory_compare(t.value, "value", 5).value == 0);
 
 	fun_json_next(&state, &t);
 	ok = ok && (t.type == FUN_JSON_OBJECT_END);
@@ -396,8 +397,9 @@ static void test_query_deep_string(void)
 	FunJsonToken t;
 	ErrorResult r = fun_json_query(data, fun_string_length(data),
 								   "apps.http.servers.restic.handler", &t);
-	int ok = (!fun_error_is_error(r) && t.type == FUN_JSON_STRING &&
-			  t.length == 6 && fun_memory_compare(t.value, "restic", 6).value == 0);
+	int ok =
+		(!fun_error_is_error(r) && t.type == FUN_JSON_STRING && t.length == 6 &&
+		 fun_memory_compare(t.value, "restic", 6).value == 0);
 
 	print_test_result("fun_json_query deep string", ok);
 }
@@ -569,8 +571,9 @@ static void test_find_key(void)
 	fun_json_next(&state, &t); // OBJECT_START
 
 	ErrorResult r = fun_json_find_key(&state, 1, "target", &t);
-	int ok = (!fun_error_is_error(r) && t.type == FUN_JSON_STRING &&
-			  t.length == 5 && fun_memory_compare(t.value, "found", 5).value == 0);
+	int ok =
+		(!fun_error_is_error(r) && t.type == FUN_JSON_STRING && t.length == 5 &&
+		 fun_memory_compare(t.value, "found", 5).value == 0);
 
 	print_test_result("fun_json_find_key", ok);
 }

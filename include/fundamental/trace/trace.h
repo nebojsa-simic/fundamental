@@ -20,13 +20,12 @@ void fun_trace_span_begin(FunSpanId id);
 
 void fun_trace_span_end(FunSpanId id);
 
-void fun_trace_span_attribute_i64(FunSpanId id, const char *key,
-				   int64_t value);
+void fun_trace_span_attribute_i64(FunSpanId id, const char *key, int64_t value);
 
 void fun_trace_span_attribute_f64(FunSpanId id, const char *key, double value);
 
 void fun_trace_span_attribute_str(FunSpanId id, const char *key,
-				   const char *value);
+								  const char *value);
 
 void fun_trace_span_add_event(FunSpanId id, const char *event_name);
 

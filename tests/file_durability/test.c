@@ -37,7 +37,7 @@ static bool test_write_with_async_durability(void)
 		AsyncResult rr = fun_read_file_in_memory(readParams);
 		fun_async_await(&rr, -1);
 		if (rr.status != ASYNC_COMPLETED ||
-					    fun_memory_compare(read_buf, data, data_size).value != 0) {
+			fun_memory_compare(read_buf, data, data_size).value != 0) {
 			success = false;
 		}
 	}
@@ -83,7 +83,7 @@ static bool test_write_with_sync_durability(void)
 		AsyncResult rr = fun_read_file_in_memory(readParams);
 		fun_async_await(&rr, -1);
 		if (rr.status != ASYNC_COMPLETED ||
-					    fun_memory_compare(read_buf, data, data_size).value != 0) {
+			fun_memory_compare(read_buf, data, data_size).value != 0) {
 			success = false;
 		}
 	}
@@ -129,7 +129,7 @@ static bool test_write_with_full_durability(void)
 		AsyncResult rr = fun_read_file_in_memory(readParams);
 		fun_async_await(&rr, -1);
 		if (rr.status != ASYNC_COMPLETED ||
-					    fun_memory_compare(read_buf, data, data_size).value != 0) {
+			fun_memory_compare(read_buf, data, data_size).value != 0) {
 			success = false;
 		}
 	}
@@ -201,7 +201,7 @@ static bool test_append_with_sync_durability(void)
 		fun_memory_copy((Memory)data1, expected, size1);
 		fun_memory_copy((Memory)data2, expected + size1, size2);
 		if (rr.status != ASYNC_COMPLETED ||
-					    fun_memory_compare(buf, expected, total).value != 0)
+			fun_memory_compare(buf, expected, total).value != 0)
 			success = false;
 	}
 

@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 		if (fun_string_compare(argv[i], "--trace") == 0)
 			do_trace = true;
 		else if (fun_string_compare(argv[i], "--threads") == 0 &&
-			 i + 1 < argc) {
+				 i + 1 < argc) {
 			n_threads = 0;
 			const char *ns = argv[++i];
 			while (*ns >= '0' && *ns <= '9')
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 
 	Model model;
 	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf",
-		   n_threads);
+			   n_threads);
 
 	double t1 = (double)fun_timing_now_ns() / 1e9;
 	double load_s = t1 - t0;
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 		fun_console_write(token_str);
 		if (resp_len + 32 < sizeof(response)) {
 			fun_string_copy(token_str, response + resp_len,
-					sizeof(response) - resp_len);
+							sizeof(response) - resp_len);
 			resp_len += (size_t)fun_string_length(token_str);
 		}
 	}

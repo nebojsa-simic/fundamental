@@ -123,7 +123,8 @@ bool test_fun_append_memory_to_file_large_data(void)
 		AsyncResult rr = fun_read_file_in_memory(readParams);
 		fun_async_await(&rr, -1);
 		if (rr.status != ASYNC_COMPLETED ||
-			fun_memory_compare(read_buffer, mem_result.value, data_size).value != 0) {
+			fun_memory_compare(read_buffer, mem_result.value, data_size).value !=
+				0) {
 			success = false;
 		}
 	}

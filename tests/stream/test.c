@@ -5,14 +5,14 @@
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 
-#define RUN_TEST(test_func)                                         \
-	fun_console_write_line(#test_func);                              \
-	if (!(test_func())) {                                           \
-		fun_console_error_line("FAILED");                           \
-		return 1;                                                   \
-	}                                                               \
-	fun_console_write(GREEN_CHECK);                                 \
-	fun_console_write(" ");                                         \
+#define RUN_TEST(test_func)               \
+	fun_console_write_line(#test_func);   \
+	if (!(test_func())) {                 \
+		fun_console_error_line("FAILED"); \
+		return 1;                         \
+	}                                     \
+	fun_console_write(GREEN_CHECK);       \
+	fun_console_write(" ");               \
 	fun_console_write_line(#test_func);
 
 bool test_stream_create_valid_file(void);

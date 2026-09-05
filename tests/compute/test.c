@@ -197,8 +197,8 @@ static void test_multiple_submit(void)
 	FunComputeGraph g = fun_compute_graph_init(m, bytes, 2, 2, 0);
 
 	FunComputeTask t;
-	fun_compute_graph_add_task(g, &t, _increment_fn, &ctx,
-				   _increment_bind, NULL);
+	fun_compute_graph_add_task(g, &t, _increment_fn, &ctx, _increment_bind,
+							   NULL);
 
 	SctxIncrement s1 = { &counter, &vals[0] };
 	fun_compute_graph_submit(g, &s1);
@@ -223,8 +223,15 @@ static void test_multiple_submit(void)
 
 static int dtor_count = 0;
 
-static void _test_destroy_fn(void *ctx) { (void)ctx; }
-static void _test_dtor(void *ctx) { (void)ctx; dtor_count++; }
+static void _test_destroy_fn(void *ctx)
+{
+	(void)ctx;
+}
+static void _test_dtor(void *ctx)
+{
+	(void)ctx;
+	dtor_count++;
+}
 
 static void test_destroy(void)
 {
@@ -238,12 +245,12 @@ static void test_destroy(void)
 	FunComputeGraph g = fun_compute_graph_init(m, bytes, 4, 4, 0);
 
 	FunComputeTask t0, t1, t2;
-	fun_compute_graph_add_task(g, &t0, _test_destroy_fn, &ctx_buf[0],
-				   NULL, _test_dtor);
-	fun_compute_graph_add_task(g, &t1, _test_destroy_fn, &ctx_buf[1],
-				   NULL, _test_dtor);
-	fun_compute_graph_add_task(g, &t2, _test_destroy_fn, &ctx_buf[2],
-				   NULL, NULL);
+	fun_compute_graph_add_task(g, &t0, _test_destroy_fn, &ctx_buf[0], NULL,
+							   _test_dtor);
+	fun_compute_graph_add_task(g, &t1, _test_destroy_fn, &ctx_buf[1], NULL,
+							   _test_dtor);
+	fun_compute_graph_add_task(g, &t2, _test_destroy_fn, &ctx_buf[2], NULL,
+							   NULL);
 
 	fun_compute_graph_destroy(g);
 	check(dtor_count == 2, "two destructors called, NULL skipped");
@@ -293,12 +300,12 @@ static void test_multi_threaded(void)
 		CtxThreadedSum ctx_s = { &a_st, &b_st, &result_st };
 
 		FunComputeTask ta, tb, ts;
-		fun_compute_graph_add_task(g, &ta, _threaded_set_fn, &ctx_a,
-					   NULL, NULL);
-		fun_compute_graph_add_task(g, &tb, _threaded_set_fn, &ctx_b,
-					   NULL, NULL);
-		fun_compute_graph_add_task(g, &ts, _threaded_sum_fn, &ctx_s,
-					   NULL, NULL);
+		fun_compute_graph_add_task(g, &ta, _threaded_set_fn, &ctx_a, NULL,
+								   NULL);
+		fun_compute_graph_add_task(g, &tb, _threaded_set_fn, &ctx_b, NULL,
+								   NULL);
+		fun_compute_graph_add_task(g, &ts, _threaded_sum_fn, &ctx_s, NULL,
+								   NULL);
 		fun_compute_task_depends_on(g, &ts, &ta);
 		fun_compute_task_depends_on(g, &ts, &tb);
 
@@ -319,12 +326,12 @@ static void test_multi_threaded(void)
 		CtxThreadedSum ctx_s = { &a_mt, &b_mt, &result_mt };
 
 		FunComputeTask ta, tb, ts;
-		fun_compute_graph_add_task(g, &ta, _threaded_set_fn, &ctx_a,
-					   NULL, NULL);
-		fun_compute_graph_add_task(g, &tb, _threaded_set_fn, &ctx_b,
-					   NULL, NULL);
-		fun_compute_graph_add_task(g, &ts, _threaded_sum_fn, &ctx_s,
-					   NULL, NULL);
+		fun_compute_graph_add_task(g, &ta, _threaded_set_fn, &ctx_a, NULL,
+								   NULL);
+		fun_compute_graph_add_task(g, &tb, _threaded_set_fn, &ctx_b, NULL,
+								   NULL);
+		fun_compute_graph_add_task(g, &ts, _threaded_sum_fn, &ctx_s, NULL,
+								   NULL);
 		fun_compute_task_depends_on(g, &ts, &ta);
 		fun_compute_task_depends_on(g, &ts, &tb);
 
@@ -335,7 +342,7 @@ static void test_multi_threaded(void)
 	}
 
 	check(result_st == result_mt,
-	      "single-threaded and multi-threaded produce same result");
+		  "single-threaded and multi-threaded produce same result");
 	check(result_mt == 30, "result is 10+20=30");
 }
 
@@ -371,8 +378,8 @@ static void test_bind(void)
 
 	FunComputeTask t_nb, t_b;
 	fun_compute_graph_add_task(g, &t_nb, _fn_marker, &ctx_val, NULL, NULL);
-	fun_compute_graph_add_task(g, &t_b, _fn_marker, &ctx_val,
-				   _bind_counter_fn, NULL);
+	fun_compute_graph_add_task(g, &t_b, _fn_marker, &ctx_val, _bind_counter_fn,
+							   NULL);
 
 	fun_compute_task_depends_on(g, &t_b, &t_nb);
 

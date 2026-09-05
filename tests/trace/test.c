@@ -19,7 +19,8 @@ static void check(bool cond, const char *msg)
 }
 
 static int _cb_uninit_called = 0;
-static void _cb_uninit(const char *line) {
+static void _cb_uninit(const char *line)
+{
 	(void)line;
 	_cb_uninit_called++;
 }
@@ -38,7 +39,8 @@ static void test_uninitialized(void)
 
 	_cb_uninit_called = 0;
 	fun_trace_report(_cb_uninit);
-	check(_cb_uninit_called == 0, "report produces no output when uninitialized");
+	check(_cb_uninit_called == 0,
+		  "report produces no output when uninitialized");
 }
 
 static void test_register(void)
@@ -98,7 +100,8 @@ static void test_attributes(void)
 }
 
 static int _report_lines = 0;
-static void _cb_report(const char *line) {
+static void _cb_report(const char *line)
+{
 	(void)line;
 	_report_lines++;
 }
