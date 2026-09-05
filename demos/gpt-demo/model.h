@@ -83,6 +83,7 @@ typedef struct Model {
 	void **ctx_rk;
 	void **ctx_kv;
 	void **ctx_attn;
+	void **ctx_attn_groups;
 	void **ctx_o;
 	void **ctx_res;
 	void **ctx_copy_attn;
@@ -91,10 +92,11 @@ typedef struct Model {
 	void **ctx_expert;
 	void **ctx_acc;
 	void **ctx_copy_res;
+	void **ctx_output_groups;
 } Model;
 
 void model_load(Model *m, GGufFile *gguf, const char *model_path,
-		int n_threads);
+				int n_threads);
 void model_free(Model *m);
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits);
 

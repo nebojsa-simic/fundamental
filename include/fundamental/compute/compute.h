@@ -19,19 +19,19 @@ struct FunComputeTask {
 };
 
 size_t fun_compute_graph_memory_required(int max_tasks, int max_edges,
-					int n_threads);
+										 int n_threads);
 
 FunComputeGraph fun_compute_graph_init(void *memory, size_t memory_size,
-				       int max_tasks, int max_edges,
-				       int n_threads);
+									   int max_tasks, int max_edges,
+									   int n_threads);
 
 void fun_compute_graph_add_task(FunComputeGraph graph, FunComputeTask *task,
-				FunComputeFn fn, void *ctx,
-				FunComputeBindFn bind,
-				FunComputeCtxDestroyFn destroy);
+								FunComputeFn fn, void *ctx,
+								FunComputeBindFn bind,
+								FunComputeCtxDestroyFn destroy);
 
 void fun_compute_task_depends_on(FunComputeGraph graph, FunComputeTask *task,
-				 FunComputeTask *dep);
+								 FunComputeTask *dep);
 
 void fun_compute_graph_submit(FunComputeGraph graph, void *submit_ctx);
 

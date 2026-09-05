@@ -76,6 +76,22 @@ typedef struct {
 } CtxAttention;
 
 typedef struct {
+	float *qbuf;
+	float *attn_out;
+	float *kcache;
+	float *vcache;
+	const float *sinks;
+	int pos;
+	int head_start;
+	int head_end;
+	int n_heads;
+	int n_kv;
+	int hd;
+	float inv_sqrt_hd;
+	float *scores;
+} CtxAttentionGroup;
+
+typedef struct {
 	float *a;
 	float *b;
 	float *out;
@@ -153,6 +169,16 @@ typedef struct {
 } CtxOutputProj;
 
 typedef struct {
+	const uint8_t *w;
+	float *x;
+	float *out;
+	size_t row_start;
+	size_t row_end;
+	size_t vocab;
+	size_t hs;
+} CtxOutputGroup;
+
+typedef struct {
 	float *hidden;
 	float *residual;
 	float *attn_res;
@@ -163,7 +189,7 @@ typedef struct {
 	float *vbuf;
 	float *attn;
 	float *proj;
-	float *scores;
+	float *scores[4];
 	float *gv[4];
 	float *uv[4];
 	float *mid[4];
@@ -188,8 +214,8 @@ static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
 	fun_string_copy(buf, w->name_prefix, 64);
 
 	fun_string_copy(".attn_q.weight", buf + pre_len, 256 - pre_len);
-	w->q_weight = (float *)fun_memory_allocate(
-		64 * 64 * 2880 * sizeof(float)).value;
+	w->q_weight =
+		(float *)fun_memory_allocate(64 * 64 * 2880 * sizeof(float)).value;
 	fun_gguf_dequant_q8_0(gguf, buf, w->q_weight);
 
 	buf[pre_len] = '\0';
@@ -199,8 +225,8 @@ static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
 
 	buf[pre_len] = '\0';
 	fun_string_copy(".attn_k.weight", buf + pre_len, 256 - pre_len);
-	w->k_weight = (float *)fun_memory_allocate(
-		8 * 64 * 2880 * sizeof(float)).value;
+	w->k_weight =
+		(float *)fun_memory_allocate(8 * 64 * 2880 * sizeof(float)).value;
 	fun_gguf_dequant_q8_0(gguf, buf, w->k_weight);
 
 	buf[pre_len] = '\0';
@@ -210,8 +236,8 @@ static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
 
 	buf[pre_len] = '\0';
 	fun_string_copy(".attn_v.weight", buf + pre_len, 256 - pre_len);
-	w->v_weight = (float *)fun_memory_allocate(
-		8 * 64 * 2880 * sizeof(float)).value;
+	w->v_weight =
+		(float *)fun_memory_allocate(8 * 64 * 2880 * sizeof(float)).value;
 	fun_gguf_dequant_q8_0(gguf, buf, w->v_weight);
 
 	buf[pre_len] = '\0';
@@ -221,8 +247,8 @@ static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
 
 	buf[pre_len] = '\0';
 	fun_string_copy(".attn_output.weight", buf + pre_len, 256 - pre_len);
-	w->o_weight = (float *)fun_memory_allocate(
-		2880 * 64 * 64 * sizeof(float)).value;
+	w->o_weight =
+		(float *)fun_memory_allocate(2880 * 64 * 64 * sizeof(float)).value;
 	fun_gguf_dequant_q8_0(gguf, buf, w->o_weight);
 
 	buf[pre_len] = '\0';
@@ -245,8 +271,8 @@ static void _exec_matvec_f32(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxMatvecF32 *c = (CtxMatvecF32 *)ctx;
-	fun_math_matrix_vector_f32(*c->w_ptr, c->x, *c->bias_ptr, c->out,
-				   c->rows, c->cols);
+	fun_math_matrix_vector_f32(*c->w_ptr, c->x, *c->bias_ptr, c->out, c->rows,
+							   c->cols);
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -287,17 +313,39 @@ static void _exec_attention(void *ctx)
 		int kvh = h * n_kv / n_h;
 		float *qh = c->qbuf + (size_t)h * (size_t)hd;
 		fun_math_rows_dot_f32(qh, c->kcache + kvh * hd, scores,
-				      (size_t)(pos + 1), (size_t)hd,
-				      (size_t)kv_dim, c->inv_sqrt_hd);
+							  (size_t)(pos + 1), (size_t)hd, (size_t)kv_dim,
+							  c->inv_sqrt_hd);
 		if (swa && pos >= swa_len)
 			for (int t = 0; t <= pos - swa_len; t++)
 				scores[t] = -1.0f / 0.0f;
 		scores[pos + 1] = c->sinks[h];
 		fun_math_softmax_f32(scores, (size_t)(pos + 2));
 		fun_math_weighted_sum_f32(scores, c->vcache + kvh * hd,
-					  c->attn_out + h * hd,
-					  (size_t)(pos + 1), (size_t)hd,
-					  (size_t)kv_dim);
+								  c->attn_out + h * hd, (size_t)(pos + 1),
+								  (size_t)hd, (size_t)kv_dim);
+	}
+	fun_trace_span_end(SPAN_ATTENTION);
+}
+
+static void _exec_attention_group(void *ctx)
+{
+	fun_trace_span_begin(SPAN_ATTENTION);
+	CtxAttentionGroup *c = (CtxAttentionGroup *)ctx;
+	int pos = c->pos;
+	int hd = c->hd;
+	int kv_dim = c->n_kv * hd;
+	float *scores = c->scores;
+	for (int h = c->head_start; h < c->head_end; h++) {
+		int kvh = h * c->n_kv / c->n_heads;
+		float *qh = c->qbuf + (size_t)h * (size_t)hd;
+		fun_math_rows_dot_f32(qh, c->kcache + kvh * hd, scores,
+							  (size_t)(pos + 1), (size_t)hd, (size_t)kv_dim,
+							  c->inv_sqrt_hd);
+		scores[pos + 1] = c->sinks[h];
+		fun_math_softmax_f32(scores, (size_t)(pos + 2));
+		fun_math_weighted_sum_f32(scores, c->vcache + kvh * hd,
+								  c->attn_out + h * hd, (size_t)(pos + 1),
+								  (size_t)hd, (size_t)kv_dim);
 	}
 	fun_trace_span_end(SPAN_ATTENTION);
 }
@@ -338,19 +386,29 @@ static void _exec_router(void *ctx)
 	for (int e = 0; e < n_exp; e++) {
 		float v = c->rlog[e];
 		if (v > topv[0]) {
-			topv[3] = topv[2]; top[3] = top[2];
-			topv[2] = topv[1]; top[2] = top[1];
-			topv[1] = topv[0]; top[1] = top[0];
-			topv[0] = v; top[0] = e;
+			topv[3] = topv[2];
+			top[3] = top[2];
+			topv[2] = topv[1];
+			top[2] = top[1];
+			topv[1] = topv[0];
+			top[1] = top[0];
+			topv[0] = v;
+			top[0] = e;
 		} else if (v > topv[1]) {
-			topv[3] = topv[2]; top[3] = top[2];
-			topv[2] = topv[1]; top[2] = top[1];
-			topv[1] = v; top[1] = e;
+			topv[3] = topv[2];
+			top[3] = top[2];
+			topv[2] = topv[1];
+			top[2] = top[1];
+			topv[1] = v;
+			top[1] = e;
 		} else if (v > topv[2]) {
-			topv[3] = topv[2]; top[3] = top[2];
-			topv[2] = v; top[2] = e;
+			topv[3] = topv[2];
+			top[3] = top[2];
+			topv[2] = v;
+			top[2] = e;
 		} else if (v > topv[3]) {
-			topv[3] = v; top[3] = e;
+			topv[3] = v;
+			top[3] = e;
 		}
 	}
 	for (int i = 0; i < topk; i++)
@@ -373,9 +431,8 @@ static void _exec_expert(void *ctx)
 	size_t ffn = c->ffn;
 	size_t hs = c->hs;
 	int ex = c->topk[c->expert_idx];
-	size_t exp_w_bytes = (size_t)ffn * (size_t)hs *
-			     FUN_MATH_MXFP4_BLOCK_BYTES /
-			     FUN_MATH_MXFP4_BLOCK_ELEMS;
+	size_t exp_w_bytes = (size_t)ffn * (size_t)hs * FUN_MATH_MXFP4_BLOCK_BYTES /
+						 FUN_MATH_MXFP4_BLOCK_ELEMS;
 	const uint8_t *gw = c->gate_w + (size_t)ex * exp_w_bytes;
 	const float *gb = c->gate_b + (size_t)ex * ffn;
 	const uint8_t *uw = c->up_w + (size_t)ex * exp_w_bytes;
@@ -386,21 +443,24 @@ static void _exec_expert(void *ctx)
 	fun_math_matrix_vector_mxfp4_f32(uw, c->hidden_in, ub, c->uv, ffn, hs);
 	for (size_t i = 0; i < ffn; i++) {
 		float g = c->gv[i];
-		if (g > 7.0f) g = 7.0f;
+		if (g > 7.0f)
+			g = 7.0f;
 		c->eg[i] = -1.702f * g;
 	}
 	fun_math_exp_f32(c->eg, c->eg, ffn);
 	for (size_t i = 0; i < ffn; i++) {
 		float g = c->gv[i];
-		if (g > 7.0f) g = 7.0f;
+		if (g > 7.0f)
+			g = 7.0f;
 		float u = c->uv[i];
-		if (u > 7.0f) u = 7.0f;
-		if (u < -7.0f) u = -7.0f;
+		if (u > 7.0f)
+			u = 7.0f;
+		if (u < -7.0f)
+			u = -7.0f;
 		c->mid[i] = g / (1.0f + c->eg[i]) * (u + 1.0f);
 	}
 	fun_math_matrix_vector_mxfp4_f32(dw, c->mid, db, c->dv, hs, ffn);
-	fun_trace_span_attribute_i64(SPAN_EXPERT, "expert_idx",
-				      c->expert_idx);
+	fun_trace_span_attribute_i64(SPAN_EXPERT, "expert_idx", c->expert_idx);
 	fun_trace_span_end(SPAN_EXPERT);
 }
 
@@ -425,9 +485,9 @@ static void _exec_embed(void *ctx)
 {
 	fun_trace_span_begin(SPAN_EMBED);
 	CtxEmbed *c = (CtxEmbed *)ctx;
-	fun_math_q8_dequant_row_f32(
-		c->embeddings + (size_t)(c->token_id) * c->emb_stride,
-		c->hidden, c->hs);
+	fun_math_q8_dequant_row_f32(c->embeddings +
+									(size_t)(c->token_id) * c->emb_stride,
+								c->hidden, c->hs);
 	fun_trace_span_end(SPAN_EMBED);
 }
 
@@ -453,6 +513,18 @@ static void _exec_output_proj(void *ctx)
 	fun_trace_span_begin(SPAN_OUTPUT);
 	CtxOutputProj *c = (CtxOutputProj *)ctx;
 	fun_math_q8_matrix_vector_f32(c->w, c->x, c->out, c->vocab, c->hs);
+	fun_trace_span_end(SPAN_OUTPUT);
+}
+
+static void _exec_output_group(void *ctx)
+{
+	fun_trace_span_begin(SPAN_OUTPUT);
+	CtxOutputGroup *c = (CtxOutputGroup *)ctx;
+	size_t rows = c->row_end - c->row_start;
+	size_t blocks = c->hs / FUN_MATH_Q8_BLOCK_ELEMS;
+	const uint8_t *w = c->w + c->row_start * blocks * FUN_MATH_Q8_BLOCK_BYTES;
+	float *out = c->out + c->row_start;
+	fun_math_q8_matrix_vector_f32(w, c->x, out, rows, c->hs);
 	fun_trace_span_end(SPAN_OUTPUT);
 }
 
@@ -500,30 +572,54 @@ static void scratch_alloc(Scratch *sc, ModelConfig *cfg)
 	int q_dim = (int)cfg->n_heads * (int)cfg->head_dim;
 	int kv_dim = (int)cfg->n_kv_heads * (int)cfg->head_dim;
 	MemoryResult mr;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->hidden = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->residual = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->attn_res = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->hidden_normed = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->expert_out = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)q_dim * sizeof(float)); sc->qbuf = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)kv_dim * sizeof(float)); sc->kbuf = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)kv_dim * sizeof(float)); sc->vbuf = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)q_dim * sizeof(float)); sc->attn = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->proj = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)(MAX_SEQ + 2) * sizeof(float)); sc->scores = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->hidden = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->residual = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->attn_res = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->hidden_normed = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->expert_out = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)q_dim * sizeof(float));
+	sc->qbuf = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)kv_dim * sizeof(float));
+	sc->kbuf = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)kv_dim * sizeof(float));
+	sc->vbuf = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)q_dim * sizeof(float));
+	sc->attn = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)hs * sizeof(float));
+	sc->proj = (float *)mr.value;
 	for (int e = 0; e < 4; e++) {
-		mr = fun_memory_allocate((size_t)ffn * sizeof(float)); sc->gv[e] = (float *)mr.value;
-		mr = fun_memory_allocate((size_t)ffn * sizeof(float)); sc->uv[e] = (float *)mr.value;
-		mr = fun_memory_allocate((size_t)ffn * sizeof(float)); sc->mid[e] = (float *)mr.value;
-		mr = fun_memory_allocate((size_t)ffn * sizeof(float)); sc->eg[e] = (float *)mr.value;
-		mr = fun_memory_allocate((size_t)hs * sizeof(float)); sc->dv[e] = (float *)mr.value;
+		mr = fun_memory_allocate((size_t)(MAX_SEQ + 2) * sizeof(float));
+		sc->scores[e] = (float *)mr.value;
 	}
-	mr = fun_memory_allocate(32 * sizeof(float)); sc->rlog = (float *)mr.value;
-	mr = fun_memory_allocate(4 * sizeof(int)); sc->topk = (int *)mr.value;
-	mr = fun_memory_allocate(4 * sizeof(float)); sc->rweights = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)half * sizeof(float)); sc->theta = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)half * sizeof(float)); sc->cos = (float *)mr.value;
-	mr = fun_memory_allocate((size_t)half * sizeof(float)); sc->sin = (float *)mr.value;
+	for (int e = 0; e < 4; e++) {
+		mr = fun_memory_allocate((size_t)ffn * sizeof(float));
+		sc->gv[e] = (float *)mr.value;
+		mr = fun_memory_allocate((size_t)ffn * sizeof(float));
+		sc->uv[e] = (float *)mr.value;
+		mr = fun_memory_allocate((size_t)ffn * sizeof(float));
+		sc->mid[e] = (float *)mr.value;
+		mr = fun_memory_allocate((size_t)ffn * sizeof(float));
+		sc->eg[e] = (float *)mr.value;
+		mr = fun_memory_allocate((size_t)hs * sizeof(float));
+		sc->dv[e] = (float *)mr.value;
+	}
+	mr = fun_memory_allocate(32 * sizeof(float));
+	sc->rlog = (float *)mr.value;
+	mr = fun_memory_allocate(4 * sizeof(int));
+	sc->topk = (int *)mr.value;
+	mr = fun_memory_allocate(4 * sizeof(float));
+	sc->rweights = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)half * sizeof(float));
+	sc->theta = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)half * sizeof(float));
+	sc->cos = (float *)mr.value;
+	mr = fun_memory_allocate((size_t)half * sizeof(float));
+	sc->sin = (float *)mr.value;
 }
 
 static void scratch_free(Scratch *sc)
@@ -538,7 +634,8 @@ static void scratch_free(Scratch *sc)
 	fun_memory_free((Memory *)&sc->vbuf);
 	fun_memory_free((Memory *)&sc->attn);
 	fun_memory_free((Memory *)&sc->proj);
-	fun_memory_free((Memory *)&sc->scores);
+	for (int e = 0; e < 4; e++)
+		fun_memory_free((Memory *)&sc->scores[e]);
 	for (int e = 0; e < 4; e++) {
 		fun_memory_free((Memory *)&sc->gv[e]);
 		fun_memory_free((Memory *)&sc->uv[e]);
@@ -554,19 +651,18 @@ static void scratch_free(Scratch *sc)
 	fun_memory_free((Memory *)&sc->sin);
 }
 
-void model_load(Model *m, GGufFile *gguf, const char *model_path,
-		int n_threads)
+void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 {
 	m->gguf = gguf;
 	fun_string_copy(model_path, m->model_path, sizeof(m->model_path));
 
 	SPAN_INFERENCE = fun_trace_span_register("inference");
 	SPAN_ATTENTION = fun_trace_span_register("attention");
-	SPAN_EXPERT    = fun_trace_span_register("expert");
-	SPAN_ROUTER    = fun_trace_span_register("router");
-	SPAN_OUTPUT    = fun_trace_span_register("output");
-	SPAN_EMBED     = fun_trace_span_register("embed");
-	SPAN_ROPE      = fun_trace_span_register("rope");
+	SPAN_EXPERT = fun_trace_span_register("expert");
+	SPAN_ROUTER = fun_trace_span_register("router");
+	SPAN_OUTPUT = fun_trace_span_register("output");
+	SPAN_EMBED = fun_trace_span_register("embed");
+	SPAN_ROPE = fun_trace_span_register("rope");
 	m->config.hidden_size = 2880;
 	m->config.n_layers = 24;
 	m->config.n_heads = 64;
@@ -593,8 +689,9 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 			.value;
 	fun_gguf_dequant_f32(gguf, "output_norm.weight", m->output_norm_weight);
 
-	m->layers = (LayerWeights *)fun_memory_allocate(
-		m->config.n_layers * sizeof(LayerWeights)).value;
+	m->layers = (LayerWeights *)fun_memory_allocate(m->config.n_layers *
+													sizeof(LayerWeights))
+					.value;
 	for (int i = 0; i < m->config.n_layers; i++) {
 		m->layers[i].q_weight = NULL;
 		m->layers[i].q_bias = NULL;
@@ -614,29 +711,35 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 
 	int kv_dim = m->config.n_kv_heads * m->config.head_dim;
 	int max_seq = m->config.max_seq_len;
-	m->k_cache = (float **)fun_memory_allocate(
-		m->config.n_layers * sizeof(float *)).value;
-	m->v_cache = (float **)fun_memory_allocate(
-		m->config.n_layers * sizeof(float *)).value;
+	m->k_cache =
+		(float **)fun_memory_allocate(m->config.n_layers * sizeof(float *))
+			.value;
+	m->v_cache =
+		(float **)fun_memory_allocate(m->config.n_layers * sizeof(float *))
+			.value;
 	for (int i = 0; i < m->config.n_layers; i++) {
-		m->k_cache[i] = (float *)fun_memory_allocate(
-			(size_t)max_seq * kv_dim * sizeof(float)).value;
-		m->v_cache[i] = (float *)fun_memory_allocate(
-			(size_t)max_seq * kv_dim * sizeof(float)).value;
+		m->k_cache[i] = (float *)fun_memory_allocate((size_t)max_seq * kv_dim *
+													 sizeof(float))
+							.value;
+		m->v_cache[i] = (float *)fun_memory_allocate((size_t)max_seq * kv_dim *
+													 sizeof(float))
+							.value;
 	}
 	m->cached_len = 0;
 
 	int half = m->config.head_dim / 2;
-	m->rope_pre = (float *)fun_memory_allocate(
-		(size_t)half * sizeof(float)).value;
+	m->rope_pre =
+		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
 	float theta_scale = fun_math_exp(fun_math_log(m->config.rope_theta) *
-					 (-2.0f / (float)m->config.head_dim));
+									 (-2.0f / (float)m->config.head_dim));
 	int corr0 = 8, corr1 = 18;
 	float power = 1.0f;
 	for (int j = 0; j < half; j++) {
 		float y = (float)(j - corr0) / (float)(corr1 - corr0);
-		if (y < 0.0f) y = 0.0f;
-		if (y > 1.0f) y = 1.0f;
+		if (y < 0.0f)
+			y = 0.0f;
+		if (y > 1.0f)
+			y = 1.0f;
 		float ramp = 1.0f - y;
 		float factor = ramp + (1.0f - ramp) / 32.0f;
 		m->rope_pre[j] = power * factor;
@@ -658,33 +761,39 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".attn_norm.weight", buf + pre_len, 256 - pre_len);
-		w->attn_norm_weight = (float *)fun_memory_allocate(
-			m->config.hidden_size * sizeof(float)).value;
+		w->attn_norm_weight =
+			(float *)fun_memory_allocate(m->config.hidden_size * sizeof(float))
+				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->attn_norm_weight);
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".post_attention_norm.weight", buf + pre_len,
-				256 - pre_len);
-		w->post_attn_norm_weight = (float *)fun_memory_allocate(
-			m->config.hidden_size * sizeof(float)).value;
+						256 - pre_len);
+		w->post_attn_norm_weight =
+			(float *)fun_memory_allocate(m->config.hidden_size * sizeof(float))
+				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->post_attn_norm_weight);
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_gate_inp.weight", buf + pre_len, 256 - pre_len);
-		w->router_weight = (float *)fun_memory_allocate(
-			m->config.n_experts * m->config.hidden_size * sizeof(float)).value;
+		w->router_weight =
+			(float *)fun_memory_allocate(m->config.n_experts *
+										 m->config.hidden_size * sizeof(float))
+				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->router_weight);
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_gate_inp.bias", buf + pre_len, 256 - pre_len);
-		w->router_bias = (float *)fun_memory_allocate(
-			m->config.n_experts * sizeof(float)).value;
+		w->router_bias =
+			(float *)fun_memory_allocate(m->config.n_experts * sizeof(float))
+				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->router_bias);
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".attn_sinks.weight", buf + pre_len, 256 - pre_len);
-		w->sinks = (float *)fun_memory_allocate(
-			m->config.n_heads * sizeof(float)).value;
+		w->sinks =
+			(float *)fun_memory_allocate(m->config.n_heads * sizeof(float))
+				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->sinks);
 
 		buf[pre_len] = '\0';
@@ -692,39 +801,47 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 		w->experts.gate_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_gate_exps.bias", buf + pre_len, 256 - pre_len);
-		w->experts.gate_b = (const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		w->experts.gate_b =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_up_exps.weight", buf + pre_len, 256 - pre_len);
 		w->experts.up_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_up_exps.bias", buf + pre_len, 256 - pre_len);
-		w->experts.up_b = (const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		w->experts.up_b =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_down_exps.weight", buf + pre_len, 256 - pre_len);
 		w->experts.down_w = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_down_exps.bias", buf + pre_len, 256 - pre_len);
-		w->experts.down_b = (const float *)(rd + fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		w->experts.down_b =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
 	}
 
 	m->scratch_mem = fun_memory_allocate(sizeof(Scratch)).value;
 	Scratch *s = (Scratch *)m->scratch_mem;
 	scratch_alloc(s, &m->config);
 
-	m->logits = (float *)fun_memory_allocate(
-		m->config.vocab_size * sizeof(float)).value;
+	m->logits =
+		(float *)fun_memory_allocate(m->config.vocab_size * sizeof(float)).value;
 
 	int n_layers = m->config.n_layers;
-	int max_tasks = 6 + n_layers * 22;
-	int max_edges = 8 + n_layers * 30;
-	size_t graph_bytes = fun_compute_graph_memory_required(max_tasks, max_edges, n_threads);
+	int max_tasks = 8 + n_layers * 30;
+	int max_edges = 12 + n_layers * 50;
+	size_t graph_bytes =
+		fun_compute_graph_memory_required(max_tasks, max_edges, n_threads);
 	m->graph_mem = fun_memory_allocate(graph_bytes).value;
-	m->graph = fun_compute_graph_init(m->graph_mem, graph_bytes,
-					   max_tasks, max_edges, n_threads);
+	m->graph = fun_compute_graph_init(m->graph_mem, graph_bytes, max_tasks,
+									  max_edges, n_threads);
 
 	m->n_tasks = max_tasks;
-	m->tasks = (FunComputeTask *)fun_memory_allocate(
-		(size_t)max_tasks * sizeof(FunComputeTask)).value;
+	m->tasks = (FunComputeTask *)fun_memory_allocate((size_t)max_tasks *
+													 sizeof(FunComputeTask))
+				   .value;
 
 	int ti = 0;
 	float inv_sqrt_hd = 1.0f / fun_math_sqrt((float)m->config.head_dim);
@@ -732,31 +849,38 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 	m->ctx_embed = fun_memory_allocate(sizeof(CtxEmbed)).value;
 	*(CtxEmbed *)m->ctx_embed = (CtxEmbed){
 		.embeddings = m->tok_embeddings,
-		.emb_stride = (size_t)m->config.hidden_size / FUN_MATH_Q8_BLOCK_ELEMS
-			      * FUN_MATH_Q8_BLOCK_BYTES,
-		.hidden = s->hidden, .hs = m->config.hidden_size,
+		.emb_stride = (size_t)m->config.hidden_size / FUN_MATH_Q8_BLOCK_ELEMS *
+					  FUN_MATH_Q8_BLOCK_BYTES,
+		.hidden = s->hidden,
+		.hs = m->config.hidden_size,
 	};
 	FunComputeTask *t_embed = &m->tasks[ti++];
-	fun_compute_graph_add_task(m->graph, t_embed, _exec_embed,
-				   m->ctx_embed, _bind_embed, NULL);
+	fun_compute_graph_add_task(m->graph, t_embed, _exec_embed, m->ctx_embed,
+							   _bind_embed, NULL);
 
 	m->ctx_rope = fun_memory_allocate(sizeof(CtxRopePre)).value;
 	*(CtxRopePre *)m->ctx_rope = (CtxRopePre){
-		.theta = s->theta, .cos = s->cos, .sin = s->sin,
-		.rope_pre = m->rope_pre, .half = m->config.head_dim / 2,
+		.theta = s->theta,
+		.cos = s->cos,
+		.sin = s->sin,
+		.rope_pre = m->rope_pre,
+		.half = m->config.head_dim / 2,
 		.mscale = m->rope_mscale,
 	};
 	FunComputeTask *t_rope = &m->tasks[ti++];
-	fun_compute_graph_add_task(m->graph, t_rope, _exec_rope_pre,
-				   m->ctx_rope, _bind_rope_pre, NULL);
+	fun_compute_graph_add_task(m->graph, t_rope, _exec_rope_pre, m->ctx_rope,
+							   _bind_rope_pre, NULL);
 
 	m->ctx_embed_residual = fun_memory_allocate(sizeof(CtxAdd)).value;
 	*(CtxAdd *)m->ctx_embed_residual = (CtxAdd){
-		.a = s->hidden, .b = s->residual, .out = s->residual, .n = m->config.hidden_size,
+		.a = s->hidden,
+		.b = s->residual,
+		.out = s->residual,
+		.n = m->config.hidden_size,
 	};
 	FunComputeTask *t_res_embed = &m->tasks[ti++];
 	fun_compute_graph_add_task(m->graph, t_res_embed, _exec_copy,
-				   m->ctx_embed_residual, _bind_residual, NULL);
+							   m->ctx_embed_residual, _bind_residual, NULL);
 	fun_compute_task_depends_on(m->graph, t_res_embed, t_embed);
 
 	m->ctx_norms = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
@@ -769,12 +893,24 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 	m->ctx_attn = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_o = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_res = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_copy_attn = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_norms2 = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_router = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_copy_attn =
+		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_norms2 =
+		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_router =
+		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_acc = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_copy_res = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_expert = fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
+	m->ctx_copy_res =
+		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_expert =
+		fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
+	m->ctx_attn_groups =
+		fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
+	m->ctx_output_groups = fun_memory_allocate(4 * sizeof(void *)).value;
+	for (int i = 0; i < n_layers * 4; i++)
+		((void **)m->ctx_attn_groups)[i] = NULL;
+	for (int i = 0; i < 4; i++)
+		((void **)m->ctx_output_groups)[i] = NULL;
 
 	FunComputeTask *prev_layer_tail = t_res_embed;
 
@@ -784,15 +920,19 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 		FunComputeTask *t_norm = &m->tasks[ti++];
 		m->ctx_norms[l] = fun_memory_allocate(sizeof(CtxRmsNorm)).value;
 		*(CtxRmsNorm *)m->ctx_norms[l] = (CtxRmsNorm){
-			.x = s->hidden, .weight = w->attn_norm_weight,
-			.out = s->hidden_normed, .n = m->config.hidden_size,
+			.x = s->hidden,
+			.weight = w->attn_norm_weight,
+			.out = s->hidden_normed,
+			.n = m->config.hidden_size,
 			.eps = m->config.rms_norm_eps,
-			.layer = w, .gguf = m->gguf, .layer_idx = l,
+			.layer = w,
+			.gguf = m->gguf,
+			.layer_idx = l,
 		};
 
 		// (t_norm added, depends_on below)
 		fun_compute_graph_add_task(m->graph, t_norm, _exec_rms_norm,
-					   m->ctx_norms[l], NULL, NULL);
+								   m->ctx_norms[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_norm, prev_layer_tail);
 
 		FunComputeTask *t_q = &m->tasks[ti++];
@@ -800,131 +940,237 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 		*(CtxMatvecF32 *)m->ctx_q[l] = (CtxMatvecF32){
 			.w_ptr = (const float **)&w->q_weight,
 			.bias_ptr = (const float **)&w->q_bias,
-			.x = s->hidden_normed, .out = s->qbuf,
+			.x = s->hidden_normed,
+			.out = s->qbuf,
 			.rows = m->config.n_heads * m->config.head_dim,
 			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_q, _exec_matvec_f32,
-					   m->ctx_q[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_q, _exec_matvec_f32, m->ctx_q[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_q, t_norm);
 
 		FunComputeTask *t_k = &m->tasks[ti++];
 		m->ctx_k[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_k[l] = (CtxMatvecF32){ .w_ptr = (const float **)&w->k_weight, .bias_ptr = (const float **)&w->k_bias, .x = s->hidden_normed, .out = s->kbuf, .rows = m->config.n_kv_heads * m->config.head_dim, .cols = m->config.hidden_size,
+		*(CtxMatvecF32 *)m->ctx_k[l] = (CtxMatvecF32){
+			.w_ptr = (const float **)&w->k_weight,
+			.bias_ptr = (const float **)&w->k_bias,
+			.x = s->hidden_normed,
+			.out = s->kbuf,
+			.rows = m->config.n_kv_heads * m->config.head_dim,
+			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_k, _exec_matvec_f32,
-					   m->ctx_k[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_k, _exec_matvec_f32, m->ctx_k[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_k, t_norm);
 
 		FunComputeTask *t_v = &m->tasks[ti++];
 		m->ctx_v[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_v[l] = (CtxMatvecF32){ .w_ptr = (const float **)&w->v_weight, .bias_ptr = (const float **)&w->v_bias, .x = s->hidden_normed, .out = s->vbuf, .rows = m->config.n_kv_heads * m->config.head_dim, .cols = m->config.hidden_size,
+		*(CtxMatvecF32 *)m->ctx_v[l] = (CtxMatvecF32){
+			.w_ptr = (const float **)&w->v_weight,
+			.bias_ptr = (const float **)&w->v_bias,
+			.x = s->hidden_normed,
+			.out = s->vbuf,
+			.rows = m->config.n_kv_heads * m->config.head_dim,
+			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_v, _exec_matvec_f32,
-					   m->ctx_v[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_v, _exec_matvec_f32, m->ctx_v[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_v, t_norm);
 
 		FunComputeTask *t_rq = &m->tasks[ti++];
 		m->ctx_rq[l] = fun_memory_allocate(sizeof(CtxRotary)).value;
-		*(CtxRotary *)m->ctx_rq[l] = (CtxRotary){ .x = s->qbuf, .cos = s->cos, .sin = s->sin, .n_heads = m->config.n_heads, .half = m->config.head_dim / 2,
+		*(CtxRotary *)m->ctx_rq[l] = (CtxRotary){
+			.x = s->qbuf,
+			.cos = s->cos,
+			.sin = s->sin,
+			.n_heads = m->config.n_heads,
+			.half = m->config.head_dim / 2,
 		};
-		fun_compute_graph_add_task(m->graph, t_rq, _exec_rotary,
-					   m->ctx_rq[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_rq, _exec_rotary, m->ctx_rq[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_rq, t_q);
 
 		FunComputeTask *t_rk = &m->tasks[ti++];
 		m->ctx_rk[l] = fun_memory_allocate(sizeof(CtxRotary)).value;
-		*(CtxRotary *)m->ctx_rk[l] = (CtxRotary){ .x = s->kbuf, .cos = s->cos, .sin = s->sin, .n_heads = m->config.n_kv_heads, .half = m->config.head_dim / 2,
+		*(CtxRotary *)m->ctx_rk[l] = (CtxRotary){
+			.x = s->kbuf,
+			.cos = s->cos,
+			.sin = s->sin,
+			.n_heads = m->config.n_kv_heads,
+			.half = m->config.head_dim / 2,
 		};
-		fun_compute_graph_add_task(m->graph, t_rk, _exec_rotary,
-					   m->ctx_rk[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_rk, _exec_rotary, m->ctx_rk[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_rk, t_k);
 
 		FunComputeTask *t_kv = &m->tasks[ti++];
 		m->ctx_kv[l] = fun_memory_allocate(sizeof(CtxKvStore)).value;
-		*(CtxKvStore *)m->ctx_kv[l] = (CtxKvStore){ .kbuf = s->kbuf, .vbuf = s->vbuf, .kcache = m->k_cache[l], .vcache = m->v_cache[l], .kv_dim = m->config.n_kv_heads * m->config.head_dim,
+		*(CtxKvStore *)m->ctx_kv[l] = (CtxKvStore){
+			.kbuf = s->kbuf,
+			.vbuf = s->vbuf,
+			.kcache = m->k_cache[l],
+			.vcache = m->v_cache[l],
+			.kv_dim = m->config.n_kv_heads * m->config.head_dim,
 		};
-		fun_compute_graph_add_task(m->graph, t_kv, _exec_kvstore,
-					   m->ctx_kv[l], _bind_kvstore, NULL);
+		fun_compute_graph_add_task(m->graph, t_kv, _exec_kvstore, m->ctx_kv[l],
+								   _bind_kvstore, NULL);
 		fun_compute_task_depends_on(m->graph, t_kv, t_rk);
 		fun_compute_task_depends_on(m->graph, t_kv, t_v);
 
-		FunComputeTask *t_attn = &m->tasks[ti++];
-		m->ctx_attn[l] = fun_memory_allocate(sizeof(CtxAttention)).value;
-		*(CtxAttention *)m->ctx_attn[l] = (CtxAttention){ .qbuf = s->qbuf, .attn_out = s->attn, .kcache = m->k_cache[l], .vcache = m->v_cache[l], .sinks = w->sinks, .n_heads = m->config.n_heads, .n_kv = m->config.n_kv_heads, .hd = m->config.head_dim, .inv_sqrt_hd = inv_sqrt_hd, .scores = s->scores,
-		};
-		fun_compute_graph_add_task(m->graph, t_attn, _exec_attention,
-					   m->ctx_attn[l], _bind_attention, NULL);
-		fun_compute_task_depends_on(m->graph, t_attn, t_rq);
-		fun_compute_task_depends_on(m->graph, t_attn, t_kv);
+		int heads_per = m->config.n_heads / 4;
+		FunComputeTask *t_attn_h[4];
+		for (int hg = 0; hg < 4; hg++) {
+			t_attn_h[hg] = &m->tasks[ti++];
+			int gi = l * 4 + hg;
+			m->ctx_attn_groups[gi] =
+				fun_memory_allocate(sizeof(CtxAttentionGroup)).value;
+			*(CtxAttentionGroup *)m->ctx_attn_groups[gi] =
+				(CtxAttentionGroup){ .qbuf = s->qbuf,
+									 .attn_out = s->attn,
+									 .kcache = m->k_cache[l],
+									 .vcache = m->v_cache[l],
+									 .sinks = w->sinks,
+									 .head_start = hg * heads_per,
+									 .head_end = (hg + 1) * heads_per,
+									 .n_heads = m->config.n_heads,
+									 .n_kv = m->config.n_kv_heads,
+									 .hd = m->config.head_dim,
+									 .inv_sqrt_hd = inv_sqrt_hd,
+									 .scores = s->scores[hg] };
+			fun_compute_graph_add_task(m->graph, t_attn_h[hg],
+									   _exec_attention_group,
+									   m->ctx_attn_groups[gi], _bind_attention,
+									   NULL);
+			fun_compute_task_depends_on(m->graph, t_attn_h[hg], t_rq);
+			fun_compute_task_depends_on(m->graph, t_attn_h[hg], t_kv);
+		}
 
 		FunComputeTask *t_o = &m->tasks[ti++];
 		m->ctx_o[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_o[l] = (CtxMatvecF32){ .w_ptr = (const float **)&w->o_weight, .bias_ptr = (const float **)&w->o_bias, .x = s->attn, .out = s->proj, .rows = m->config.hidden_size, .cols = m->config.n_heads * m->config.head_dim,
+		*(CtxMatvecF32 *)m->ctx_o[l] = (CtxMatvecF32){
+			.w_ptr = (const float **)&w->o_weight,
+			.bias_ptr = (const float **)&w->o_bias,
+			.x = s->attn,
+			.out = s->proj,
+			.rows = m->config.hidden_size,
+			.cols = m->config.n_heads * m->config.head_dim,
 		};
-		fun_compute_graph_add_task(m->graph, t_o, _exec_matvec_f32,
-					   m->ctx_o[l], NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_o, t_attn);
+		fun_compute_graph_add_task(m->graph, t_o, _exec_matvec_f32, m->ctx_o[l],
+								   NULL, NULL);
+		for (int hg = 0; hg < 4; hg++)
+			fun_compute_task_depends_on(m->graph, t_o, t_attn_h[hg]);
 
 		FunComputeTask *t_res = &m->tasks[ti++];
 		m->ctx_res[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_res[l] = (CtxAdd){ .a = s->residual, .b = s->proj, .out = s->hidden, .n = m->config.hidden_size,
+		*(CtxAdd *)m->ctx_res[l] = (CtxAdd){
+			.a = s->residual,
+			.b = s->proj,
+			.out = s->hidden,
+			.n = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_res, _exec_add,
-					   m->ctx_res[l], NULL, NULL);
+		fun_compute_graph_add_task(m->graph, t_res, _exec_add, m->ctx_res[l],
+								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_res, t_o);
 
 		FunComputeTask *t_copy_attn = &m->tasks[ti++];
 		m->ctx_copy_attn[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_copy_attn[l] = (CtxAdd){ .a = s->hidden, .out = s->attn_res, .n = m->config.hidden_size,
+		*(CtxAdd *)m->ctx_copy_attn[l] = (CtxAdd){
+			.a = s->hidden,
+			.out = s->attn_res,
+			.n = m->config.hidden_size,
 		};
 		fun_compute_graph_add_task(m->graph, t_copy_attn, _exec_copy,
-					   m->ctx_copy_attn[l], NULL, NULL);
+								   m->ctx_copy_attn[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_copy_attn, t_res);
 
 		FunComputeTask *t_norm2 = &m->tasks[ti++];
 		m->ctx_norms2[l] = fun_memory_allocate(sizeof(CtxRmsNorm)).value;
-		*(CtxRmsNorm *)m->ctx_norms2[l] = (CtxRmsNorm){ .x = s->hidden, .weight = w->post_attn_norm_weight, .out = s->hidden_normed, .n = m->config.hidden_size, .eps = m->config.rms_norm_eps,
+		*(CtxRmsNorm *)m->ctx_norms2[l] = (CtxRmsNorm){
+			.x = s->hidden,
+			.weight = w->post_attn_norm_weight,
+			.out = s->hidden_normed,
+			.n = m->config.hidden_size,
+			.eps = m->config.rms_norm_eps,
 		};
 		fun_compute_graph_add_task(m->graph, t_norm2, _exec_rms_norm,
-					   m->ctx_norms2[l], NULL, NULL);
+								   m->ctx_norms2[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_norm2, t_copy_attn);
 
 		FunComputeTask *t_router = &m->tasks[ti++];
 		m->ctx_router[l] = fun_memory_allocate(sizeof(CtxRouter)).value;
-		*(CtxRouter *)m->ctx_router[l] = (CtxRouter){ .router_w = w->router_weight, .router_b = w->router_bias, .x = s->hidden_normed, .topk = s->topk, .rlog = s->rlog, .rweights = s->rweights, .n_exp = m->config.n_experts, .topk_n = m->config.n_active_experts, .hs = m->config.hidden_size,
+		*(CtxRouter *)m->ctx_router[l] = (CtxRouter){
+			.router_w = w->router_weight,
+			.router_b = w->router_bias,
+			.x = s->hidden_normed,
+			.topk = s->topk,
+			.rlog = s->rlog,
+			.rweights = s->rweights,
+			.n_exp = m->config.n_experts,
+			.topk_n = m->config.n_active_experts,
+			.hs = m->config.hidden_size,
 		};
 		fun_compute_graph_add_task(m->graph, t_router, _exec_router,
-					   m->ctx_router[l], NULL, NULL);
+								   m->ctx_router[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_router, t_norm2);
 
 		FunComputeTask *t_e[4];
 		for (int e = 0; e < 4; e++) {
 			t_e[e] = &m->tasks[ti++];
-			m->ctx_expert[l * 4 + e] = fun_memory_allocate(sizeof(CtxExpert)).value;
-			*(CtxExpert *)m->ctx_expert[l * 4 + e] = (CtxExpert){ .gate_w = w->experts.gate_w, .up_w = w->experts.up_w, .down_w = w->experts.down_w, .gate_b = w->experts.gate_b, .up_b = w->experts.up_b, .down_b = w->experts.down_b, .hidden_in = s->hidden_normed, .gv = s->gv[e], .uv = s->uv[e], .mid = s->mid[e], .eg = s->eg[e], .dv = s->dv[e], .ffn = m->config.ffn_size, .hs = m->config.hidden_size, .topk = s->topk, .expert_idx = e,
+			m->ctx_expert[l * 4 + e] =
+				fun_memory_allocate(sizeof(CtxExpert)).value;
+			*(CtxExpert *)m->ctx_expert[l * 4 + e] = (CtxExpert){
+				.gate_w = w->experts.gate_w,
+				.up_w = w->experts.up_w,
+				.down_w = w->experts.down_w,
+				.gate_b = w->experts.gate_b,
+				.up_b = w->experts.up_b,
+				.down_b = w->experts.down_b,
+				.hidden_in = s->hidden_normed,
+				.gv = s->gv[e],
+				.uv = s->uv[e],
+				.mid = s->mid[e],
+				.eg = s->eg[e],
+				.dv = s->dv[e],
+				.ffn = m->config.ffn_size,
+				.hs = m->config.hidden_size,
+				.topk = s->topk,
+				.expert_idx = e,
 			};
 			fun_compute_graph_add_task(m->graph, t_e[e], _exec_expert,
-						   m->ctx_expert[l * 4 + e], NULL, NULL);
+									   m->ctx_expert[l * 4 + e], NULL, NULL);
 			fun_compute_task_depends_on(m->graph, t_e[e], t_router);
 		}
 
 		FunComputeTask *t_acc = &m->tasks[ti++];
 		m->ctx_acc[l] = fun_memory_allocate(sizeof(CtxExpertAccum)).value;
-		*(CtxExpertAccum *)m->ctx_acc[l] = (CtxExpertAccum){ .dv0 = s->dv[0], .dv1 = s->dv[1], .dv2 = s->dv[2], .dv3 = s->dv[3], .rweights = s->rweights, .topk = s->topk, .hidden = s->hidden, .expert_out = s->expert_out, .attn_res = s->attn_res, .hs = m->config.hidden_size,
+		*(CtxExpertAccum *)m->ctx_acc[l] = (CtxExpertAccum){
+			.dv0 = s->dv[0],
+			.dv1 = s->dv[1],
+			.dv2 = s->dv[2],
+			.dv3 = s->dv[3],
+			.rweights = s->rweights,
+			.topk = s->topk,
+			.hidden = s->hidden,
+			.expert_out = s->expert_out,
+			.attn_res = s->attn_res,
+			.hs = m->config.hidden_size,
 		};
 		fun_compute_graph_add_task(m->graph, t_acc, _exec_expert_accum,
-					   m->ctx_acc[l], NULL, NULL);
+								   m->ctx_acc[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_acc, t_router);
 		for (int e = 0; e < 4; e++)
 			fun_compute_task_depends_on(m->graph, t_acc, t_e[e]);
 
 		FunComputeTask *t_copy_res = &m->tasks[ti++];
 		m->ctx_copy_res[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_copy_res[l] = (CtxAdd){ .a = s->hidden, .b = s->residual, .out = s->residual, .n = m->config.hidden_size,
+		*(CtxAdd *)m->ctx_copy_res[l] = (CtxAdd){
+			.a = s->hidden,
+			.b = s->residual,
+			.out = s->residual,
+			.n = m->config.hidden_size,
 		};
 		fun_compute_graph_add_task(m->graph, t_copy_res, _exec_copy,
-					   m->ctx_copy_res[l], _bind_residual, NULL);
+								   m->ctx_copy_res[l], _bind_residual, NULL);
 		fun_compute_task_depends_on(m->graph, t_copy_res, t_acc);
 
 		prev_layer_tail = t_copy_res;
@@ -933,24 +1179,36 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path,
 	FunComputeTask *t_out_norm = &m->tasks[ti++];
 	m->ctx_out_norm = fun_memory_allocate(sizeof(CtxRmsNorm)).value;
 	*(CtxRmsNorm *)m->ctx_out_norm = (CtxRmsNorm){
-		.x = s->hidden, .weight = m->output_norm_weight,
-		.out = s->hidden_normed, .n = m->config.hidden_size,
+		.x = s->hidden,
+		.weight = m->output_norm_weight,
+		.out = s->hidden_normed,
+		.n = m->config.hidden_size,
 		.eps = m->config.rms_norm_eps,
 	};
 	fun_compute_graph_add_task(m->graph, t_out_norm, _exec_rms_norm,
-				   m->ctx_out_norm, NULL, NULL);
+							   m->ctx_out_norm, NULL, NULL);
 	fun_compute_task_depends_on(m->graph, t_out_norm, prev_layer_tail);
 
-	FunComputeTask *t_logits = &m->tasks[ti++];
-	m->ctx_logits = fun_memory_allocate(sizeof(CtxOutputProj)).value;
-	*(CtxOutputProj *)m->ctx_logits = (CtxOutputProj){
-		.w = m->output_weight, .x = s->hidden_normed,
-		.out = m->logits, .vocab = m->config.vocab_size,
-		.hs = m->config.hidden_size,
-	};
-	fun_compute_graph_add_task(m->graph, t_logits, _exec_output_proj,
-				   m->ctx_logits, NULL, NULL);
-	fun_compute_task_depends_on(m->graph, t_logits, t_out_norm);
+	FunComputeTask *t_out_h[4];
+	size_t vocab = m->config.vocab_size;
+	size_t chunk = vocab / 4;
+	for (int og = 0; og < 4; og++) {
+		t_out_h[og] = &m->tasks[ti++];
+		m->ctx_output_groups[og] =
+			fun_memory_allocate(sizeof(CtxOutputGroup)).value;
+		*(CtxOutputGroup *)m->ctx_output_groups[og] =
+			(CtxOutputGroup){ .w = m->output_weight,
+							  .x = s->hidden_normed,
+							  .out = m->logits,
+							  .row_start = (size_t)og * chunk,
+							  .row_end = (og == 3) ? vocab :
+													 (size_t)(og + 1) * chunk,
+							  .vocab = vocab,
+							  .hs = m->config.hidden_size };
+		fun_compute_graph_add_task(m->graph, t_out_h[og], _exec_output_group,
+								   m->ctx_output_groups[og], NULL, NULL);
+		fun_compute_task_depends_on(m->graph, t_out_h[og], t_out_norm);
+	}
 
 	m->n_tasks = ti;
 }
@@ -989,29 +1247,53 @@ void model_free(Model *m)
 	if (m->tasks)
 		fun_memory_free((Memory *)&m->tasks);
 
-	if (m->ctx_embed) fun_memory_free((Memory *)&m->ctx_embed);
-	if (m->ctx_rope) fun_memory_free((Memory *)&m->ctx_rope);
-	if (m->ctx_embed_residual) fun_memory_free((Memory *)&m->ctx_embed_residual);
-	if (m->ctx_out_norm) fun_memory_free((Memory *)&m->ctx_out_norm);
-	if (m->ctx_logits) fun_memory_free((Memory *)&m->ctx_logits);
+	if (m->ctx_embed)
+		fun_memory_free((Memory *)&m->ctx_embed);
+	if (m->ctx_rope)
+		fun_memory_free((Memory *)&m->ctx_rope);
+	if (m->ctx_embed_residual)
+		fun_memory_free((Memory *)&m->ctx_embed_residual);
+	if (m->ctx_out_norm)
+		fun_memory_free((Memory *)&m->ctx_out_norm);
+	if (m->ctx_logits)
+		fun_memory_free((Memory *)&m->ctx_logits);
 	for (int l = 0; l < m->config.n_layers; l++) {
-		if (m->ctx_norms && m->ctx_norms[l]) fun_memory_free((Memory *)&m->ctx_norms[l]);
-		if (m->ctx_q && m->ctx_q[l]) fun_memory_free((Memory *)&m->ctx_q[l]);
-		if (m->ctx_k && m->ctx_k[l]) fun_memory_free((Memory *)&m->ctx_k[l]);
-		if (m->ctx_v && m->ctx_v[l]) fun_memory_free((Memory *)&m->ctx_v[l]);
-		if (m->ctx_rq && m->ctx_rq[l]) fun_memory_free((Memory *)&m->ctx_rq[l]);
-		if (m->ctx_rk && m->ctx_rk[l]) fun_memory_free((Memory *)&m->ctx_rk[l]);
-		if (m->ctx_kv && m->ctx_kv[l]) fun_memory_free((Memory *)&m->ctx_kv[l]);
-		if (m->ctx_attn && m->ctx_attn[l]) fun_memory_free((Memory *)&m->ctx_attn[l]);
-		if (m->ctx_o && m->ctx_o[l]) fun_memory_free((Memory *)&m->ctx_o[l]);
-		if (m->ctx_res && m->ctx_res[l]) fun_memory_free((Memory *)&m->ctx_res[l]);
-		if (m->ctx_copy_attn && m->ctx_copy_attn[l]) fun_memory_free((Memory *)&m->ctx_copy_attn[l]);
-		if (m->ctx_norms2 && m->ctx_norms2[l]) fun_memory_free((Memory *)&m->ctx_norms2[l]);
-		if (m->ctx_router && m->ctx_router[l]) fun_memory_free((Memory *)&m->ctx_router[l]);
-		if (m->ctx_acc && m->ctx_acc[l]) fun_memory_free((Memory *)&m->ctx_acc[l]);
-		if (m->ctx_copy_res && m->ctx_copy_res[l]) fun_memory_free((Memory *)&m->ctx_copy_res[l]);
+		if (m->ctx_norms && m->ctx_norms[l])
+			fun_memory_free((Memory *)&m->ctx_norms[l]);
+		if (m->ctx_q && m->ctx_q[l])
+			fun_memory_free((Memory *)&m->ctx_q[l]);
+		if (m->ctx_k && m->ctx_k[l])
+			fun_memory_free((Memory *)&m->ctx_k[l]);
+		if (m->ctx_v && m->ctx_v[l])
+			fun_memory_free((Memory *)&m->ctx_v[l]);
+		if (m->ctx_rq && m->ctx_rq[l])
+			fun_memory_free((Memory *)&m->ctx_rq[l]);
+		if (m->ctx_rk && m->ctx_rk[l])
+			fun_memory_free((Memory *)&m->ctx_rk[l]);
+		if (m->ctx_kv && m->ctx_kv[l])
+			fun_memory_free((Memory *)&m->ctx_kv[l]);
+		if (m->ctx_attn && m->ctx_attn[l])
+			fun_memory_free((Memory *)&m->ctx_attn[l]);
+		if (m->ctx_o && m->ctx_o[l])
+			fun_memory_free((Memory *)&m->ctx_o[l]);
+		if (m->ctx_res && m->ctx_res[l])
+			fun_memory_free((Memory *)&m->ctx_res[l]);
+		if (m->ctx_copy_attn && m->ctx_copy_attn[l])
+			fun_memory_free((Memory *)&m->ctx_copy_attn[l]);
+		if (m->ctx_norms2 && m->ctx_norms2[l])
+			fun_memory_free((Memory *)&m->ctx_norms2[l]);
+		if (m->ctx_router && m->ctx_router[l])
+			fun_memory_free((Memory *)&m->ctx_router[l]);
+		if (m->ctx_acc && m->ctx_acc[l])
+			fun_memory_free((Memory *)&m->ctx_acc[l]);
+		if (m->ctx_copy_res && m->ctx_copy_res[l])
+			fun_memory_free((Memory *)&m->ctx_copy_res[l]);
 		for (int e = 0; e < 4; e++)
-			if (m->ctx_expert && m->ctx_expert[l * 4 + e]) fun_memory_free((Memory *)&m->ctx_expert[l * 4 + e]);
+			if (m->ctx_expert && m->ctx_expert[l * 4 + e])
+				fun_memory_free((Memory *)&m->ctx_expert[l * 4 + e]);
+		for (int hg = 0; hg < 4; hg++)
+			if (m->ctx_attn_groups && m->ctx_attn_groups[l * 4 + hg])
+				fun_memory_free((Memory *)&m->ctx_attn_groups[l * 4 + hg]);
 	}
 	fun_memory_free((Memory *)&m->ctx_norms);
 	fun_memory_free((Memory *)&m->ctx_q);
@@ -1028,14 +1310,24 @@ void model_free(Model *m)
 	fun_memory_free((Memory *)&m->ctx_router);
 	fun_memory_free((Memory *)&m->ctx_acc);
 	fun_memory_free((Memory *)&m->ctx_copy_res);
-	if (m->ctx_expert) fun_memory_free((Memory *)&m->ctx_expert);
+	if (m->ctx_expert)
+		fun_memory_free((Memory *)&m->ctx_expert);
+	if (m->ctx_attn_groups)
+		fun_memory_free((Memory *)&m->ctx_attn_groups);
+	for (int og = 0; og < 4; og++)
+		if (m->ctx_output_groups && m->ctx_output_groups[og])
+			fun_memory_free((Memory *)&m->ctx_output_groups[og]);
+	if (m->ctx_output_groups)
+		fun_memory_free((Memory *)&m->ctx_output_groups);
 
 	if (m->scratch_mem) {
 		scratch_free((Scratch *)m->scratch_mem);
 		fun_memory_free((Memory *)&m->scratch_mem);
 	}
-	if (m->logits) fun_memory_free((Memory *)&m->logits);
-	if (m->layers) fun_memory_free((Memory *)&m->layers);
+	if (m->logits)
+		fun_memory_free((Memory *)&m->logits);
+	if (m->layers)
+		fun_memory_free((Memory *)&m->layers);
 	if (m->k_cache) {
 		for (int i = 0; i < m->config.n_layers; i++)
 			fun_memory_free((Memory *)&m->k_cache[i]);

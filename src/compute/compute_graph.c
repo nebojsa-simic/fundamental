@@ -32,6 +32,7 @@ struct FunComputeGraph_s {
 	int ready_tail;
 	int ready_count;
 	int pending_count;
+	int workers_running;
 	Mutex ready_mutex;
 	CondVar ready_condvar;
 	Mutex done_mutex;
@@ -79,20 +80,15 @@ static void _worker_loop(void *data)
 	for (;;) {
 		fun_mutex_lock(graph->ready_mutex);
 		while (graph->ready_count == 0 && graph->pending_count > 0)
-			fun_condvar_wait(graph->ready_condvar,
-					 graph->ready_mutex);
+			fun_condvar_wait(graph->ready_condvar, graph->ready_mutex);
 		if (graph->ready_count == 0 && graph->pending_count == 0) {
 			fun_mutex_unlock(graph->ready_mutex);
-			fun_mutex_lock(graph->done_mutex);
-			fun_condvar_signal(graph->done_condvar);
-			fun_mutex_unlock(graph->done_mutex);
-			return;
+			break;
 		}
 		int idx = _dequeue_ready(graph);
 		fun_mutex_unlock(graph->ready_mutex);
 
-		graph->meta[idx].caller_task->fn(
-			graph->meta[idx].caller_task->ctx);
+		graph->meta[idx].caller_task->fn(graph->meta[idx].caller_task->ctx);
 
 		fun_mutex_lock(graph->ready_mutex);
 		_complete_task(graph, idx);
@@ -101,14 +97,29 @@ static void _worker_loop(void *data)
 
 		fun_mutex_lock(graph->done_mutex);
 		graph->pending_count--;
-		if (graph->pending_count == 0)
-			fun_condvar_signal(graph->done_condvar);
+		int is_done = (graph->pending_count == 0);
 		fun_mutex_unlock(graph->done_mutex);
+
+		if (is_done) {
+			fun_mutex_lock(graph->ready_mutex);
+			fun_condvar_broadcast(graph->ready_condvar);
+			fun_mutex_unlock(graph->ready_mutex);
+
+			fun_mutex_lock(graph->done_mutex);
+			fun_condvar_signal(graph->done_condvar);
+			fun_mutex_unlock(graph->done_mutex);
+		}
 	}
+
+	fun_mutex_lock(graph->done_mutex);
+	graph->workers_running--;
+	if (graph->workers_running == 0)
+		fun_condvar_signal(graph->done_condvar);
+	fun_mutex_unlock(graph->done_mutex);
 }
 
 size_t fun_compute_graph_memory_required(int max_tasks, int max_edges,
-					int n_threads)
+										 int n_threads)
 {
 	(void)n_threads;
 	size_t sz = sizeof(struct FunComputeGraph_s);
@@ -119,8 +130,8 @@ size_t fun_compute_graph_memory_required(int max_tasks, int max_edges,
 }
 
 FunComputeGraph fun_compute_graph_init(void *memory, size_t memory_size,
-				       int max_tasks, int max_edges,
-				       int n_threads)
+									   int max_tasks, int max_edges,
+									   int n_threads)
 {
 	size_t required =
 		fun_compute_graph_memory_required(max_tasks, max_edges, n_threads);
@@ -147,10 +158,12 @@ FunComputeGraph fun_compute_graph_init(void *memory, size_t memory_size,
 	g->ready_tail = 0;
 	g->ready_count = 0;
 	g->pending_count = 0;
+	g->workers_running = 0;
 	g->n_threads = n_threads;
 	g->thread_pool = NULL;
 	g->ready_mutex = NULL;
 	g->ready_condvar = NULL;
+	g->done_mutex = NULL;
 	g->done_condvar = NULL;
 
 	for (int i = 0; i < max_tasks; i++) {
@@ -162,23 +175,18 @@ FunComputeGraph fun_compute_graph_init(void *memory, size_t memory_size,
 	}
 
 	if (n_threads > 0) {
-		if (fun_error_is_error(
-			    fun_mutex_create(&g->ready_mutex).error))
+		if (fun_error_is_error(fun_mutex_create(&g->ready_mutex).error))
 			return NULL;
-		if (fun_error_is_error(
-			    fun_condvar_create(&g->ready_condvar).error))
+		if (fun_error_is_error(fun_condvar_create(&g->ready_condvar).error))
 			return NULL;
-		if (fun_error_is_error(
-			    fun_mutex_create(&g->done_mutex).error))
+		if (fun_error_is_error(fun_mutex_create(&g->done_mutex).error))
 			return NULL;
-		if (fun_error_is_error(
-			    fun_condvar_create(&g->done_condvar).error))
+		if (fun_error_is_error(fun_condvar_create(&g->done_condvar).error))
 			return NULL;
 		ThreadPool tp = NULL;
 		if (fun_error_is_error(
-			    fun_thread_pool_create((int32_t)n_threads, &tp)
-				    .error) ||
-		    tp == NULL) {
+				fun_thread_pool_create((int32_t)n_threads, &tp).error) ||
+			tp == NULL) {
 			fun_condvar_destroy(g->done_condvar);
 			fun_mutex_destroy(g->done_mutex);
 			fun_condvar_destroy(g->ready_condvar);
@@ -192,9 +200,9 @@ FunComputeGraph fun_compute_graph_init(void *memory, size_t memory_size,
 }
 
 void fun_compute_graph_add_task(FunComputeGraph graph, FunComputeTask *task,
-				FunComputeFn fn, void *ctx,
-				FunComputeBindFn bind,
-				FunComputeCtxDestroyFn destroy)
+								FunComputeFn fn, void *ctx,
+								FunComputeBindFn bind,
+								FunComputeCtxDestroyFn destroy)
 {
 	int i = graph->n_tasks++;
 	task->fn = fn;
@@ -205,7 +213,7 @@ void fun_compute_graph_add_task(FunComputeGraph graph, FunComputeTask *task,
 }
 
 void fun_compute_task_depends_on(FunComputeGraph graph, FunComputeTask *task,
-				 FunComputeTask *dep)
+								 FunComputeTask *dep)
 {
 	int di = _find_task_index(graph, dep);
 	int ti = _find_task_index(graph, task);
@@ -239,10 +247,17 @@ void fun_compute_graph_submit(FunComputeGraph graph, void *submit_ctx)
 	if (graph->n_threads > 0) {
 		WorkerCtx wctx = { graph };
 		WorkItem item = { .data = &wctx,
-				  .data_size = sizeof(WorkerCtx),
-				  .work_fn = _worker_loop };
+						  .data_size = sizeof(WorkerCtx),
+						  .work_fn = _worker_loop };
+		fun_mutex_lock(graph->done_mutex);
+		graph->workers_running = 0;
 		for (int i = 0; i < graph->n_threads; i++)
-			fun_thread_pool_submit(graph->thread_pool, &item);
+			if (!fun_error_is_error(
+					fun_thread_pool_submit(graph->thread_pool, &item).error))
+				graph->workers_running++;
+		if (graph->workers_running == 0)
+			fun_condvar_signal(graph->done_condvar);
+		fun_mutex_unlock(graph->done_mutex);
 	}
 }
 
@@ -251,8 +266,7 @@ void fun_compute_graph_wait(FunComputeGraph graph)
 	if (graph->n_threads == 0) {
 		while (graph->ready_count > 0) {
 			int idx = _dequeue_ready(graph);
-			graph->meta[idx].caller_task->fn(
-				graph->meta[idx].caller_task->ctx);
+			graph->meta[idx].caller_task->fn(graph->meta[idx].caller_task->ctx);
 			_complete_task(graph, idx);
 			graph->pending_count--;
 		}
@@ -260,7 +274,7 @@ void fun_compute_graph_wait(FunComputeGraph graph)
 	}
 
 	fun_mutex_lock(graph->done_mutex);
-	while (graph->pending_count > 0)
+	while (graph->pending_count > 0 || graph->workers_running > 0)
 		fun_condvar_wait(graph->done_condvar, graph->done_mutex);
 	fun_mutex_unlock(graph->done_mutex);
 }
