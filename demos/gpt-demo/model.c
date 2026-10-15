@@ -46,6 +46,20 @@ typedef struct {
 	size_t cols;
 } CtxMatvecQ8;
 
+/* Row-sharded Q8_0 matvec: out[row_start..row_end) = W[row_start..row_end)·x
+ * + bias[row_start..row_end) (bias may be NULL). Used to shard the Q and O
+ * attention projections (the two largest serial matvecs per layer) so they can
+ * run in parallel across the thread pool. */
+typedef struct {
+	const uint8_t *w;      /* rows x cols packed Q8_0 */
+	const float *bias;     /* [rows], may be NULL */
+	float *x;              /* input [cols] */
+	float *out;            /* output [rows] */
+	size_t row_start;
+	size_t row_end;
+	size_t cols;
+} CtxMatvecQ8Shard;
+
 /* Rotary-position task context: applies per-head RoPE to x in place. cos/sin
  * are the per-half-dim rotation tables precomputed by _exec_rope_pre. */
 typedef struct {
@@ -251,6 +265,24 @@ static void _exec_matvec_q8(void *ctx)
 	if (c->bias)
 		for (size_t i = 0; i < c->rows; i++)
 			c->out[i] += c->bias[i];
+	fun_trace_span_end(SPAN_ATTENTION);
+}
+
+/* Row-sharded variant of _exec_matvec_q8: offsets the packed weight pointer by
+ * row_start and writes into out[row_start..], adding bias[row_start..] when a
+ * bias is present. */
+static void _exec_matvec_q8_shard(void *ctx)
+{
+	fun_trace_span_begin(SPAN_ATTENTION);
+	CtxMatvecQ8Shard *c = (CtxMatvecQ8Shard *)ctx;
+	size_t rows = c->row_end - c->row_start;
+	size_t blocks = c->cols / FUN_MATH_Q8_BLOCK_ELEMS;
+	const uint8_t *w = c->w + c->row_start * blocks * FUN_MATH_Q8_BLOCK_BYTES;
+	float *out = c->out + c->row_start;
+	fun_math_q8_matrix_vector_f32(w, c->x, out, rows, c->cols);
+	if (c->bias)
+		for (size_t i = 0; i < rows; i++)
+			out[i] += c->bias[c->row_start + i];
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -857,8 +889,8 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		(float *)fun_memory_allocate(m->config.vocab_size * sizeof(float)).value;
 
 	int n_layers = m->config.n_layers;
-	int max_tasks = 8 + n_layers * 30;
-	int max_edges = 12 + n_layers * 50;
+	int max_tasks = 8 + n_layers * 40;
+	int max_edges = 12 + n_layers * 80;
 	size_t graph_bytes =
 		fun_compute_graph_memory_required(max_tasks, max_edges, n_threads);
 	m->graph_mem = fun_memory_allocate(graph_bytes).value;
@@ -911,13 +943,13 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	fun_compute_task_depends_on(m->graph, t_res_embed, t_embed);
 
 	m->ctx_norms = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_q = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_q = fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
 	m->ctx_k = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_v = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_rq = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_rk = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_kv = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_o = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
+	m->ctx_o = fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
 	m->ctx_res = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_copy_attn =
 		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
@@ -933,8 +965,11 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	m->ctx_attn_groups =
 		fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
 	m->ctx_output_groups = fun_memory_allocate(4 * sizeof(void *)).value;
-	for (int i = 0; i < n_layers * 4; i++)
+	for (int i = 0; i < n_layers * 4; i++) {
 		((void **)m->ctx_attn_groups)[i] = NULL;
+		((void **)m->ctx_q)[i] = NULL;
+		((void **)m->ctx_o)[i] = NULL;
+	}
 	for (int i = 0; i < 4; i++)
 		((void **)m->ctx_output_groups)[i] = NULL;
 
@@ -958,19 +993,27 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 								   m->ctx_norms[l], NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_norm, prev_layer_tail);
 
-		FunComputeTask *t_q = &m->tasks[ti++];
-		m->ctx_q[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
-		*(CtxMatvecQ8 *)m->ctx_q[l] = (CtxMatvecQ8){
-			.w = w->q_weight,
-			.bias = w->q_bias,
-			.x = s->hidden_normed,
-			.out = s->qbuf,
-			.rows = m->config.n_heads * m->config.head_dim,
-			.cols = m->config.hidden_size,
-		};
-		fun_compute_graph_add_task(m->graph, t_q, _exec_matvec_q8, m->ctx_q[l],
-								   NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_q, t_norm);
+		FunComputeTask *t_q_sh[4];
+		size_t q_rows = m->config.n_heads * m->config.head_dim;
+		size_t q_chunk = q_rows / 4;
+		for (int qs = 0; qs < 4; qs++) {
+			t_q_sh[qs] = &m->tasks[ti++];
+			int qi = l * 4 + qs;
+			m->ctx_q[qi] = fun_memory_allocate(sizeof(CtxMatvecQ8Shard)).value;
+			*(CtxMatvecQ8Shard *)m->ctx_q[qi] = (CtxMatvecQ8Shard){
+				.w = w->q_weight,
+				.bias = w->q_bias,
+				.x = s->hidden_normed,
+				.out = s->qbuf,
+				.row_start = qs * q_chunk,
+				.row_end = (qs == 3) ? q_rows : (size_t)(qs + 1) * q_chunk,
+				.cols = m->config.hidden_size,
+			};
+			fun_compute_graph_add_task(m->graph, t_q_sh[qs],
+									   _exec_matvec_q8_shard, m->ctx_q[qi],
+									   NULL, NULL);
+			fun_compute_task_depends_on(m->graph, t_q_sh[qs], t_norm);
+		}
 
 		FunComputeTask *t_k = &m->tasks[ti++];
 		m->ctx_k[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
@@ -1011,7 +1054,8 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		};
 		fun_compute_graph_add_task(m->graph, t_rq, _exec_rotary, m->ctx_rq[l],
 								   NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_rq, t_q);
+		for (int qs = 0; qs < 4; qs++)
+			fun_compute_task_depends_on(m->graph, t_rq, t_q_sh[qs]);
 
 		FunComputeTask *t_rk = &m->tasks[ti++];
 		m->ctx_rk[l] = fun_memory_allocate(sizeof(CtxRotary)).value;
@@ -1068,20 +1112,28 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 			fun_compute_task_depends_on(m->graph, t_attn_h[hg], t_kv);
 		}
 
-		FunComputeTask *t_o = &m->tasks[ti++];
-		m->ctx_o[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
-		*(CtxMatvecQ8 *)m->ctx_o[l] = (CtxMatvecQ8){
-			.w = w->o_weight,
-			.bias = w->o_bias,
-			.x = s->attn,
-			.out = s->proj,
-			.rows = m->config.hidden_size,
-			.cols = m->config.n_heads * m->config.head_dim,
-		};
-		fun_compute_graph_add_task(m->graph, t_o, _exec_matvec_q8, m->ctx_o[l],
-								   NULL, NULL);
-		for (int hg = 0; hg < 4; hg++)
-			fun_compute_task_depends_on(m->graph, t_o, t_attn_h[hg]);
+		FunComputeTask *t_o_sh[4];
+		size_t o_rows = m->config.hidden_size;
+		size_t o_chunk = o_rows / 4;
+		for (int os = 0; os < 4; os++) {
+			t_o_sh[os] = &m->tasks[ti++];
+			int oi = l * 4 + os;
+			m->ctx_o[oi] = fun_memory_allocate(sizeof(CtxMatvecQ8Shard)).value;
+			*(CtxMatvecQ8Shard *)m->ctx_o[oi] = (CtxMatvecQ8Shard){
+				.w = w->o_weight,
+				.bias = w->o_bias,
+				.x = s->attn,
+				.out = s->proj,
+				.row_start = os * o_chunk,
+				.row_end = (os == 3) ? o_rows : (size_t)(os + 1) * o_chunk,
+				.cols = m->config.n_heads * m->config.head_dim,
+			};
+			fun_compute_graph_add_task(m->graph, t_o_sh[os],
+									   _exec_matvec_q8_shard, m->ctx_o[oi],
+									   NULL, NULL);
+			for (int hg = 0; hg < 4; hg++)
+				fun_compute_task_depends_on(m->graph, t_o_sh[os], t_attn_h[hg]);
+		}
 
 		FunComputeTask *t_res = &m->tasks[ti++];
 		m->ctx_res[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
@@ -1093,7 +1145,8 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		};
 		fun_compute_graph_add_task(m->graph, t_res, _exec_add, m->ctx_res[l],
 								   NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_res, t_o);
+		for (int os = 0; os < 4; os++)
+			fun_compute_task_depends_on(m->graph, t_res, t_o_sh[os]);
 
 		FunComputeTask *t_copy_attn = &m->tasks[ti++];
 		m->ctx_copy_attn[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
@@ -1290,8 +1343,9 @@ void model_free(Model *m)
 	for (int l = 0; l < m->config.n_layers; l++) {
 		if (m->ctx_norms && m->ctx_norms[l])
 			fun_memory_free((Memory *)&m->ctx_norms[l]);
-		if (m->ctx_q && m->ctx_q[l])
-			fun_memory_free((Memory *)&m->ctx_q[l]);
+		for (int qs = 0; qs < 4; qs++)
+			if (m->ctx_q && m->ctx_q[l * 4 + qs])
+				fun_memory_free((Memory *)&m->ctx_q[l * 4 + qs]);
 		if (m->ctx_k && m->ctx_k[l])
 			fun_memory_free((Memory *)&m->ctx_k[l]);
 		if (m->ctx_v && m->ctx_v[l])
@@ -1302,8 +1356,9 @@ void model_free(Model *m)
 			fun_memory_free((Memory *)&m->ctx_rk[l]);
 		if (m->ctx_kv && m->ctx_kv[l])
 			fun_memory_free((Memory *)&m->ctx_kv[l]);
-		if (m->ctx_o && m->ctx_o[l])
-			fun_memory_free((Memory *)&m->ctx_o[l]);
+		for (int os = 0; os < 4; os++)
+			if (m->ctx_o && m->ctx_o[l * 4 + os])
+				fun_memory_free((Memory *)&m->ctx_o[l * 4 + os]);
 		if (m->ctx_res && m->ctx_res[l])
 			fun_memory_free((Memory *)&m->ctx_res[l]);
 		if (m->ctx_copy_attn && m->ctx_copy_attn[l])
