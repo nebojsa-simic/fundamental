@@ -415,8 +415,12 @@ void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)
 	}
 }
 
-void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
-								   size_t rows, size_t cols)
+/* Weak so the AVX-512 implementation in avx512/vector.c takes precedence when
+ * both objects are linked; the AVX2 build links this object alone and uses
+ * this version. */
+__attribute__((weak)) void
+fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
+							  size_t rows, size_t cols)
 {
 	const size_t blocks = cols / FUN_MATH_Q8_BLOCK_ELEMS;
 	for (size_t r = 0; r < rows; r++) {

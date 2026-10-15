@@ -128,3 +128,37 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
 		out[r] = bias ? s + bias[r] : s;
 	}
 }
+
+/* Q8_0 matrix-vector product: out[r] = sum_d w[r][d] * x[d]. The weight matrix
+ * is stored in 34-byte blocks (2-byte fp16 scale + 32 int8 values); each block
+ * is dequantized on the fly by sign-extending the int8 values to f32 and
+ * scaling the block dot product by the fp16 scale. Processes 16 elements per
+ * 512-bit op (twice the AVX2 throughput), accelerating the attention and
+ * output projections that dominate single-token decode. */
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
+								   size_t rows, size_t cols)
+{
+	const size_t blocks = cols / FUN_MATH_Q8_BLOCK_ELEMS;
+	for (size_t r = 0; r < rows; r++) {
+		const uint8_t *row_src = w + r * blocks * FUN_MATH_Q8_BLOCK_BYTES;
+		__m512 acc = _mm512_setzero_ps();
+		for (size_t b = 0; b < blocks; b++) {
+			const uint8_t *bp = row_src + b * FUN_MATH_Q8_BLOCK_BYTES;
+			float d =
+				fun_math_fp16_to_f32((uint16_t)bp[0] | ((uint16_t)bp[1] << 8));
+			const int8_t *q = (const int8_t *)(bp + 2);
+			const float *xv = x + b * FUN_MATH_Q8_BLOCK_ELEMS;
+
+			__m512i q0 =
+				_mm512_cvtepi8_epi32(_mm_loadu_si128((const __m128i *)q));
+			__m512 bs =
+				_mm512_mul_ps(_mm512_cvtepi32_ps(q0), _mm512_loadu_ps(xv));
+			__m512i q1 = _mm512_cvtepi8_epi32(
+				_mm_loadu_si128((const __m128i *)(q + 16)));
+			bs = _mm512_fmadd_ps(_mm512_cvtepi32_ps(q1),
+								 _mm512_loadu_ps(xv + 16), bs);
+			acc = _mm512_fmadd_ps(_mm512_set1_ps(d), bs, acc);
+		}
+		out[r] = _mm512_reduce_add_ps(acc);
+	}
+}
