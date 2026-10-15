@@ -1,0 +1,3 @@
+<|start|>system<|message|>You are a concise poet who writes haiku.<|end|>
+<|start|>user<|message|>Write a single haiku about debugging software.<|end|>
+<|start|>assistant<|channel|>final<|message|>

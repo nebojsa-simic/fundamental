@@ -1,0 +1,2 @@
+<|start|>user<|message|>Tell me a short riddle about a compiler, then give the answer.<|end|>
+<|start|>assistant<|channel|>final<|message|>

@@ -28,6 +28,17 @@ gcc --std=c17 -Os -mavx512f -mavx512bw -mavx512dq -mavx512vl -mfma -I ../../incl
     ../../src/string/stringConversion.c ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringTemplate.c ^
+    ../../src/stream/streamFile.c ^
+    ../../src/stream/streamFlow.c ^
+    ../../src/stream/streamLifecycle.c ^
+    ../../arch/stream/windows-amd64/streamOpen.c ^
+    ../../arch/stream/windows-amd64/streamRead.c ^
+    ../../arch/stream/windows-amd64/streamWrite.c ^
+    ../../arch/file/windows-amd64/fileRead.c ^
+    ../../arch/file/windows-amd64/fileReadMmap.c ^
+    ../../arch/file/windows-amd64/fileReadRing.c ^
+    ../../src/async/async.c ^
+    ../../arch/async/windows-amd64/async.c ^
     vector_avx512.o ^
     vector_avx2.o ^
     -lm -o demo.exe

@@ -1,0 +1,3 @@
+<|start|>system<|message|>You are a senior code reviewer. Be direct and specific.<|end|>
+<|start|>user<|message|>Review this line and explain the bug: if (x = 0) { free(p); }<|end|>
+<|start|>assistant<|channel|>final<|message|>

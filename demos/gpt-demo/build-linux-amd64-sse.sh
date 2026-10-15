@@ -24,6 +24,17 @@ gcc --std=c17 -Os -I ../../include \
     ../../src/string/stringConversion.c \
     ../../src/string/stringOperations.c \
     ../../src/string/stringTemplate.c \
+    ../../src/stream/streamFile.c \
+    ../../src/stream/streamFlow.c \
+    ../../src/stream/streamLifecycle.c \
+    ../../arch/stream/linux-amd64/streamOpen.c \
+    ../../arch/stream/linux-amd64/streamRead.c \
+    ../../arch/stream/linux-amd64/streamWrite.c \
+    ../../arch/file/linux-amd64/fileRead.c \
+    ../../arch/file/linux-amd64/fileReadMmap.c \
+    ../../arch/file/linux-amd64/fileReadRing.c \
+    ../../src/async/async.c \
+    ../../arch/async/linux-amd64/async.c \
     -lm -o demo
 
 if [ $? -eq 0 ]; then echo "Build complete: demo"; fi
