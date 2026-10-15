@@ -379,24 +379,26 @@ void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 }
 
 void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
-							   size_t n_rows, size_t row_len, size_t row_stride)
+                               size_t n_rows, size_t row_len, size_t row_stride)
 {
-	size_t d = 0;
-	for (; d + 8 <= row_len; d += 8) {
-		__m256 acc = _mm256_setzero_ps();
-		for (size_t t = 0; t < n_rows; t++) {
-			__m256 w = _mm256_set1_ps(wgt[t]);
-			acc = _mm256_fmadd_ps(w, _mm256_loadu_ps(x + t * row_stride + d),
-								  acc);
-		}
-		_mm256_storeu_ps(out + d, acc);
-	}
-	for (; d < row_len; d++) {
-		float acc = 0.0f;
-		for (size_t t = 0; t < n_rows; t++)
-			acc += wgt[t] * x[t * row_stride + d];
-		out[d] = acc;
-	}
+    size_t d = 0;
+    for (; d + 8 <= row_len; d += 8)
+        _mm256_storeu_ps(out + d, _mm256_setzero_ps());
+    for (; d < row_len; d++)
+        out[d] = 0.0f;
+
+    for (size_t t = 0; t < n_rows; t++) {
+        __m256 w = _mm256_set1_ps(wgt[t]);
+        const float *xr = x + t * row_stride;
+        d = 0;
+        for (; d + 8 <= row_len; d += 8) {
+            __m256 acc = _mm256_loadu_ps(out + d);
+            acc = _mm256_fmadd_ps(w, _mm256_loadu_ps(xr + d), acc);
+            _mm256_storeu_ps(out + d, acc);
+        }
+        for (; d < row_len; d++)
+            out[d] += wgt[t] * xr[d];
+    }
 }
 
 void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)
