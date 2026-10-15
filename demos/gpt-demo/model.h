@@ -91,7 +91,7 @@ typedef struct Model {
 	void *ctx_out_norm;
 	void *ctx_logits;
 	void **ctx_norms;              /* [n_layers] CtxRmsNorm (pre-attn) */
-	void **ctx_q;                  /* [n_layers] CtxMatvecQ8 */
+	void **ctx_q;                  /* [n_layers*4] CtxMatvecQ8Shard */
 	void **ctx_k;                  /* [n_layers] CtxMatvecQ8 */
 	void **ctx_v;                  /* [n_layers] CtxMatvecQ8 */
 	void **ctx_rq;                 /* [n_layers] CtxRotary */
@@ -99,14 +99,11 @@ typedef struct Model {
 	void **ctx_kv;                 /* [n_layers] CtxKvStore */
 	void **ctx_attn;               /* [n_layers] CtxAttention */
 	void **ctx_attn_groups;        /* [n_layers*4] CtxAttentionGroup (head shards) */
-	void **ctx_o;                  /* [n_layers] CtxMatvecQ8 */
-	void **ctx_res;                /* [n_layers] CtxAdd */
-	void **ctx_copy_attn;          /* [n_layers] CtxAdd */
-	void **ctx_norms2;             /* [n_layers] CtxRmsNorm (post-attn) */
+	void **ctx_o;                  /* [n_layers*4] CtxMatvecQ8Shard */
+	void **ctx_post_attn;          /* [n_layers] CtxPostAttn */
 	void **ctx_router;             /* [n_layers] CtxRouter */
 	void **ctx_expert;             /* [n_layers*4] CtxExpert */
-	void **ctx_acc;                /* [n_layers] CtxExpertAccum */
-	void **ctx_copy_res;           /* [n_layers] CtxAdd */
+	void **ctx_post_moe;           /* [n_layers] CtxPostMoe */
 	void **ctx_output_groups;      /* [4] CtxOutputGroup (vocab shards) */
 } Model;
 

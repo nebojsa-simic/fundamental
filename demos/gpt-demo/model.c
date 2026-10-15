@@ -124,6 +124,32 @@ typedef struct {
 	size_t n;
 } CtxAdd;
 
+/* Fused post-attention block: hidden = residual + proj, snapshot attn_res =
+ * hidden, then hidden_normed = rms_norm(hidden). Fuses the three serial
+ * elementwise steps that follow the O projection into one task. */
+typedef struct {
+	float *residual;         /* in [n] */
+	float *proj;             /* in [n] */
+	float *hidden;           /* out [n] */
+	float *attn_res;         /* out [n] */
+	const float *norm_weight;/* in [n] */
+	float *normed;           /* out [n] */
+	size_t n;
+	float eps;
+} CtxPostAttn;
+
+/* Fused post-MoE block: mix the 4 expert outputs by routing weights, add the
+ * attention residual, and write the result to both hidden and residual. Fuses
+ * the expert-accumulate and residual-copy steps. */
+typedef struct {
+	float *dv0, *dv1, *dv2, *dv3; /* in [n] per-expert outputs */
+	float *rweights;              /* in [4] routing weights */
+	float *attn_res;              /* in [n] */
+	float *hidden;                /* out [n] */
+	float *residual;              /* out [n] */
+	size_t n;
+} CtxPostMoe;
+
 /* Router task: computes the per-expert logits, keeps the top-k experts, and
  * softmaxes their logits into routing weights. */
 typedef struct {
@@ -158,18 +184,6 @@ typedef struct {
 	int *topk;             /* which experts were routed (indexed by expert_idx) */
 	int expert_idx;        /* 0..3, which slot of topk this task serves */
 } CtxExpert;
-
-/* Expert accumulation task: mixes the 4 expert outputs by their routing weights
- * and adds the attention residual back in to produce the next hidden state. */
-typedef struct {
-	float *dv0, *dv1, *dv2, *dv3; /* per-expert outputs [hs] */
-	float *rweights;              /* [4] routing weights */
-	int *topk;
-	float *hidden;       /* out [hs]: attn_res + weighted expert sum */
-	float *expert_out;   /* scratch [hs] */
-	float *attn_res;     /* in [hs]: attention residual */
-	size_t hs;
-} CtxExpertAccum;
 
 /* Token embedding task: dequantizes the Q8_0 embedding row for token_id into
  * hidden[0..hs). emb_stride is the byte stride between rows. */
@@ -341,16 +355,6 @@ static void _exec_attention_group(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
-/* Elementwise add: out[i] = a[i] + b[i] (residual connections). */
-static void _exec_add(void *ctx)
-{
-	fun_trace_span_begin(SPAN_ATTENTION);
-	CtxAdd *c = (CtxAdd *)ctx;
-	for (size_t i = 0; i < c->n; i++)
-		c->out[i] = c->a[i] + c->b[i];
-	fun_trace_span_end(SPAN_ATTENTION);
-}
-
 /* Elementwise copy: out[i] = a[i] (snapshot of a buffer for later use). */
 static void _exec_copy(void *ctx)
 {
@@ -358,6 +362,36 @@ static void _exec_copy(void *ctx)
 	CtxAdd *c = (CtxAdd *)ctx;
 	for (size_t i = 0; i < c->n; i++)
 		c->out[i] = c->a[i];
+	fun_trace_span_end(SPAN_ATTENTION);
+}
+
+/* Fused post-attention block (see CtxPostAttn). */
+static void _exec_post_attn(void *ctx)
+{
+	fun_trace_span_begin(SPAN_ATTENTION);
+	CtxPostAttn *c = (CtxPostAttn *)ctx;
+	for (size_t i = 0; i < c->n; i++) {
+		float h = c->residual[i] + c->proj[i];
+		c->hidden[i] = h;
+		c->attn_res[i] = h;
+	}
+	fun_math_rms_norm_f32(c->hidden, c->norm_weight, c->normed, c->n, c->eps);
+	fun_trace_span_end(SPAN_ATTENTION);
+}
+
+/* Fused post-MoE block (see CtxPostMoe). */
+static void _exec_post_moe(void *ctx)
+{
+	fun_trace_span_begin(SPAN_ATTENTION);
+	CtxPostMoe *c = (CtxPostMoe *)ctx;
+	const float *dv[4] = { c->dv0, c->dv1, c->dv2, c->dv3 };
+	for (size_t i = 0; i < c->n; i++) {
+		float e = c->rweights[0] * dv[0][i] + c->rweights[1] * dv[1][i] +
+				  c->rweights[2] * dv[2][i] + c->rweights[3] * dv[3][i];
+		float h = c->attn_res[i] + e;
+		c->hidden[i] = h;
+		c->residual[i] = h;
+	}
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -369,13 +403,8 @@ static void _exec_router(void *ctx)
 	fun_trace_span_begin(SPAN_ROUTER);
 	CtxRouter *c = (CtxRouter *)ctx;
 	int n_exp = c->n_exp;
-	int hs = c->hs;
-	for (int e = 0; e < n_exp; e++) {
-		float s = 0.0f;
-		for (int i = 0; i < hs; i++)
-			s += c->router_w[e * hs + i] * c->x[i];
-		c->rlog[e] = s + c->router_b[e];
-	}
+	fun_math_matrix_vector_f32(c->router_w, c->x, c->router_b, c->rlog,
+							   (size_t)n_exp, (size_t)c->hs);
 	int topk = c->topk_n;
 	int top[4] = { 0, 0, 0, 0 };
 	float topv[4] = { -1e30f, -1e30f, -1e30f, -1e30f };
@@ -466,26 +495,6 @@ static void _exec_expert(void *ctx)
 	fun_math_matrix_vector_mxfp4_f32(dw, c->mid, db, c->dv, hs, ffn);
 	fun_trace_span_attribute_i64(SPAN_EXPERT, "expert_idx", c->expert_idx);
 	fun_trace_span_end(SPAN_EXPERT);
-}
-
-/* Combine the 4 expert outputs and finish the MoE block:
- *  - expert_out = sum_e rweights[e] * dv[e]
- *  - hidden = attn_res + expert_out   (residual + expert contribution) */
-static void _exec_expert_accum(void *ctx)
-{
-	fun_trace_span_begin(SPAN_ATTENTION);
-	CtxExpertAccum *c = (CtxExpertAccum *)ctx;
-	float *dv[4] = { c->dv0, c->dv1, c->dv2, c->dv3 };
-	for (size_t i = 0; i < c->hs; i++)
-		c->expert_out[i] = 0.0f;
-	for (int ex = 0; ex < 4; ex++) {
-		float w = c->rweights[ex];
-		for (size_t i = 0; i < c->hs; i++)
-			c->expert_out[i] += w * dv[ex][i];
-	}
-	for (size_t i = 0; i < c->hs; i++)
-		c->hidden[i] = c->attn_res[i] + c->expert_out[i];
-	fun_trace_span_end(SPAN_ATTENTION);
 }
 
 /* Dequantize the token embedding row for token_id from Q8_0 into hidden. */
@@ -950,15 +959,11 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	m->ctx_rk = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_kv = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_o = fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
-	m->ctx_res = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_copy_attn =
-		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_norms2 =
+	m->ctx_post_attn =
 		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_router =
 		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_acc = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_copy_res =
+	m->ctx_post_moe =
 		fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_expert =
 		fun_memory_allocate((size_t)n_layers * 4 * sizeof(void *)).value;
@@ -1135,42 +1140,22 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 				fun_compute_task_depends_on(m->graph, t_o_sh[os], t_attn_h[hg]);
 		}
 
-		FunComputeTask *t_res = &m->tasks[ti++];
-		m->ctx_res[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_res[l] = (CtxAdd){
-			.a = s->residual,
-			.b = s->proj,
-			.out = s->hidden,
-			.n = m->config.hidden_size,
-		};
-		fun_compute_graph_add_task(m->graph, t_res, _exec_add, m->ctx_res[l],
-								   NULL, NULL);
-		for (int os = 0; os < 4; os++)
-			fun_compute_task_depends_on(m->graph, t_res, t_o_sh[os]);
-
-		FunComputeTask *t_copy_attn = &m->tasks[ti++];
-		m->ctx_copy_attn[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_copy_attn[l] = (CtxAdd){
-			.a = s->hidden,
-			.out = s->attn_res,
-			.n = m->config.hidden_size,
-		};
-		fun_compute_graph_add_task(m->graph, t_copy_attn, _exec_copy,
-								   m->ctx_copy_attn[l], NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_copy_attn, t_res);
-
-		FunComputeTask *t_norm2 = &m->tasks[ti++];
-		m->ctx_norms2[l] = fun_memory_allocate(sizeof(CtxRmsNorm)).value;
-		*(CtxRmsNorm *)m->ctx_norms2[l] = (CtxRmsNorm){
-			.x = s->hidden,
-			.weight = w->post_attn_norm_weight,
-			.out = s->hidden_normed,
+		FunComputeTask *t_post_attn = &m->tasks[ti++];
+		m->ctx_post_attn[l] = fun_memory_allocate(sizeof(CtxPostAttn)).value;
+		*(CtxPostAttn *)m->ctx_post_attn[l] = (CtxPostAttn){
+			.residual = s->residual,
+			.proj = s->proj,
+			.hidden = s->hidden,
+			.attn_res = s->attn_res,
+			.norm_weight = w->post_attn_norm_weight,
+			.normed = s->hidden_normed,
 			.n = m->config.hidden_size,
 			.eps = m->config.rms_norm_eps,
 		};
-		fun_compute_graph_add_task(m->graph, t_norm2, _exec_rms_norm,
-								   m->ctx_norms2[l], NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_norm2, t_copy_attn);
+		fun_compute_graph_add_task(m->graph, t_post_attn, _exec_post_attn,
+								   m->ctx_post_attn[l], NULL, NULL);
+		for (int os = 0; os < 4; os++)
+			fun_compute_task_depends_on(m->graph, t_post_attn, t_o_sh[os]);
 
 		FunComputeTask *t_router = &m->tasks[ti++];
 		m->ctx_router[l] = fun_memory_allocate(sizeof(CtxRouter)).value;
@@ -1187,7 +1172,7 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		};
 		fun_compute_graph_add_task(m->graph, t_router, _exec_router,
 								   m->ctx_router[l], NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_router, t_norm2);
+		fun_compute_task_depends_on(m->graph, t_router, t_post_attn);
 
 		FunComputeTask *t_e[4];
 		for (int e = 0; e < 4; e++) {
@@ -1217,39 +1202,26 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 			fun_compute_task_depends_on(m->graph, t_e[e], t_router);
 		}
 
-		FunComputeTask *t_acc = &m->tasks[ti++];
-		m->ctx_acc[l] = fun_memory_allocate(sizeof(CtxExpertAccum)).value;
-		*(CtxExpertAccum *)m->ctx_acc[l] = (CtxExpertAccum){
+		FunComputeTask *t_post_moe = &m->tasks[ti++];
+		m->ctx_post_moe[l] = fun_memory_allocate(sizeof(CtxPostMoe)).value;
+		*(CtxPostMoe *)m->ctx_post_moe[l] = (CtxPostMoe){
 			.dv0 = s->dv[0],
 			.dv1 = s->dv[1],
 			.dv2 = s->dv[2],
 			.dv3 = s->dv[3],
 			.rweights = s->rweights,
-			.topk = s->topk,
-			.hidden = s->hidden,
-			.expert_out = s->expert_out,
 			.attn_res = s->attn_res,
-			.hs = m->config.hidden_size,
-		};
-		fun_compute_graph_add_task(m->graph, t_acc, _exec_expert_accum,
-								   m->ctx_acc[l], NULL, NULL);
-		fun_compute_task_depends_on(m->graph, t_acc, t_router);
-		for (int e = 0; e < 4; e++)
-			fun_compute_task_depends_on(m->graph, t_acc, t_e[e]);
-
-		FunComputeTask *t_copy_res = &m->tasks[ti++];
-		m->ctx_copy_res[l] = fun_memory_allocate(sizeof(CtxAdd)).value;
-		*(CtxAdd *)m->ctx_copy_res[l] = (CtxAdd){
-			.a = s->hidden,
-			.b = s->residual,
-			.out = s->residual,
+			.hidden = s->hidden,
+			.residual = s->residual,
 			.n = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_copy_res, _exec_copy,
-								   m->ctx_copy_res[l], _bind_residual, NULL);
-		fun_compute_task_depends_on(m->graph, t_copy_res, t_acc);
+		fun_compute_graph_add_task(m->graph, t_post_moe, _exec_post_moe,
+								   m->ctx_post_moe[l], NULL, NULL);
+		fun_compute_task_depends_on(m->graph, t_post_moe, t_router);
+		for (int e = 0; e < 4; e++)
+			fun_compute_task_depends_on(m->graph, t_post_moe, t_e[e]);
 
-		prev_layer_tail = t_copy_res;
+		prev_layer_tail = t_post_moe;
 	}
 
 	FunComputeTask *t_out_norm = &m->tasks[ti++];
@@ -1359,18 +1331,12 @@ void model_free(Model *m)
 		for (int os = 0; os < 4; os++)
 			if (m->ctx_o && m->ctx_o[l * 4 + os])
 				fun_memory_free((Memory *)&m->ctx_o[l * 4 + os]);
-		if (m->ctx_res && m->ctx_res[l])
-			fun_memory_free((Memory *)&m->ctx_res[l]);
-		if (m->ctx_copy_attn && m->ctx_copy_attn[l])
-			fun_memory_free((Memory *)&m->ctx_copy_attn[l]);
-		if (m->ctx_norms2 && m->ctx_norms2[l])
-			fun_memory_free((Memory *)&m->ctx_norms2[l]);
+		if (m->ctx_post_attn && m->ctx_post_attn[l])
+			fun_memory_free((Memory *)&m->ctx_post_attn[l]);
 		if (m->ctx_router && m->ctx_router[l])
 			fun_memory_free((Memory *)&m->ctx_router[l]);
-		if (m->ctx_acc && m->ctx_acc[l])
-			fun_memory_free((Memory *)&m->ctx_acc[l]);
-		if (m->ctx_copy_res && m->ctx_copy_res[l])
-			fun_memory_free((Memory *)&m->ctx_copy_res[l]);
+		if (m->ctx_post_moe && m->ctx_post_moe[l])
+			fun_memory_free((Memory *)&m->ctx_post_moe[l]);
 		for (int e = 0; e < 4; e++)
 			if (m->ctx_expert && m->ctx_expert[l * 4 + e])
 				fun_memory_free((Memory *)&m->ctx_expert[l * 4 + e]);
@@ -1386,12 +1352,9 @@ void model_free(Model *m)
 	fun_memory_free((Memory *)&m->ctx_rk);
 	fun_memory_free((Memory *)&m->ctx_kv);
 	fun_memory_free((Memory *)&m->ctx_o);
-	fun_memory_free((Memory *)&m->ctx_res);
-	fun_memory_free((Memory *)&m->ctx_copy_attn);
-	fun_memory_free((Memory *)&m->ctx_norms2);
+	fun_memory_free((Memory *)&m->ctx_post_attn);
 	fun_memory_free((Memory *)&m->ctx_router);
-	fun_memory_free((Memory *)&m->ctx_acc);
-	fun_memory_free((Memory *)&m->ctx_copy_res);
+	fun_memory_free((Memory *)&m->ctx_post_moe);
 	if (m->ctx_expert)
 		fun_memory_free((Memory *)&m->ctx_expert);
 	if (m->ctx_attn_groups)
