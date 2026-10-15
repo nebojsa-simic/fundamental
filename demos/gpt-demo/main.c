@@ -15,6 +15,11 @@
 #define MAX_SEQ 1024
 #define MAX_PROMPT_BYTES 16384
 
+static void _trace_output(const char *line)
+{
+	fun_console_write_line(line);
+}
+
 /* Read a prompt text file into out (NUL-terminated), trimming surrounding
  * whitespace. Returns 0 on success, -1 if the file can't be opened or is empty.
  * Uses the stream API so the file size need not be known up front. */
@@ -73,7 +78,7 @@ int main(int argc, char **argv)
 {
 	if (argc < 2) {
 		fun_console_write_line(
-			"Usage: demo.exe \"your prompt\" [--threads N] [--prompt-file FILE]");
+			"Usage: demo.exe \"your prompt\" [--threads N] [--prompt-file FILE] [--trace]");
 		fun_console_write_line(
 			"       demo.exe --prompt-file prompts/prompt.txt [--threads N]");
 		return 1;
@@ -81,10 +86,12 @@ int main(int argc, char **argv)
 
 	fun_math_init();
 
-	/* Parse the prompt (positional) plus the --threads / --prompt-file flags. */
+	/* Parse the prompt (positional) plus the --threads / --prompt-file / --trace
+	 * flags. */
 	const char *prompt = NULL;
 	const char *prompt_file = NULL;
 	int n_threads = 4;
+	bool do_trace = false;
 	for (int i = 1; i < argc; i++) {
 		if (fun_string_compare(argv[i], "--threads") == 0 && i + 1 < argc) {
 			n_threads = 0;
@@ -94,6 +101,8 @@ int main(int argc, char **argv)
 		} else if (fun_string_compare(argv[i], "--prompt-file") == 0 &&
 				   i + 1 < argc) {
 			prompt_file = argv[++i];
+		} else if (fun_string_compare(argv[i], "--trace") == 0) {
+			do_trace = true;
 		} else if (!prompt) {
 			prompt = argv[i];
 		}
@@ -128,6 +137,13 @@ int main(int argc, char **argv)
 
 	Tokenizer tok;
 	tokenizer_load(&tok, gguf);
+
+	/* Trace must be initialized before model_load(): model_load registers the
+	 * span names, and those registration calls no-op if no tracer is active. */
+	size_t trace_sz = fun_trace_memory_required(16);
+	Memory trace_mem = fun_memory_allocate(trace_sz).value;
+	if (do_trace)
+		fun_trace_init(trace_mem, trace_sz, 16);
 
 	Model model;
 	model_load(&model, gguf, "../../models/openai_gpt-oss-20b-MXFP4.gguf",
@@ -217,8 +233,16 @@ int main(int argc, char **argv)
 	fun_string_template("  Time (seconds): %{seconds}, Tokens: #{generated}, tok/s: %{toks_per_sec}", final_params, 3, output, 512);
 	fun_console_write_line(output);
 
+	if (do_trace) {
+		fun_console_write_line("");
+		fun_console_write_line("  === Trace Report ===");
+		fun_trace_report(_trace_output);
+	}
+
 	model_free(&model);
 	fun_gguf_close(gguf);
+	fun_trace_destroy();
+	fun_memory_free(&trace_mem);
 
 	return 0;
 }
