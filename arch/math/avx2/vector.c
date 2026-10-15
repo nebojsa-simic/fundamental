@@ -77,7 +77,7 @@ static inline float __attribute__((always_inline)) _mm256_hsum_ps(__m256 v)
 	return _mm_cvtss_f32(sum);
 }
 
-void fun_math_silu_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_silu_f32(const float *x, float *out, size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -88,7 +88,7 @@ void fun_math_silu_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_silu(x[i]);
 }
 
-void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
+__attribute__((weak)) void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
 						 size_t n)
 {
 	size_t i = 0;
@@ -104,7 +104,7 @@ void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
 	}
 }
 
-void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
+__attribute__((weak)) void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
 						   size_t n, float eps)
 {
 	__m256 ss = _mm256_setzero_ps();
@@ -128,7 +128,7 @@ void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
 		out[i] = x[i] * scale * weight[i];
 }
 
-void fun_math_softmax_f32(float *x, size_t n)
+__attribute__((weak)) void fun_math_softmax_f32(float *x, size_t n)
 {
 	if (n == 0)
 		return;
@@ -228,7 +228,7 @@ static inline __m256 __attribute__((always_inline)) _mm256_sin_ps(__m256 x)
 							negate);
 }
 
-void fun_math_matrix_vector_f32(const float *w, const float *x,
+__attribute__((weak)) void fun_math_matrix_vector_f32(const float *w, const float *x,
 								const float *bias, float *out, size_t rows,
 								size_t cols)
 {
@@ -246,7 +246,7 @@ void fun_math_matrix_vector_f32(const float *w, const float *x,
 	}
 }
 
-float fun_math_dot_f32(const float *a, const float *b, size_t n)
+__attribute__((weak)) float fun_math_dot_f32(const float *a, const float *b, size_t n)
 {
 	__m256 sum = _mm256_setzero_ps();
 	size_t i = 0;
@@ -259,7 +259,7 @@ float fun_math_dot_f32(const float *a, const float *b, size_t n)
 	return s;
 }
 
-void fun_math_exp_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_exp_f32(const float *x, float *out, size_t n)
 {
 	size_t i = 0;
 	__m256 lo = _mm256_set1_ps(-87.3365f);
@@ -284,7 +284,7 @@ void fun_math_exp_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_exp(x[i]);
 }
 
-void fun_math_log_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_log_f32(const float *x, float *out, size_t n)
 {
 	size_t i = 0;
 	__m256 pneginf = _mm256_castsi256_ps(_mm256_set1_epi32(0xFF800000));
@@ -312,7 +312,7 @@ void fun_math_log_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_log(x[i]);
 }
 
-void fun_math_sin_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_sin_f32(const float *x, float *out, size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8)
@@ -321,7 +321,7 @@ void fun_math_sin_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_sin(x[i]);
 }
 
-void fun_math_cos_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_cos_f32(const float *x, float *out, size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -333,7 +333,7 @@ void fun_math_cos_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_cos(x[i]);
 }
 
-void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
+__attribute__((weak)) void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
 						 float *out, size_t n_heads, size_t half)
 {
 	for (size_t h = 0; h < n_heads; h++) {
@@ -359,7 +359,7 @@ void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
 	}
 }
 
-void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
+__attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 						   size_t n_rows, size_t row_len, size_t row_stride,
 						   float scale)
 {
@@ -378,7 +378,7 @@ void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 	}
 }
 
-void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
+__attribute__((weak)) void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
                                size_t n_rows, size_t row_len, size_t row_stride)
 {
     size_t d = 0;
