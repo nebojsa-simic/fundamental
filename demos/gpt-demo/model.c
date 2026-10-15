@@ -17,64 +17,74 @@ static FunSpanId SPAN_OUTPUT;
 static FunSpanId SPAN_EMBED;
 static FunSpanId SPAN_ROPE;
 
+/* Per-submit dynamic state passed through fun_compute_graph_submit to each
+ * task's bind callback. token_id and pos change every forward step; everything
+ * else in the task contexts is static across steps. */
 typedef struct {
 	int token_id;
 	int pos;
 } SubmitCtx;
 
+/* RMS-norm task context: out[i] = x[i] / sqrt(mean(x^2) + eps) * weight[i]. */
 typedef struct {
-	float *x;
-	const float *weight;
-	float *out;
+	float *x;             /* in [n], also the residual input */
+	const float *weight;  /* in [n] gain */
+	float *out;           /* out [n] */
 	size_t n;
 	float eps;
-	LayerWeights *layer;
-	GGufFile *gguf;
-	int layer_idx;
 } CtxRmsNorm;
 
+/* Q8_0 matvec task context: out = W·x + bias. w is the packed Q8_0 weight
+ * matrix (rows x cols, raw pointer into the GGUF blob); bias is an f32 bias
+ * vector [rows], may be NULL. */
 typedef struct {
-	const float **w_ptr;
-	const float **bias_ptr;
-	float *x;
-	float *out;
+	const uint8_t *w;      /* weight matrix, rows x cols packed Q8_0 */
+	const float *bias;     /* bias vector [rows], may be NULL */
+	float *x;              /* input [cols] */
+	float *out;            /* output [rows] */
 	size_t rows;
 	size_t cols;
-	LayerWeights *layer;
-	GGufFile *gguf;
-} CtxMatvecF32;
+} CtxMatvecQ8;
 
+/* Rotary-position task context: applies per-head RoPE to x in place. cos/sin
+ * are the per-half-dim rotation tables precomputed by _exec_rope_pre. */
 typedef struct {
-	float *x;
-	const float *cos;
-	const float *sin;
+	float *x;              /* in/out [n_heads * 2*half] */
+	const float *cos;      /* [half] */
+	const float *sin;      /* [half] */
 	size_t n_heads;
-	size_t half;
+	size_t half;           /* head_dim / 2 */
 } CtxRotary;
 
+/* KV-cache store task: writes this token's rotated K and V into the layer's
+ * cache at row pos. kv_dim = n_kv_heads * head_dim. */
 typedef struct {
-	float *kbuf;
-	float *vbuf;
-	float *kcache;
-	float *vcache;
+	float *kbuf;     /* in [kv_dim] */
+	float *vbuf;     /* in [kv_dim] */
+	float *kcache;   /* out [max_seq][kv_dim], row pos written */
+	float *vcache;   /* out [max_seq][kv_dim], row pos written */
 	size_t kv_dim;
 	int pos;
 } CtxKvStore;
 
+/* Attention task (whole-layer variant): scores q against all cached keys up to
+ * pos, applies attention-sink bias and softmax, then weights cached values. */
 typedef struct {
-	float *qbuf;
-	float *attn_out;
-	float *kcache;
-	float *vcache;
-	const float *sinks;
+	float *qbuf;       /* in [n_heads * hd] */
+	float *attn_out;   /* out [n_heads * hd] */
+	float *kcache;     /* [max_seq][n_kv*hd] */
+	float *vcache;     /* [max_seq][n_kv*hd] */
+	const float *sinks;/* [n_heads] */
 	int pos;
 	int n_heads;
 	int n_kv;
 	int hd;
 	float inv_sqrt_hd;
-	float *scores;
+	float *scores;     /* scratch [max_seq+2] */
 } CtxAttention;
 
+/* Attention task sharded over a contiguous range of query heads [head_start,
+ * head_end). Each shard is an independent task so 4 heads can run in parallel. */
 typedef struct {
 	float *qbuf;
 	float *attn_out;
@@ -91,83 +101,95 @@ typedef struct {
 	float *scores;
 } CtxAttentionGroup;
 
+/* Elementwise add or copy task (reused for residual adds and buffer copies via
+ * _exec_add / _exec_copy). */
 typedef struct {
 	float *a;
-	float *b;
+	float *b;    /* may alias a */
 	float *out;
 	size_t n;
 } CtxAdd;
 
+/* Router task: computes the per-expert logits, keeps the top-k experts, and
+ * softmaxes their logits into routing weights. */
 typedef struct {
-	const float *router_w;
-	const float *router_b;
-	float *x;
-	int *topk;
-	float *rlog;
-	float *rweights;
+	const float *router_w; /* [n_exp][hs] */
+	const float *router_b; /* [n_exp] */
+	float *x;              /* input [hs] */
+	int *topk;             /* out [topk_n] expert indices */
+	float *rlog;           /* scratch [n_exp] raw logits */
+	float *rweights;       /* out [topk_n] softmax weights */
 	int n_exp;
 	int topk_n;
 	int hs;
 } CtxRouter;
 
+/* Expert task: runs one selected expert's SwiGLU MLP. Weights are MXFP4-packed
+ * (17 bytes / 32 elements). hidden_in is the post-attn RMS-normed residual. */
 typedef struct {
-	const uint8_t *gate_w;
-	const uint8_t *up_w;
-	const uint8_t *down_w;
-	const float *gate_b;
-	const float *up_b;
-	const float *down_b;
-	float *hidden_in;
-	float *gv;
-	float *uv;
-	float *mid;
-	float *eg;
-	float *dv;
+	const uint8_t *gate_w; /* [n_experts][ffn][hs] packed MXFP4 */
+	const uint8_t *up_w;   /* [n_experts][ffn][hs] packed MXFP4 */
+	const uint8_t *down_w; /* [n_experts][hs][ffn] packed MXFP4 */
+	const float *gate_b;   /* [n_experts][ffn] */
+	const float *up_b;     /* [n_experts][ffn] */
+	const float *down_b;   /* [n_experts][hs] */
+	float *hidden_in;      /* input [hs] */
+	float *gv;             /* scratch [ffn] gate act = gate·x+b */
+	float *uv;             /* scratch [ffn] up act = up·x+b */
+	float *mid;            /* scratch [ffn] SwiGLU output */
+	float *eg;             /* scratch [ffn] exp(-1.702·clamp(g)) */
+	float *dv;             /* out [hs] down·mid + down_b */
 	size_t ffn;
 	size_t hs;
-	int *topk;
-	int expert_idx;
+	int *topk;             /* which experts were routed (indexed by expert_idx) */
+	int expert_idx;        /* 0..3, which slot of topk this task serves */
 } CtxExpert;
 
+/* Expert accumulation task: mixes the 4 expert outputs by their routing weights
+ * and adds the attention residual back in to produce the next hidden state. */
 typedef struct {
-	float *dv0;
-	float *dv1;
-	float *dv2;
-	float *dv3;
-	float *rweights;
+	float *dv0, *dv1, *dv2, *dv3; /* per-expert outputs [hs] */
+	float *rweights;              /* [4] routing weights */
 	int *topk;
-	float *hidden;
-	float *expert_out;
-	float *attn_res;
+	float *hidden;       /* out [hs]: attn_res + weighted expert sum */
+	float *expert_out;   /* scratch [hs] */
+	float *attn_res;     /* in [hs]: attention residual */
 	size_t hs;
 } CtxExpertAccum;
 
+/* Token embedding task: dequantizes the Q8_0 embedding row for token_id into
+ * hidden[0..hs). emb_stride is the byte stride between rows. */
 typedef struct {
-	const uint8_t *embeddings;
+	const uint8_t *embeddings; /* vocab x hs packed Q8_0 */
 	size_t emb_stride;
-	float *hidden;
+	float *hidden;             /* out [hs] */
 	size_t hs;
 	int token_id;
 } CtxEmbed;
 
+/* RoPE precompute task: fills cos/sin rotation tables for position pos using
+ * the precomputed inverse frequencies, scaled by mscale (YaRN length factor). */
 typedef struct {
-	float *theta;
-	float *cos;
-	float *sin;
-	const float *rope_pre;
+	float *theta;         /* scratch [half] = pos * rope_pre */
+	float *cos;           /* out [half] */
+	float *sin;           /* out [half] */
+	const float *rope_pre;/* [half] */
 	size_t half;
 	float mscale;
 	int pos;
 } CtxRopePre;
 
+/* Output projection (whole-vocab variant): logits = output_weight · x. */
 typedef struct {
-	const uint8_t *w;
-	float *x;
-	float *out;
+	const uint8_t *w; /* vocab x hs packed Q8_0 */
+	float *x;         /* input [hs] */
+	float *out;       /* out [vocab] */
 	size_t vocab;
 	size_t hs;
 } CtxOutputProj;
 
+/* Output projection sharded over vocabulary rows [row_start, row_end), so the
+ * full 201088-row output matvec is split into 4 parallel tasks. */
 typedef struct {
 	const uint8_t *w;
 	float *x;
@@ -178,104 +200,62 @@ typedef struct {
 	size_t hs;
 } CtxOutputGroup;
 
+/* All per-token working buffers, shared across the whole graph (one pass
+ * reuses the same hidden/attn/expert buffers layer after layer). The [4]
+ * arrays give each expert / attention shard its own slice so they can run in
+ * parallel without stepping on each other. */
 typedef struct {
-	float *hidden;
-	float *residual;
-	float *attn_res;
-	float *hidden_normed;
-	float *expert_out;
-	float *qbuf;
-	float *kbuf;
-	float *vbuf;
-	float *attn;
-	float *proj;
-	float *scores[4];
-	float *gv[4];
-	float *uv[4];
-	float *mid[4];
-	float *eg[4];
-	float *dv[4];
-	float *rlog;
-	int *topk;
-	float *rweights;
-	float *theta;
-	float *cos;
-	float *sin;
+	float *hidden;        /* [hs]: running hidden state */
+	float *residual;      /* [hs]: residual stream */
+	float *attn_res;      /* [hs]: attention residual saved for MoE add */
+	float *hidden_normed; /* [hs]: RMS-norm output */
+	float *expert_out;    /* [hs]: weighted expert sum */
+	float *qbuf;          /* [q_dim] */
+	float *kbuf;          /* [kv_dim] */
+	float *vbuf;          /* [kv_dim] */
+	float *attn;          /* [q_dim]: attention output */
+	float *proj;          /* [hs]: O-projection output */
+	float *scores[4];     /* [MAX_SEQ+2] per attention shard */
+	float *gv[4];         /* [ffn] per expert */
+	float *uv[4];         /* [ffn] per expert */
+	float *mid[4];        /* [ffn] per expert */
+	float *eg[4];         /* [ffn] per expert */
+	float *dv[4];         /* [hs] per expert */
+	float *rlog;          /* [n_experts] */
+	int *topk;            /* [4] */
+	float *rweights;      /* [4] */
+	float *theta;         /* [half] */
+	float *cos;           /* [half] */
+	float *sin;           /* [half] */
 } Scratch;
 
-static void dequant_layer(LayerWeights *w, GGufFile *gguf, int layer_idx)
-{
-	char buf[256];
-	int pre_len;
-	fun_string_copy("blk.", buf, 256);
-	pre_len = (int)fun_string_length(buf);
-	fun_string_from_int(layer_idx, 10, buf + pre_len, 256 - pre_len);
-	pre_len = (int)fun_string_length(buf);
-	fun_string_copy(buf, w->name_prefix, 64);
-
-	fun_string_copy(".attn_q.weight", buf + pre_len, 256 - pre_len);
-	w->q_weight =
-		(float *)fun_memory_allocate(64 * 64 * 2880 * sizeof(float)).value;
-	fun_gguf_dequant_q8_0(gguf, buf, w->q_weight);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_q.bias", buf + pre_len, 256 - pre_len);
-	w->q_bias = (float *)fun_memory_allocate(64 * 64 * sizeof(float)).value;
-	fun_gguf_dequant_f32(gguf, buf, w->q_bias);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_k.weight", buf + pre_len, 256 - pre_len);
-	w->k_weight =
-		(float *)fun_memory_allocate(8 * 64 * 2880 * sizeof(float)).value;
-	fun_gguf_dequant_q8_0(gguf, buf, w->k_weight);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_k.bias", buf + pre_len, 256 - pre_len);
-	w->k_bias = (float *)fun_memory_allocate(8 * 64 * sizeof(float)).value;
-	fun_gguf_dequant_f32(gguf, buf, w->k_bias);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_v.weight", buf + pre_len, 256 - pre_len);
-	w->v_weight =
-		(float *)fun_memory_allocate(8 * 64 * 2880 * sizeof(float)).value;
-	fun_gguf_dequant_q8_0(gguf, buf, w->v_weight);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_v.bias", buf + pre_len, 256 - pre_len);
-	w->v_bias = (float *)fun_memory_allocate(8 * 64 * sizeof(float)).value;
-	fun_gguf_dequant_f32(gguf, buf, w->v_bias);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_output.weight", buf + pre_len, 256 - pre_len);
-	w->o_weight =
-		(float *)fun_memory_allocate(2880 * 64 * 64 * sizeof(float)).value;
-	fun_gguf_dequant_q8_0(gguf, buf, w->o_weight);
-
-	buf[pre_len] = '\0';
-	fun_string_copy(".attn_output.bias", buf + pre_len, 256 - pre_len);
-	w->o_bias = (float *)fun_memory_allocate(2880 * sizeof(float)).value;
-	fun_gguf_dequant_f32(gguf, buf, w->o_bias);
-}
-
+/* RMS-normalize the residual: out[i] = x[i] / rms(x) * weight[i]. */
 static void _exec_rms_norm(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxRmsNorm *c = (CtxRmsNorm *)ctx;
-	if (c->layer && !c->layer->q_weight)
-		dequant_layer(c->layer, c->gguf, c->layer_idx);
 	fun_math_rms_norm_f32(c->x, c->weight, c->out, c->n, c->eps);
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
-static void _exec_matvec_f32(void *ctx)
+/* Q8_0 matvec: out = W·x + bias.
+ * fun_math_q8_matrix_vector_f32 multiplies the Q8_0-packed matrix W
+ * (rows x cols) by column vector x (cols) into out (rows); the f32 bias
+ * (rows, may be NULL) is added afterwards. Used for Q/K/V (4096/512 x 2880)
+ * and the O projection (2880 x 4096). */
+static void _exec_matvec_q8(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
-	CtxMatvecF32 *c = (CtxMatvecF32 *)ctx;
-	fun_math_matrix_vector_f32(*c->w_ptr, c->x, *c->bias_ptr, c->out, c->rows,
-							   c->cols);
+	CtxMatvecQ8 *c = (CtxMatvecQ8 *)ctx;
+	fun_math_q8_matrix_vector_f32(c->w, c->x, c->out, c->rows, c->cols);
+	if (c->bias)
+		for (size_t i = 0; i < c->rows; i++)
+			c->out[i] += c->bias[i];
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* Apply RoPE to Q or K in place: for each head, pairs (x[2j], x[2j+1]) are
+ * rotated by angle cos[j]/sin[j]. x doubles as both input and output. */
 static void _exec_rotary(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -284,6 +264,8 @@ static void _exec_rotary(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* Copy this token's rotated K and V into the layer KV cache at row pos, so
+ * future tokens can attend to it. Elementwise loop over kv_dim entries. */
 static void _exec_kvstore(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -297,36 +279,13 @@ static void _exec_kvstore(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
-static void _exec_attention(void *ctx)
-{
-	fun_trace_span_begin(SPAN_ATTENTION);
-	CtxAttention *c = (CtxAttention *)ctx;
-	int pos = c->pos;
-	int n_h = c->n_heads;
-	int n_kv = c->n_kv;
-	int hd = c->hd;
-	int kv_dim = n_kv * hd;
-	int swa = 0;
-	int swa_len = 128;
-	float *scores = c->scores;
-	for (int h = 0; h < n_h; h++) {
-		int kvh = h * n_kv / n_h;
-		float *qh = c->qbuf + (size_t)h * (size_t)hd;
-		fun_math_rows_dot_f32(qh, c->kcache + kvh * hd, scores,
-							  (size_t)(pos + 1), (size_t)hd, (size_t)kv_dim,
-							  c->inv_sqrt_hd);
-		if (swa && pos >= swa_len)
-			for (int t = 0; t <= pos - swa_len; t++)
-				scores[t] = -1.0f / 0.0f;
-		scores[pos + 1] = c->sinks[h];
-		fun_math_softmax_f32(scores, (size_t)(pos + 2));
-		fun_math_weighted_sum_f32(scores, c->vcache + kvh * hd,
-								  c->attn_out + h * hd, (size_t)(pos + 1),
-								  (size_t)hd, (size_t)kv_dim);
-	}
-	fun_trace_span_end(SPAN_ATTENTION);
-}
-
+/* Attention for one shard of query heads. For each head h:
+ *  - rows_dot: scores[t] = dot(q[h], k_cache[kvh][t]) * inv_sqrt_hd for the
+ *    pos+1 cached positions (q/kv strides over the shared kv_dim rows).
+ *  - append the attention-sink bias scores[pos+1] = sinks[h].
+ *  - softmax over the pos+2 scores.
+ *  - weighted_sum: attn_out[h] = sum_t scores[t] * v_cache[kvh][t].
+ * kvh maps each query head to its GQA KV head via h * n_kv / n_heads. */
 static void _exec_attention_group(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -350,6 +309,7 @@ static void _exec_attention_group(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* Elementwise add: out[i] = a[i] + b[i] (residual connections). */
 static void _exec_add(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -359,6 +319,7 @@ static void _exec_add(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* Elementwise copy: out[i] = a[i] (snapshot of a buffer for later use). */
 static void _exec_copy(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -368,6 +329,9 @@ static void _exec_copy(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* MoE router: rlog[e] = dot(router_w[e], x) + router_b[e] for all experts,
+ * select the top-k by value (a 4-element insertion max-heap), then softmax the
+ * top-k logits (numerically stable by subtracting the max) into rweights. */
 static void _exec_router(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ROUTER);
@@ -424,6 +388,14 @@ static void _exec_router(void *ctx)
 	fun_trace_span_end(SPAN_ROUTER);
 }
 
+/* Run one routed expert's SwiGLU MLP:
+ *  - gv = gate_w(ex)·hidden_in + gate_b  [MXFP4 matvec ffn x hs]
+ *  - uv = up_w(ex)·hidden_in  + up_b     [MXFP4 matvec ffn x hs]
+ *  - SwiGLU: mid = clamp(g,7) / (1 + exp(-1.702·clamp(g))) * (clamp(u,±7)+1)
+ *    (the /(1+eg) form reuses eg = exp(-1.702·g) computed once).
+ *  - dv = down_w(ex)·mid + down_b        [MXFP4 matvec hs x ffn]
+ * The expert's weights are located by offsetting into the packed arrays by
+ * ex * (ffn*hs*17/32) bytes (MXFP4 = 17 bytes per 32 elements). */
 static void _exec_expert(void *ctx)
 {
 	fun_trace_span_begin(SPAN_EXPERT);
@@ -464,6 +436,9 @@ static void _exec_expert(void *ctx)
 	fun_trace_span_end(SPAN_EXPERT);
 }
 
+/* Combine the 4 expert outputs and finish the MoE block:
+ *  - expert_out = sum_e rweights[e] * dv[e]
+ *  - hidden = attn_res + expert_out   (residual + expert contribution) */
 static void _exec_expert_accum(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
@@ -481,6 +456,7 @@ static void _exec_expert_accum(void *ctx)
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
+/* Dequantize the token embedding row for token_id from Q8_0 into hidden. */
 static void _exec_embed(void *ctx)
 {
 	fun_trace_span_begin(SPAN_EMBED);
@@ -491,6 +467,8 @@ static void _exec_embed(void *ctx)
 	fun_trace_span_end(SPAN_EMBED);
 }
 
+/* Precompute RoPE rotation tables for position pos: theta[j] = pos*rope_pre[j],
+ * cos/sin of theta, then both scaled by mscale (YaRN length-scaling factor). */
 static void _exec_rope_pre(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ROPE);
@@ -508,6 +486,9 @@ static void _exec_rope_pre(void *ctx)
 	fun_trace_span_end(SPAN_ROPE);
 }
 
+/* Whole-vocab output projection: logits = output_weight · x.
+ * fun_math_q8_matrix_vector_f32 multiplies the Q8_0-packed matrix W
+ * (vocab x hs) by x (hs) into out (vocab); Q8_0 = 34 bytes / 32 elements. */
 static void _exec_output_proj(void *ctx)
 {
 	fun_trace_span_begin(SPAN_OUTPUT);
@@ -516,6 +497,9 @@ static void _exec_output_proj(void *ctx)
 	fun_trace_span_end(SPAN_OUTPUT);
 }
 
+/* Output projection restricted to vocabulary rows [row_start, row_end).
+ * Offsets the packed weight pointer by row_start * (hs/32)*34 bytes and writes
+ * into out[row_start..], so 4 shards cover the full 201088-row output matvec. */
 static void _exec_output_group(void *ctx)
 {
 	fun_trace_span_begin(SPAN_OUTPUT);
@@ -527,6 +511,10 @@ static void _exec_output_group(void *ctx)
 	fun_math_q8_matrix_vector_f32(w, c->x, out, rows, c->hs);
 	fun_trace_span_end(SPAN_OUTPUT);
 }
+
+/* Bind callbacks copy the per-submit token_id/pos into the static task
+ * contexts just before execution. They run on the submitting thread at
+ * fun_compute_graph_submit time. */
 
 static void _bind_embed(void *task_ctx, void *submit_ctx)
 {
@@ -556,6 +544,8 @@ static void _bind_attention(void *task_ctx, void *submit_ctx)
 	c->pos = s->pos;
 }
 
+/* Residual snapshot: before the residual buffer is overwritten by the next
+ * add, copy its current value into b so the add task can use it. */
 static void _bind_residual(void *task_ctx, void *submit_ctx)
 {
 	CtxAdd *c = (CtxAdd *)task_ctx;
@@ -564,6 +554,10 @@ static void _bind_residual(void *task_ctx, void *submit_ctx)
 		c->b[i] = c->a[i];
 }
 
+/* Allocate every per-token scratch buffer into sc. Sizes come from config:
+ * hidden, residual, norm outputs (hs); Q/K/V buffers (n_heads*head_dim and
+ * n_kv_heads*head_dim); attention scores (MAX_SEQ+2); expert activations
+ * (ffn or hs); router/topk/rweights; and RoPE tables (head_dim/2). */
 static void scratch_alloc(Scratch *sc, ModelConfig *cfg)
 {
 	int hs = (int)cfg->hidden_size;
@@ -608,7 +602,7 @@ static void scratch_alloc(Scratch *sc, ModelConfig *cfg)
 		mr = fun_memory_allocate((size_t)hs * sizeof(float));
 		sc->dv[e] = (float *)mr.value;
 	}
-	mr = fun_memory_allocate(32 * sizeof(float));
+	mr = fun_memory_allocate(cfg->n_experts * sizeof(float));
 	sc->rlog = (float *)mr.value;
 	mr = fun_memory_allocate(4 * sizeof(int));
 	sc->topk = (int *)mr.value;
@@ -622,6 +616,7 @@ static void scratch_alloc(Scratch *sc, ModelConfig *cfg)
 	sc->sin = (float *)mr.value;
 }
 
+/* Inverse of scratch_alloc: frees every buffer (via Memory* casts). */
 static void scratch_free(Scratch *sc)
 {
 	fun_memory_free((Memory *)&sc->hidden);
@@ -651,6 +646,10 @@ static void scratch_free(Scratch *sc)
 	fun_memory_free((Memory *)&sc->sin);
 }
 
+/* Build the whole inference engine: load config, locate GGUF tensor offsets,
+ * dequantize eager weights (norms/router/sinks/output norm), allocate KV caches
+ * and scratch, and construct the once-built compute graph that will be replayed
+ * every token. Attention Q/K/V/O weights and biases are raw GGUF pointers. */
 void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 {
 	m->gguf = gguf;
@@ -693,20 +692,11 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 													sizeof(LayerWeights))
 					.value;
 	for (int i = 0; i < m->config.n_layers; i++) {
-		m->layers[i].q_weight = NULL;
-		m->layers[i].q_bias = NULL;
-		m->layers[i].k_weight = NULL;
-		m->layers[i].k_bias = NULL;
-		m->layers[i].v_weight = NULL;
-		m->layers[i].v_bias = NULL;
-		m->layers[i].o_weight = NULL;
-		m->layers[i].o_bias = NULL;
 		m->layers[i].attn_norm_weight = NULL;
 		m->layers[i].post_attn_norm_weight = NULL;
 		m->layers[i].router_weight = NULL;
 		m->layers[i].router_bias = NULL;
 		m->layers[i].sinks = NULL;
-		m->layers[i].gguf = NULL;
 	}
 
 	int kv_dim = m->config.n_kv_heads * m->config.head_dim;
@@ -727,6 +717,9 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	}
 	m->cached_len = 0;
 
+	/* RoPE inverse frequencies. theta_scale = theta^(-2/head_dim) so successive
+	 * dims decay geometrically; a YaRN-style corr ramp shrinks long-range dims
+	 * by 1/32 to tame high-frequency extrapolation. */
 	int half = m->config.head_dim / 2;
 	m->rope_pre =
 		(float *)fun_memory_allocate((size_t)half * sizeof(float)).value;
@@ -746,8 +739,9 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		power *= theta_scale;
 	}
 
-	/* Pre-load expert tensor offsets and non-attention weights only.
-	 * Attention weights (Q/K/V/O) are lazily dequantized on first use. */
+	/* Load tensor offsets and eager weights. Attention Q/K/V/O weights are
+	 * raw Q8_0 pointers into the GGUF (no dequant); their biases are raw f32
+	 * pointers. Norms, router and sinks are dequantized eagerly. */
 	const uint8_t *rd = fun_gguf_get_raw_data(m->gguf);
 	for (int l = 0; l < m->config.n_layers; l++) {
 		LayerWeights *w = &m->layers[l];
@@ -795,6 +789,39 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 			(float *)fun_memory_allocate(m->config.n_heads * sizeof(float))
 				.value;
 		fun_gguf_dequant_f32(m->gguf, buf, w->sinks);
+
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_q.weight", buf + pre_len, 256 - pre_len);
+		w->q_weight = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_q.bias", buf + pre_len, 256 - pre_len);
+		w->q_bias =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_k.weight", buf + pre_len, 256 - pre_len);
+		w->k_weight = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_k.bias", buf + pre_len, 256 - pre_len);
+		w->k_bias =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_v.weight", buf + pre_len, 256 - pre_len);
+		w->v_weight = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_v.bias", buf + pre_len, 256 - pre_len);
+		w->v_bias =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_output.weight", buf + pre_len, 256 - pre_len);
+		w->o_weight = rd + fun_gguf_get_tensor_offset(m->gguf, buf).value;
+		buf[pre_len] = '\0';
+		fun_string_copy(".attn_output.bias", buf + pre_len, 256 - pre_len);
+		w->o_bias =
+			(const float *)(rd +
+							fun_gguf_get_tensor_offset(m->gguf, buf).value);
 
 		buf[pre_len] = '\0';
 		fun_string_copy(".ffn_gate_exps.weight", buf + pre_len, 256 - pre_len);
@@ -890,7 +917,6 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	m->ctx_rq = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_rk = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_kv = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
-	m->ctx_attn = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_o = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_res = fun_memory_allocate((size_t)n_layers * sizeof(void *)).value;
 	m->ctx_copy_attn =
@@ -925,9 +951,6 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 			.out = s->hidden_normed,
 			.n = m->config.hidden_size,
 			.eps = m->config.rms_norm_eps,
-			.layer = w,
-			.gguf = m->gguf,
-			.layer_idx = l,
 		};
 
 		// (t_norm added, depends_on below)
@@ -936,44 +959,44 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		fun_compute_task_depends_on(m->graph, t_norm, prev_layer_tail);
 
 		FunComputeTask *t_q = &m->tasks[ti++];
-		m->ctx_q[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_q[l] = (CtxMatvecF32){
-			.w_ptr = (const float **)&w->q_weight,
-			.bias_ptr = (const float **)&w->q_bias,
+		m->ctx_q[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
+		*(CtxMatvecQ8 *)m->ctx_q[l] = (CtxMatvecQ8){
+			.w = w->q_weight,
+			.bias = w->q_bias,
 			.x = s->hidden_normed,
 			.out = s->qbuf,
 			.rows = m->config.n_heads * m->config.head_dim,
 			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_q, _exec_matvec_f32, m->ctx_q[l],
+		fun_compute_graph_add_task(m->graph, t_q, _exec_matvec_q8, m->ctx_q[l],
 								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_q, t_norm);
 
 		FunComputeTask *t_k = &m->tasks[ti++];
-		m->ctx_k[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_k[l] = (CtxMatvecF32){
-			.w_ptr = (const float **)&w->k_weight,
-			.bias_ptr = (const float **)&w->k_bias,
+		m->ctx_k[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
+		*(CtxMatvecQ8 *)m->ctx_k[l] = (CtxMatvecQ8){
+			.w = w->k_weight,
+			.bias = w->k_bias,
 			.x = s->hidden_normed,
 			.out = s->kbuf,
 			.rows = m->config.n_kv_heads * m->config.head_dim,
 			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_k, _exec_matvec_f32, m->ctx_k[l],
+		fun_compute_graph_add_task(m->graph, t_k, _exec_matvec_q8, m->ctx_k[l],
 								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_k, t_norm);
 
 		FunComputeTask *t_v = &m->tasks[ti++];
-		m->ctx_v[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_v[l] = (CtxMatvecF32){
-			.w_ptr = (const float **)&w->v_weight,
-			.bias_ptr = (const float **)&w->v_bias,
+		m->ctx_v[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
+		*(CtxMatvecQ8 *)m->ctx_v[l] = (CtxMatvecQ8){
+			.w = w->v_weight,
+			.bias = w->v_bias,
 			.x = s->hidden_normed,
 			.out = s->vbuf,
 			.rows = m->config.n_kv_heads * m->config.head_dim,
 			.cols = m->config.hidden_size,
 		};
-		fun_compute_graph_add_task(m->graph, t_v, _exec_matvec_f32, m->ctx_v[l],
+		fun_compute_graph_add_task(m->graph, t_v, _exec_matvec_q8, m->ctx_v[l],
 								   NULL, NULL);
 		fun_compute_task_depends_on(m->graph, t_v, t_norm);
 
@@ -1046,16 +1069,16 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 		}
 
 		FunComputeTask *t_o = &m->tasks[ti++];
-		m->ctx_o[l] = fun_memory_allocate(sizeof(CtxMatvecF32)).value;
-		*(CtxMatvecF32 *)m->ctx_o[l] = (CtxMatvecF32){
-			.w_ptr = (const float **)&w->o_weight,
-			.bias_ptr = (const float **)&w->o_bias,
+		m->ctx_o[l] = fun_memory_allocate(sizeof(CtxMatvecQ8)).value;
+		*(CtxMatvecQ8 *)m->ctx_o[l] = (CtxMatvecQ8){
+			.w = w->o_weight,
+			.bias = w->o_bias,
 			.x = s->attn,
 			.out = s->proj,
 			.rows = m->config.hidden_size,
 			.cols = m->config.n_heads * m->config.head_dim,
 		};
-		fun_compute_graph_add_task(m->graph, t_o, _exec_matvec_f32, m->ctx_o[l],
+		fun_compute_graph_add_task(m->graph, t_o, _exec_matvec_q8, m->ctx_o[l],
 								   NULL, NULL);
 		for (int hg = 0; hg < 4; hg++)
 			fun_compute_task_depends_on(m->graph, t_o, t_attn_h[hg]);
@@ -1213,6 +1236,10 @@ void model_load(Model *m, GGufFile *gguf, const char *model_path, int n_threads)
 	m->n_tasks = ti;
 }
 
+/* Forward one token at a time for tokens[0..n_tokens), skipping the first
+ * cached_len positions that are already in the KV cache (incremental decode).
+ * Each step submits the graph with {token_id, pos}, blocks until it finishes,
+ * and copies that position's vocab-sized logits into the caller's buffer. */
 void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 {
 	int start = m->cached_len;
@@ -1230,6 +1257,9 @@ void model_forward(Model *m, const int *tokens, int n_tokens, float *logits)
 	}
 }
 
+/* Tear down everything model_load allocated: graph, task contexts, scratch,
+ * logits, layer weights, KV caches. Order matters (tasks destroyed before the
+ * graph is freed; per-layer contexts before the arrays holding them). */
 void model_free(Model *m)
 {
 	if (m->output_norm_weight)
@@ -1272,8 +1302,6 @@ void model_free(Model *m)
 			fun_memory_free((Memory *)&m->ctx_rk[l]);
 		if (m->ctx_kv && m->ctx_kv[l])
 			fun_memory_free((Memory *)&m->ctx_kv[l]);
-		if (m->ctx_attn && m->ctx_attn[l])
-			fun_memory_free((Memory *)&m->ctx_attn[l]);
 		if (m->ctx_o && m->ctx_o[l])
 			fun_memory_free((Memory *)&m->ctx_o[l]);
 		if (m->ctx_res && m->ctx_res[l])
@@ -1302,7 +1330,6 @@ void model_free(Model *m)
 	fun_memory_free((Memory *)&m->ctx_rq);
 	fun_memory_free((Memory *)&m->ctx_rk);
 	fun_memory_free((Memory *)&m->ctx_kv);
-	fun_memory_free((Memory *)&m->ctx_attn);
 	fun_memory_free((Memory *)&m->ctx_o);
 	fun_memory_free((Memory *)&m->ctx_res);
 	fun_memory_free((Memory *)&m->ctx_copy_attn);
