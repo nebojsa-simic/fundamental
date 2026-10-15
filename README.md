@@ -83,7 +83,7 @@ StringTemplateParam params[] = {
     { "age", { .intValue = 42 } }
 };
 
-fun_string_template(template, params, 2, output);
+fun_string_template(template, params, 2, output, 512);
 // Result: "Hello Alice, you have 42 messages"
 ```
 
