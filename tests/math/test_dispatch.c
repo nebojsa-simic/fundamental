@@ -118,6 +118,17 @@ static TestCount test_unary_dispatch(void)
 		}
 	}
 
+	/* NaN propagation: a NaN input must produce a NaN output */
+	{
+		float nan = _math_test_make_nan();
+		float nanin[1] = { nan };
+		float nanout[1] = { 0.0f };
+		FunMathTensor nin = { nanin, 1, 1 };
+		FunMathTensor nout = { nanout, 1, 1 };
+		fun_math_unary(FUN_MATH_OP_EXP, FUN_MATH_DTYPE_F32, &nin, &nout);
+		math_test_count_add(&tc, _math_test_float_is_nan(nanout[0]));
+	}
+
 done:
 	fun_memory_free((Memory *)&x);
 	fun_memory_free((Memory *)&got);
@@ -163,6 +174,17 @@ static TestCount test_binary_reduce_dispatch(void)
 	float max_out = 0.0f;
 	fun_math_reduce(FUN_MATH_OP_MAX, FUN_MATH_DTYPE_F32, &ta, &max_out);
 	math_test_count_add(&tc, max_out == fun_math_max_f32(a, n));
+
+	/* zero-length reduction writes 0.0 for both sum and max */
+	{
+		FunMathTensor zt = { a, 0, 1 };
+		float zsum = 1.0f;
+		float zmax = 1.0f;
+		fun_math_reduce(FUN_MATH_OP_SUM, FUN_MATH_DTYPE_F32, &zt, &zsum);
+		fun_math_reduce(FUN_MATH_OP_MAX, FUN_MATH_DTYPE_F32, &zt, &zmax);
+		math_test_count_add(&tc, zsum == 0.0f);
+		math_test_count_add(&tc, zmax == 0.0f);
+	}
 
 done:
 	fun_memory_free((Memory *)&a);
