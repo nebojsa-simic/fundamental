@@ -406,8 +406,8 @@ static void _exec_router(void *ctx)
 	fun_trace_span_begin(SPAN_ROUTER);
 	CtxRouter *c = (CtxRouter *)ctx;
 	int n_exp = c->n_exp;
-	fun_math_matrix_vector_f32_dispatch(c->router_w, c->x, c->router_b,
-										c->rlog, (size_t)n_exp, (size_t)c->hs);
+	fun_math_matrix_vector_f32_dispatch(c->router_w, c->x, c->router_b, c->rlog,
+										(size_t)n_exp, (size_t)c->hs);
 	int topk = c->topk_n;
 	int top[4] = { 0, 0, 0, 0 };
 	float topv[4] = { -1e30f, -1e30f, -1e30f, -1e30f };
