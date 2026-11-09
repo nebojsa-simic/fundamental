@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Platform-specific implementations for the async module's monotonic millisecond clock, keeping OS-specific code in `arch/async/` and out of `src/async/`.
+
+## Requirements
 
 ### Requirement: Arch layer provides monotonic millisecond clock
 Each platform arch implementation SHALL provide `arch_async_now_ms()` returning the current monotonic time in milliseconds as an `unsigned long long`. The `src/async/async.c` module SHALL call this function for all timeout calculations and SHALL NOT contain any `#ifdef` platform guards or OS-specific includes.

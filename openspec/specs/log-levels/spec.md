@@ -1,7 +1,7 @@
 # log-levels Specification
 
 ## Purpose
-TBD - created by archiving change add-logging-system. Update Purpose after archive.
+Log level hierarchy and threshold filtering for the logging subsystem.
 ## Requirements
 ### Requirement: Log Level Hierarchy
 

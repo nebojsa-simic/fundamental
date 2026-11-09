@@ -1,7 +1,7 @@
 # sync Specification
 
 ## Purpose
-TBD - created by archiving change sync. Update Purpose after archive.
+Synchronization primitives — mutex and condition variable — provided by platform arch implementations.
 ## Requirements
 ### Requirement: Mutex can be created and destroyed
 The system SHALL provide `fun_mutex_create(&out_mutex)` that allocates and initializes a `Mutex`. On success, `*out_mutex` is set to a valid handle. On error, `*out_mutex` is unchanged. The system SHALL provide `fun_mutex_destroy(mutex)` that frees the mutex. Destroy on NULL SHALL be a no-op. Destroying a mutex while locked SHALL be undefined.

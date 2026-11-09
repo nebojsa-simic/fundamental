@@ -1,7 +1,7 @@
 # batch-rename Specification
 
 ## Purpose
-TBD - created by archiving change batch-renamer-demo. Update Purpose after archive.
+Demo application that batch-renames files using the filesystem module.
 ## Requirements
 ### Requirement: Batch file renaming
 The system SHALL rename multiple files in a directory based on user-specified transformation rules with preview capability.

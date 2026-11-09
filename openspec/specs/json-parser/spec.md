@@ -1,7 +1,7 @@
 # json-parser Specification
 
 ## Purpose
-TBD - created by archiving change json-parser-performance. Update Purpose after archive.
+Streaming JSON parsing over a caller-provided buffer, extracting values without heap allocation.
 ## Requirements
 ### Requirement: JSON Parser State
 The JSON module SHALL provide a stack-allocatable parser state type (`FunJsonState`) requiring no mandatory heap allocation.

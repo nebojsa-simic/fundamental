@@ -1,7 +1,7 @@
 # thread-pool Specification
 
 ## Purpose
-TBD - created by archiving change thread-pool. Update Purpose after archive.
+Thread pool that runs submitted work items across a fixed number of worker threads.
 ## Requirements
 ### Requirement: Pool can be created with thread count
 The system SHALL provide `fun_thread_pool_create(num_threads, &out_pool)` that creates a `ThreadPool` with the specified number of worker threads. On success, `*out_pool` is set to a valid pool handle and all workers are running. On error, `*out_pool` is unchanged. `num_threads` MUST be greater than 0. The pool SHALL use direct dispatch — workers receive work immediately or submit returns `ERROR_CODE_THREAD_POOL_FULL`.

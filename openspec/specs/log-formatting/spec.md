@@ -1,7 +1,7 @@
 # log-formatting Specification
 
 ## Purpose
-TBD - created by archiving change add-logging-system. Update Purpose after archive.
+Formatting log records, including the hybrid wall-clock timestamp layout.
 ## Requirements
 ### Requirement: Hybrid Wall-Clock Timestamp Format
 

@@ -28,9 +28,9 @@ typedef struct {
 
 /* RMS-norm task context: out[i] = x[i] / sqrt(mean(x^2) + eps) * weight[i]. */
 typedef struct {
-	float *x;             /* in [n], also the residual input */
-	const float *weight;  /* in [n] gain */
-	float *out;           /* out [n] */
+	float *x; /* in [n], also the residual input */
+	const float *weight; /* in [n] gain */
+	float *out; /* out [n] */
 	size_t n;
 	float eps;
 } CtxRmsNorm;
@@ -39,10 +39,10 @@ typedef struct {
  * matrix (rows x cols, raw pointer into the GGUF blob); bias is an f32 bias
  * vector [rows], may be NULL. */
 typedef struct {
-	const uint8_t *w;      /* weight matrix, rows x cols packed Q8_0 */
-	const float *bias;     /* bias vector [rows], may be NULL */
-	float *x;              /* input [cols] */
-	float *out;            /* output [rows] */
+	const uint8_t *w; /* weight matrix, rows x cols packed Q8_0 */
+	const float *bias; /* bias vector [rows], may be NULL */
+	float *x; /* input [cols] */
+	float *out; /* output [rows] */
 	size_t rows;
 	size_t cols;
 } CtxMatvecQ8;
@@ -52,10 +52,10 @@ typedef struct {
  * attention projections (the two largest serial matvecs per layer) so they can
  * run in parallel across the thread pool. */
 typedef struct {
-	const uint8_t *w;      /* rows x cols packed Q8_0 */
-	const float *bias;     /* [rows], may be NULL */
-	float *x;              /* input [cols] */
-	float *out;            /* output [rows] */
+	const uint8_t *w; /* rows x cols packed Q8_0 */
+	const float *bias; /* [rows], may be NULL */
+	float *x; /* input [cols] */
+	float *out; /* output [rows] */
 	size_t row_start;
 	size_t row_end;
 	size_t cols;
@@ -64,20 +64,20 @@ typedef struct {
 /* Rotary-position task context: applies per-head RoPE to x in place. cos/sin
  * are the per-half-dim rotation tables precomputed by _exec_rope_pre. */
 typedef struct {
-	float *x;              /* in/out [n_heads * 2*half] */
-	const float *cos;      /* [half] */
-	const float *sin;      /* [half] */
+	float *x; /* in/out [n_heads * 2*half] */
+	const float *cos; /* [half] */
+	const float *sin; /* [half] */
 	size_t n_heads;
-	size_t half;           /* head_dim / 2 */
+	size_t half; /* head_dim / 2 */
 } CtxRotary;
 
 /* KV-cache store task: writes this token's rotated K and V into the layer's
  * cache at row pos. kv_dim = n_kv_heads * head_dim. */
 typedef struct {
-	float *kbuf;     /* in [kv_dim] */
-	float *vbuf;     /* in [kv_dim] */
-	float *kcache;   /* out [max_seq][kv_dim], row pos written */
-	float *vcache;   /* out [max_seq][kv_dim], row pos written */
+	float *kbuf; /* in [kv_dim] */
+	float *vbuf; /* in [kv_dim] */
+	float *kcache; /* out [max_seq][kv_dim], row pos written */
+	float *vcache; /* out [max_seq][kv_dim], row pos written */
 	size_t kv_dim;
 	int pos;
 } CtxKvStore;
@@ -85,17 +85,17 @@ typedef struct {
 /* Attention task (whole-layer variant): scores q against all cached keys up to
  * pos, applies attention-sink bias and softmax, then weights cached values. */
 typedef struct {
-	float *qbuf;       /* in [n_heads * hd] */
-	float *attn_out;   /* out [n_heads * hd] */
-	float *kcache;     /* [max_seq][n_kv*hd] */
-	float *vcache;     /* [max_seq][n_kv*hd] */
-	const float *sinks;/* [n_heads] */
+	float *qbuf; /* in [n_heads * hd] */
+	float *attn_out; /* out [n_heads * hd] */
+	float *kcache; /* [max_seq][n_kv*hd] */
+	float *vcache; /* [max_seq][n_kv*hd] */
+	const float *sinks; /* [n_heads] */
 	int pos;
 	int n_heads;
 	int n_kv;
 	int hd;
 	float inv_sqrt_hd;
-	float *scores;     /* scratch [max_seq+2] */
+	float *scores; /* scratch [max_seq+2] */
 } CtxAttention;
 
 /* Attention task sharded over a contiguous range of query heads [head_start,
@@ -120,7 +120,7 @@ typedef struct {
  * _exec_add / _exec_copy). */
 typedef struct {
 	float *a;
-	float *b;    /* may alias a */
+	float *b; /* may alias a */
 	float *out;
 	size_t n;
 } CtxAdd;
@@ -129,12 +129,12 @@ typedef struct {
  * hidden, then hidden_normed = rms_norm(hidden). Fuses the three serial
  * elementwise steps that follow the O projection into one task. */
 typedef struct {
-	float *residual;         /* in [n] */
-	float *proj;             /* in [n] */
-	float *hidden;           /* out [n] */
-	float *attn_res;         /* out [n] */
-	const float *norm_weight;/* in [n] */
-	float *normed;           /* out [n] */
+	float *residual; /* in [n] */
+	float *proj; /* in [n] */
+	float *hidden; /* out [n] */
+	float *attn_res; /* out [n] */
+	const float *norm_weight; /* in [n] */
+	float *normed; /* out [n] */
 	size_t n;
 	float eps;
 } CtxPostAttn;
@@ -144,10 +144,10 @@ typedef struct {
  * the expert-accumulate and residual-copy steps. */
 typedef struct {
 	float *dv0, *dv1, *dv2, *dv3; /* in [n] per-expert outputs */
-	float *rweights;              /* in [4] routing weights */
-	float *attn_res;              /* in [n] */
-	float *hidden;                /* out [n] */
-	float *residual;              /* out [n] */
+	float *rweights; /* in [4] routing weights */
+	float *attn_res; /* in [n] */
+	float *hidden; /* out [n] */
+	float *residual; /* out [n] */
 	size_t n;
 } CtxPostMoe;
 
@@ -156,10 +156,10 @@ typedef struct {
 typedef struct {
 	const float *router_w; /* [n_exp][hs] */
 	const float *router_b; /* [n_exp] */
-	float *x;              /* input [hs] */
-	int *topk;             /* out [topk_n] expert indices */
-	float *rlog;           /* scratch [n_exp] raw logits */
-	float *rweights;       /* out [topk_n] softmax weights */
+	float *x; /* input [hs] */
+	int *topk; /* out [topk_n] expert indices */
+	float *rlog; /* scratch [n_exp] raw logits */
+	float *rweights; /* out [topk_n] softmax weights */
 	int n_exp;
 	int topk_n;
 	int hs;
@@ -169,21 +169,21 @@ typedef struct {
  * (17 bytes / 32 elements). hidden_in is the post-attn RMS-normed residual. */
 typedef struct {
 	const uint8_t *gate_w; /* [n_experts][ffn][hs] packed MXFP4 */
-	const uint8_t *up_w;   /* [n_experts][ffn][hs] packed MXFP4 */
+	const uint8_t *up_w; /* [n_experts][ffn][hs] packed MXFP4 */
 	const uint8_t *down_w; /* [n_experts][hs][ffn] packed MXFP4 */
-	const float *gate_b;   /* [n_experts][ffn] */
-	const float *up_b;     /* [n_experts][ffn] */
-	const float *down_b;   /* [n_experts][hs] */
-	float *hidden_in;      /* input [hs] */
-	float *gv;             /* scratch [ffn] gate act = gate·x+b */
-	float *uv;             /* scratch [ffn] up act = up·x+b */
-	float *mid;            /* scratch [ffn] SwiGLU output */
-	float *eg;             /* scratch [ffn] exp(-1.702·clamp(g)) */
-	float *dv;             /* out [hs] down·mid + down_b */
+	const float *gate_b; /* [n_experts][ffn] */
+	const float *up_b; /* [n_experts][ffn] */
+	const float *down_b; /* [n_experts][hs] */
+	float *hidden_in; /* input [hs] */
+	float *gv; /* scratch [ffn] gate act = gate·x+b */
+	float *uv; /* scratch [ffn] up act = up·x+b */
+	float *mid; /* scratch [ffn] SwiGLU output */
+	float *eg; /* scratch [ffn] exp(-1.702·clamp(g)) */
+	float *dv; /* out [hs] down·mid + down_b */
 	size_t ffn;
 	size_t hs;
-	int *topk;             /* which experts were routed (indexed by expert_idx) */
-	int expert_idx;        /* 0..3, which slot of topk this task serves */
+	int *topk; /* which experts were routed (indexed by expert_idx) */
+	int expert_idx; /* 0..3, which slot of topk this task serves */
 } CtxExpert;
 
 /* Token embedding task: dequantizes the Q8_0 embedding row for token_id into
@@ -191,7 +191,7 @@ typedef struct {
 typedef struct {
 	const uint8_t *embeddings; /* vocab x hs packed Q8_0 */
 	size_t emb_stride;
-	float *hidden;             /* out [hs] */
+	float *hidden; /* out [hs] */
 	size_t hs;
 	int token_id;
 } CtxEmbed;
@@ -199,10 +199,10 @@ typedef struct {
 /* RoPE precompute task: fills cos/sin rotation tables for position pos using
  * the precomputed inverse frequencies, scaled by mscale (YaRN length factor). */
 typedef struct {
-	float *theta;         /* scratch [half] = pos * rope_pre */
-	float *cos;           /* out [half] */
-	float *sin;           /* out [half] */
-	const float *rope_pre;/* [half] */
+	float *theta; /* scratch [half] = pos * rope_pre */
+	float *cos; /* out [half] */
+	float *sin; /* out [half] */
+	const float *rope_pre; /* [half] */
 	size_t half;
 	float mscale;
 	int pos;
@@ -211,8 +211,8 @@ typedef struct {
 /* Output projection (whole-vocab variant): logits = output_weight · x. */
 typedef struct {
 	const uint8_t *w; /* vocab x hs packed Q8_0 */
-	float *x;         /* input [hs] */
-	float *out;       /* out [vocab] */
+	float *x; /* input [hs] */
+	float *out; /* out [vocab] */
 	size_t vocab;
 	size_t hs;
 } CtxOutputProj;
@@ -234,28 +234,28 @@ typedef struct {
  * arrays give each expert / attention shard its own slice so they can run in
  * parallel without stepping on each other. */
 typedef struct {
-	float *hidden;        /* [hs]: running hidden state */
-	float *residual;      /* [hs]: residual stream */
-	float *attn_res;      /* [hs]: attention residual saved for MoE add */
+	float *hidden; /* [hs]: running hidden state */
+	float *residual; /* [hs]: residual stream */
+	float *attn_res; /* [hs]: attention residual saved for MoE add */
 	float *hidden_normed; /* [hs]: RMS-norm output */
-	float *expert_out;    /* [hs]: weighted expert sum */
-	float *qbuf;          /* [q_dim] */
-	float *kbuf;          /* [kv_dim] */
-	float *vbuf;          /* [kv_dim] */
-	float *attn;          /* [q_dim]: attention output */
-	float *proj;          /* [hs]: O-projection output */
-	float *scores[4];     /* [MAX_SEQ+2] per attention shard */
-	float *gv[4];         /* [ffn] per expert */
-	float *uv[4];         /* [ffn] per expert */
-	float *mid[4];        /* [ffn] per expert */
-	float *eg[4];         /* [ffn] per expert */
-	float *dv[4];         /* [hs] per expert */
-	float *rlog;          /* [n_experts] */
-	int *topk;            /* [4] */
-	float *rweights;      /* [4] */
-	float *theta;         /* [half] */
-	float *cos;           /* [half] */
-	float *sin;           /* [half] */
+	float *expert_out; /* [hs]: weighted expert sum */
+	float *qbuf; /* [q_dim] */
+	float *kbuf; /* [kv_dim] */
+	float *vbuf; /* [kv_dim] */
+	float *attn; /* [q_dim]: attention output */
+	float *proj; /* [hs]: O-projection output */
+	float *scores[4]; /* [MAX_SEQ+2] per attention shard */
+	float *gv[4]; /* [ffn] per expert */
+	float *uv[4]; /* [ffn] per expert */
+	float *mid[4]; /* [ffn] per expert */
+	float *eg[4]; /* [ffn] per expert */
+	float *dv[4]; /* [hs] per expert */
+	float *rlog; /* [n_experts] */
+	int *topk; /* [4] */
+	float *rweights; /* [4] */
+	float *theta; /* [half] */
+	float *cos; /* [half] */
+	float *sin; /* [half] */
 } Scratch;
 
 /* RMS-normalize the residual: out[i] = x[i] / rms(x) * weight[i]. */

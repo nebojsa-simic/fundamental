@@ -1,7 +1,7 @@
 # startup-framework Specification
 
 ## Purpose
-TBD - created by archiving change centralized-startup-init. Update Purpose after archive.
+Centralized startup dispatcher that runs registered initialization handlers in phase order.
 ## Requirements
 ### Requirement: Centralized Startup Dispatcher
 

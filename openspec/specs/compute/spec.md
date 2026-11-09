@@ -1,7 +1,7 @@
 # compute Specification
 
 ## Purpose
-TBD - created by archiving change add-compute-graph. Update Purpose after archive.
+Task-graph computation scheduler that executes dependent tasks across a thread pool using caller-provided memory.
 ## Requirements
 ### Requirement: Caller queries memory required for graph
 

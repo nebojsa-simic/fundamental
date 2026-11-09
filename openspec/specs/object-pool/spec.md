@@ -1,7 +1,7 @@
 # object-pool Specification
 
 ## Purpose
-TBD - created by archiving change object-pool. Update Purpose after archive.
+Fixed-capacity object pool with caller-provided memory for reusing handles such as network connections.
 ## Requirements
 ### Requirement: Pool Creation
 

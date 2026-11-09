@@ -1,7 +1,7 @@
 # file-exists Specification
 
 ## Purpose
-TBD - created by archiving change add-file-exists-method. Update Purpose after archive.
+Determining whether a file exists on disk via a streaming open check.
 ## Requirements
 ### Requirement: File Existence Check
 The filesystem module SHALL provide a function to check if a file exists at the specified path.

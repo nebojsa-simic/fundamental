@@ -1,10 +1,9 @@
 # Network Module Specification
 
-Simple async TCP/UDP networking for CLI applications. Self-polling AsyncResult model; no external event loop. Internal per-connection overflow buffer. All memory is caller-allocated except the connection handle (managed by internal pool).
+## Purpose
+Simple async TCP/UDP networking for CLI applications on the self-polling AsyncResult model, with no external event loop and caller-allocated memory.
 
----
-
-## Address
+## Requirements
 
 ### Requirement: IPv4 address can be parsed from string
 The system SHALL provide a `fun_network_address_parse` function that parses an `"IPv4:port"` string (e.g., `"127.0.0.1:8080"`) into a `NetworkAddress`.
@@ -74,7 +73,5 @@ The system SHALL only accept numeric IP addresses. Strings containing non-numeri
 - **THEN** `fun_network_address_parse` SHALL return an error result
 
 ---
-
-## TCP Client
 
 See `network-simple-async` specification for full TCP and UDP requirements.

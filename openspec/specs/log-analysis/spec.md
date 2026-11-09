@@ -1,7 +1,7 @@
 # log-analysis Specification
 
 ## Purpose
-TBD - created by archiving change log-analyzer-demo. Update Purpose after archive.
+Log file parsing and analysis for the log-analyzer demo application.
 ## Requirements
 ### Requirement: Log file parsing
 The system SHALL read log files asynchronously and parse individual log entries to extract structured information including timestamp, log level, and message content.

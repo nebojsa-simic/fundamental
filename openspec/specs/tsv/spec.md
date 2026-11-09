@@ -1,3 +1,8 @@
+## Purpose
+Streaming tab-separated value parsing over a caller-provided mutable buffer with no heap allocation.
+
+## Requirements
+
 ### Requirement: TSV Parser Initialisation
 The TSV module SHALL initialise a streaming parser over a caller-provided mutable buffer without allocating memory.
 

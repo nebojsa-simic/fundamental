@@ -1,7 +1,7 @@
 # log-config Specification
 
 ## Purpose
-TBD - created by archiving change add-logging-system. Update Purpose after archive.
+Configuration of the logging subsystem, including automatic initialization at startup.
 ## Requirements
 ### Requirement: Automatic Initialization at Startup
 

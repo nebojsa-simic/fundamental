@@ -1,7 +1,7 @@
 # timing Specification
 
 ## Purpose
-TBD - created by archiving change add-instrument-timing. Update Purpose after archive.
+Monotonic nanosecond clock for high-resolution timing measurements.
 
 ## Requirements
 

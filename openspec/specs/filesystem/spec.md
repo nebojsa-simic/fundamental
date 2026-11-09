@@ -1,11 +1,7 @@
-## REMOVED Requirements
+## Purpose
+Filesystem path operations built on the Path type: join, normalize, parent and filename extraction, and directory create/remove/list that convert Path to native strings at I/O boundaries.
 
-### Requirement: Platform-specific path separator
-**Reason**: Path type eliminates need for separator character - components are stored as array without separators
-
-**Migration**: Remove all calls to `fun_path_separator()`. Path operations now work with component arrays, not separator-delimited strings. Use `fun_path_from_string()` to parse strings and `fun_path_to_string()` to generate platform-specific strings at I/O boundaries.
-
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: Path Join Operation
 The filesystem module SHALL provide function to join path components.

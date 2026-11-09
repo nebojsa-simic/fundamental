@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+The Path type: representing filesystem paths as component arrays without separators, with string conversion, join, normalize, parent and filename extraction, component access, and validation.
+
+## Requirements
 
 ### Requirement: Path Separator Access
 The filesystem module SHALL retain the `fun_path_separator()` function to provide platform-specific path separator character for manual string construction scenarios.
@@ -219,8 +222,6 @@ The filesystem module SHALL provide function to validate Path structure.
 #### Scenario: Validate Path with empty component
 - **WHEN** `fun_path_is_valid(Path path)` is called with Path containing empty string component
 - **THEN** false is returned
-
-## MODIFIED Requirements
 
 ### Requirement: Filesystem Module Path Parameters
 The filesystem module SHALL accept Path type instead of String for all path parameters.

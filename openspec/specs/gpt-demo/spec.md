@@ -1,7 +1,7 @@
 # gpt-demo Specification
 
 ## Purpose
-TBD - created by archiving change gpt-demo. Update Purpose after archive.
+Demo application that runs CPU inference of the GPT-OSS-20B MoE model loaded from a GGUF file.
 
 ## Requirements
 

@@ -1,7 +1,7 @@
 # log-outputs Specification
 
 ## Purpose
-TBD - created by archiving change add-logging-system. Update Purpose after archive.
+Log output sinks, including the console output target.
 ## Requirements
 ### Requirement: Console Output
 

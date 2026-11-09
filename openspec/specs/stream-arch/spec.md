@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Platform-specific implementations for closing stream OS handles, keeping OS handle types in `arch/stream/` and out of `src/stream/`.
+
+## Requirements
 
 ### Requirement: Arch layer provides stream handle close
 Each platform arch implementation SHALL provide `arch_stream_close_handle(void *internal_state)` which closes the platform-specific OS handle held in the arch-internal state struct. The `src/stream/streamLifecycle.c` module SHALL call this function and SHALL NOT include any arch-specific header directly or reference any OS handle types (`INVALID_HANDLE_VALUE`, `HANDLE`, file descriptors, etc.).

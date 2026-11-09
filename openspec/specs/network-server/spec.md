@@ -1,7 +1,7 @@
 # network-server Specification
 
 ## Purpose
-TBD - created by archiving change network-server-module. Update Purpose after archive.
+TCP server: creating a config with address and state, and handling per-connection I/O.
 ## Requirements
 ### Requirement: TCP server config can be created with address and state
 The system SHALL provide `fun_network_tcp_server_config(address, server_state, &out_config)` that creates a `NetworkServerConfig` for TCP server use. On success, `*out_config` is set to a valid config handle. On error, `*out_config` is unchanged. The `server_state` pointer is stored and passed to every listener callback invocation.

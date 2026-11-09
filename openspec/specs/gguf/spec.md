@@ -1,7 +1,7 @@
 # gguf Specification
 
 ## Purpose
-TBD - created by archiving change add-gguf-module. Update Purpose after archive.
+Reader for the GGUF model file format: opening files, reading tensor metadata, and dequantizing weights.
 ## Requirements
 ### Requirement: GGUF file open and close
 The system SHALL provide `fun_gguf_open(String path)` to memory-map a GGUF file and `fun_gguf_close(GGufFile *file)` to release resources.

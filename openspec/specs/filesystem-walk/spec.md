@@ -1,3 +1,8 @@
+## Purpose
+Streaming recursive directory traversal that yields entries one at a time from caller-provided work memory, with pruning, depth limits, and early exit.
+
+## Requirements
+
 ### Requirement: Walk Initialisation
 The filesystem module SHALL initialise a streaming directory walk using caller-provided work memory, opening the root directory handle immediately.
 

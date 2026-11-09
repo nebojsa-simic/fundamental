@@ -1,7 +1,7 @@
 # shutdown-framework Specification
 
 ## Purpose
-TBD - created by archiving change centralized-shutdown-framework. Update Purpose after archive.
+Centralized shutdown dispatcher that runs registered cleanup handlers in reverse order.
 ## Requirements
 ### Requirement: Centralized Shutdown Dispatcher
 

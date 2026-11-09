@@ -1,7 +1,7 @@
 # test-stdlib-cleanup Specification
 
 ## Purpose
-TBD - created by archiving change remove-stdlib-from-tests. Update Purpose after archive.
+Ensuring test files use only library primitives rather than the C standard library, for portability.
 ## Requirements
 ### Requirement: Test files use library primitives only
 Test source files SHALL NOT include or call functions from `<stdio.h>`, `<stdlib.h>`, `<string.h>`, `<assert.h>`, or `<math.h>`. Test output SHALL use `fun_console_write` / `fun_console_write_line`, memory operations SHALL use `fun_memory_allocate` / `fun_memory_free` / `fun_memory_copy` / `fun_memory_fill`, string operations SHALL use `fun_string_compare` / `fun_string_length` / `fun_string_template`, validation SHALL use the `check_int` pattern, file I/O verification SHALL use `fun_read_file_in_memory`, and floating-point reference math SHALL use `fun_math_*` functions.

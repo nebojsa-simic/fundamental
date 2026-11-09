@@ -1,7 +1,7 @@
 # trace Specification
 
 ## Purpose
-TBD - created by archiving change add-instrument-timing. Update Purpose after archive.
+Lightweight tracing: caller-queries memory, registers spans, and emits a timing report.
 
 ## Requirements
 

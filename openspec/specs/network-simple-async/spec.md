@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Asynchronous TCP and UDP networking on the self-polling AsyncResult model: non-blocking connect, send, exact receive with overflow buffering, close, and fire-and-forget UDP.
+
+## Requirements
 
 ### Requirement: TCP connection can be established asynchronously
 The system SHALL provide `fun_network_tcp_connect(address, &conn)` that initiates a non-blocking TCP connection and returns an `AsyncResult`. On `ASYNC_COMPLETED`, `*conn` SHALL be a valid `TcpNetworkConnection` handle. On `ASYNC_ERROR`, `*conn` SHALL be NULL.
