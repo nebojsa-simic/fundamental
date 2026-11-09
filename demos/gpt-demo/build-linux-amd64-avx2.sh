@@ -21,6 +21,7 @@ gcc --std=c17 -Os -mavx2 -mfma -I ../../include \
     ../../arch/gguf/linux-amd64/mmap.c \
     ../../src/math/math_scalar.c \
     ../../src/math/math_init.c \
+    ../../src/math/math_kernels.c \
     ../../arch/math/linux-amd64/cpu_features.c \
     ../../src/console/console.c \
     ../../arch/console/linux-amd64/console.c \

@@ -1,6 +1,7 @@
 #include "model.h"
 #include "fundamental/compute/compute.h"
 #include "fundamental/math/math.h"
+#include "fundamental/math/math_kernels.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
 #include "fundamental/trace/trace.h"
@@ -262,7 +263,7 @@ static void _exec_rms_norm(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxRmsNorm *c = (CtxRmsNorm *)ctx;
-	fun_math_rms_norm_f32(c->x, c->weight, c->out, c->n, c->eps);
+	fun_math_rms_norm_f32_dispatch(c->x, c->weight, c->out, c->n, c->eps);
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -306,7 +307,8 @@ static void _exec_rotary(void *ctx)
 {
 	fun_trace_span_begin(SPAN_ATTENTION);
 	CtxRotary *c = (CtxRotary *)ctx;
-	fun_math_rotary_f32(c->x, c->cos, c->sin, c->x, c->n_heads, c->half);
+	fun_math_rotary_f32_dispatch(c->x, c->cos, c->sin, c->x, c->n_heads,
+								 c->half);
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -347,7 +349,7 @@ static void _exec_attention_group(void *ctx)
 							  (size_t)(pos + 1), (size_t)hd, (size_t)kv_dim,
 							  c->inv_sqrt_hd);
 		scores[pos + 1] = c->sinks[h];
-		fun_math_softmax_f32(scores, (size_t)(pos + 2));
+		fun_math_softmax_f32_dispatch(scores, (size_t)(pos + 2));
 		fun_math_weighted_sum_f32(scores, c->vcache + kvh * hd,
 								  c->attn_out + h * hd, (size_t)(pos + 1),
 								  (size_t)hd, (size_t)kv_dim);
@@ -375,7 +377,8 @@ static void _exec_post_attn(void *ctx)
 		c->hidden[i] = h;
 		c->attn_res[i] = h;
 	}
-	fun_math_rms_norm_f32(c->hidden, c->norm_weight, c->normed, c->n, c->eps);
+	fun_math_rms_norm_f32_dispatch(c->hidden, c->norm_weight, c->normed, c->n,
+								   c->eps);
 	fun_trace_span_end(SPAN_ATTENTION);
 }
 
@@ -403,8 +406,8 @@ static void _exec_router(void *ctx)
 	fun_trace_span_begin(SPAN_ROUTER);
 	CtxRouter *c = (CtxRouter *)ctx;
 	int n_exp = c->n_exp;
-	fun_math_matrix_vector_f32(c->router_w, c->x, c->router_b, c->rlog,
-							   (size_t)n_exp, (size_t)c->hs);
+	fun_math_matrix_vector_f32_dispatch(c->router_w, c->x, c->router_b,
+										c->rlog, (size_t)n_exp, (size_t)c->hs);
 	int topk = c->topk_n;
 	int top[4] = { 0, 0, 0, 0 };
 	float topv[4] = { -1e30f, -1e30f, -1e30f, -1e30f };
