@@ -235,3 +235,34 @@ void _math_bench_noop(const float *x, float *out, size_t n)
 	for (size_t i = 0; i < n; i++)
 		out[i] = x[i];
 }
+
+void fun_math_add_f32(const float *a, const float *b, float *out, size_t n)
+{
+	for (size_t i = 0; i < n; i++)
+		out[i] = a[i] + b[i];
+}
+
+void fun_math_mul_f32(const float *a, const float *b, float *out, size_t n)
+{
+	for (size_t i = 0; i < n; i++)
+		out[i] = a[i] * b[i];
+}
+
+float fun_math_sum_f32(const float *x, size_t n)
+{
+	float s = 0.0f;
+	for (size_t i = 0; i < n; i++)
+		s += x[i];
+	return s;
+}
+
+float fun_math_max_f32(const float *x, size_t n)
+{
+	if (n == 0)
+		return 0.0f;
+	float m = x[0];
+	for (size_t i = 1; i < n; i++)
+		if (x[i] > m)
+			m = x[i];
+	return m;
+}

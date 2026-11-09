@@ -9,7 +9,9 @@ gcc ^
     test_consistency.c ^
     test_performance.c ^
     test_harness_self.c ^
+    test_dispatch.c ^
     ../../src/math/math_scalar.c ^
+    ../../src/math/math_kernels.c ^
     ../../src/math/math_init.c ^
     ../../arch/math/scalar/vector.c ^
     ../../arch/math/scalar/vector_mxfp4.c ^

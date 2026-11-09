@@ -13,7 +13,9 @@ gcc ^
     test_consistency.c ^
     test_performance.c ^
     test_harness_self.c ^
+    test_dispatch.c ^
     ../../src/math/math_scalar.c ^
+    ../../src/math/math_kernels.c ^
     ../../src/math/math_init.c ^
     ../../arch/math/windows-amd64/cpu_features.c ^
     ../../src/console/console.c ^

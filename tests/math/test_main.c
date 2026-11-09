@@ -10,6 +10,7 @@ TestCount test_edge_cases(void);
 TestCount test_consistency(void);
 TestCount test_performance(void);
 TestCount test_harness_self(void);
+TestCount test_dispatch(void);
 
 static void run_suite(const char *name, TestCount (*fn)(void), TestCount *total)
 {
@@ -55,6 +56,7 @@ int main(void)
 	run_suite("consistency", test_consistency, &total);
 	run_suite("performance", test_performance, &total);
 	run_suite("harness self-test", test_harness_self, &total);
+	run_suite("dispatch", test_dispatch, &total);
 
 	fun_console_write_line("");
 	fun_console_write("Summary: ");

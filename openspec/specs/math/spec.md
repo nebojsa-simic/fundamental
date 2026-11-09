@@ -1,8 +1,10 @@
 # math Specification
 
 ## Purpose
-TBD - created by archiving change math-module-tests. Update Purpose after archive.
+Fast, portable scalar and SIMD math kernels for the Fundamental Library: scalar transcendental functions, vectorized (batch) float32 kernels, and fused quantized matrix-vector primitives (MXFP4, Q8_0). ISA-specific implementations live under `arch/math/<isa>/` and are selected at link time by which units the build links; there is no runtime dispatch.
+
 ## Requirements
+
 ### Requirement: Golden value generation tool
 The system SHALL provide a Python tool at `tests/math/tools/generate_golden.py` that generates C header files containing precomputed test vectors. Each header SHALL define a struct type with `input`, `expected`, and `tolerance` fields, followed by a static const array of test cases terminated by a sentinel.
 
@@ -114,15 +116,23 @@ The system SHALL exit with code 0 when all tests pass and non-zero when any test
 - **THEN** the test process exits with code 1 and prints the failed test names and failure counts
 
 ### Requirement: Build scripts compile test binary
-The system SHALL provide platform-specific build scripts that compile the test harness into an executable using gcc with the Fundamental Library's build conventions. For this chunk (no SIMD), the build SHALL not require AVX-512 flags.
+The system SHALL provide platform-specific build scripts that compile the test harness into an executable using gcc with the Fundamental Library's build conventions. Each platform SHALL provide one build variant per ISA target (scalar, AVX2, AVX-512) so each ISA unit is exercised independently.
 
 #### Scenario: Windows amd64 build
 - **WHEN** `build-windows-amd64.bat` is executed
-- **THEN** it compiles all test source files plus `src/math/math_scalar.c` and `arch/math/windows-amd64/cpu_features.c` into `test.exe` using `gcc --std=c17 -Os -I ../../include`, strips the binary, and exits with code 0
+- **THEN** it compiles the test sources plus the AVX-512 and AVX2 units (`arch/math/avx512/vector.c`, `arch/math/avx2/vector.c`) and `arch/math/windows-amd64/cpu_features.c` into `test.exe` and exits with code 0
+
+#### Scenario: Windows amd64 AVX2 build
+- **WHEN** `build-windows-amd64-avx2.bat` is executed
+- **THEN** it compiles the test sources plus the AVX2 units (`arch/math/avx2/vector.c`, `arch/math/avx2/vector_mxfp4.c`) and `arch/math/windows-amd64/cpu_features.c` into `test.exe` and exits with code 0
+
+#### Scenario: Windows amd64 scalar build
+- **WHEN** `build-windows-amd64-sse.bat` is executed
+- **THEN** it compiles the test sources plus the scalar units (`arch/math/scalar/vector.c`, `arch/math/scalar/vector_mxfp4.c`) and `arch/math/windows-amd64/cpu_features.c` into `test.exe` and exits with code 0
 
 #### Scenario: Linux amd64 build
 - **WHEN** `build-linux-amd64.sh` is executed
-- **THEN** it compiles all test source files plus `src/math/math_scalar.c` and `arch/math/linux-amd64/cpu_features.c` into `test` using `gcc --std=c17 -Os -I ../../include`, strips the binary, and exits with code 0
+- **THEN** it compiles the test sources plus the selected ISA unit(s) and `arch/math/linux-amd64/cpu_features.c` into `test` and exits with code 0
 
 ### Requirement: Consistency cross-validation
 When a SIMD implementation is compiled alongside a scalar reference, the system SHALL verify that both produce identical results within the scalar's tolerance for randomly generated inputs.
@@ -217,7 +227,7 @@ The system SHALL implement `fun_math_log` using exponent/mantissa extraction wit
 - **THEN** it returns NaN
 
 ### Requirement: CPU feature detection
-The system SHALL detect available CPU SIMD features at startup and store the results for later dispatch.
+The system SHALL detect available CPU SIMD features at startup and expose the results via the `fun_math_has_sse2()`, `fun_math_has_avx()`, `fun_math_has_avx2()`, and `fun_math_has_avx512f()` query functions for informational use. Feature detection SHALL NOT be used to select a vector implementation; implementation selection is link-time only (see "ISA units provide vector function implementations").
 
 #### Scenario: Feature detection on x86-64
 - **WHEN** `fun_math_init()` is called during startup Phase 1
@@ -226,21 +236,6 @@ The system SHALL detect available CPU SIMD features at startup and store the res
 #### Scenario: Feature query returns false when unsupported
 - **WHEN** `fun_math_has_avx512f()` is called on a CPU without AVX-512
 - **THEN** it returns 0 (false)
-
-### Requirement: Unimplemented functions return sentinel
-Functions deferred to future chunks SHALL return 0.0 so that tests can compile and run, making failures clearly attributable to missing implementations.
-
-#### Scenario: Deferred scalar functions
-- **WHEN** `fun_math_sin`, `fun_math_cos`, `fun_math_tanh`, `fun_math_sigmoid`, or `fun_math_silu` is called
-- **THEN** it returns 0.0
-
-#### Scenario: Deferred vector functions
-- **WHEN** `fun_math_silu_f32`, `fun_math_rms_norm_f32`, `fun_math_swiglu_f32`, or `fun_math_softmax_f32` is called
-- **THEN** it returns 0.0 or returns immediately for void functions
-
-#### Scenario: No deferred functions remain
-- **WHEN** the math module is fully initialized after Chunk 3
-- **THEN** all 12 declared functions have real implementations; no function returns a sentinel value
 
 ### Requirement: sin implementation
 The system SHALL implement `fun_math_sin` using range reduction modulo 2π followed by a Taylor polynomial, achieving relative error below 1e-3 for inputs with absolute value ≤ 50.
@@ -346,7 +341,7 @@ The system SHALL implement `fun_math_silu` using `fun_math_sigmoid`, achieving r
 - **THEN** it returns NaN
 
 ### Requirement: silu_f32 AVX2 implementation
-The system SHALL implement `fun_math_silu_f32` using AVX2 SIMD when available, applying element-wise SiLU activation over float32 arrays with aligned loads and stores.
+The system SHALL implement `fun_math_silu_f32` using AVX2 SIMD when available, applying element-wise SiLU activation over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: silu_f32 accuracy
 - **WHEN** silu_f32 is called with arrays of length 1024 against precomputed golden values
@@ -361,7 +356,7 @@ The system SHALL implement `fun_math_silu_f32` using AVX2 SIMD when available, a
 - **THEN** every element matches within 1e-5 absolute tolerance
 
 ### Requirement: rms_norm_f32 AVX2 implementation
-The system SHALL implement `fun_math_rms_norm_f32` using AVX2 SIMD when available, computing RMS normalization over float32 arrays with aligned loads and stores.
+The system SHALL implement `fun_math_rms_norm_f32` using AVX2 SIMD when available, computing RMS normalization over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: rms_norm_f32 accuracy
 - **WHEN** rms_norm_f32 is called with arrays of length 4096 against precomputed golden values
@@ -376,7 +371,7 @@ The system SHALL implement `fun_math_rms_norm_f32` using AVX2 SIMD when availabl
 - **THEN** every element matches within 5e-4 absolute or 5e-3 relative tolerance
 
 ### Requirement: swiglu_f32 AVX2 implementation
-The system SHALL implement `fun_math_swiglu_f32` using AVX2 SIMD when available, computing gate·SiLU(gate)·up over float32 arrays with aligned loads and stores.
+The system SHALL implement `fun_math_swiglu_f32` using AVX2 SIMD when available, computing gate·SiLU(gate)·up over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: swiglu_f32 accuracy
 - **WHEN** swiglu_f32 is called with gate/up arrays of length 1024 against precomputed golden values
@@ -387,7 +382,7 @@ The system SHALL implement `fun_math_swiglu_f32` using AVX2 SIMD when available,
 - **THEN** it returns immediately without accessing input or output arrays
 
 ### Requirement: softmax_f32 AVX2 implementation
-The system SHALL implement `fun_math_softmax_f32` using AVX2 SIMD when available, computing in-place softmax over float32 arrays with aligned loads and stores.
+The system SHALL implement `fun_math_softmax_f32` using AVX2 SIMD when available, computing in-place softmax over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: softmax_f32 accuracy
 - **WHEN** softmax_f32 is called with arrays of length 32 against precomputed golden values
@@ -397,40 +392,32 @@ The system SHALL implement `fun_math_softmax_f32` using AVX2 SIMD when available
 - **WHEN** softmax_f32 is called with n=0
 - **THEN** it returns immediately without accessing the input array
 
-### Requirement: Vector function dispatch
-The system SHALL dispatch vector function calls to the best available implementation at runtime based on CPU feature detection.
-
-#### Scenario: AVX2 dispatch
-- **WHEN** the CPU supports AVX2 and `fun_math_init` has been called
-- **THEN** all four vector functions execute AVX2-optimized code paths
-
-#### Scenario: Scalar fallback
-- **WHEN** the CPU does not support AVX2
-- **THEN** all four vector functions execute scalar fallback implementations
-
-### Requirement: Aligned-only AVX2 API
-The AVX2 vector implementations SHALL require 32-byte aligned buffers and n%8==0. Callers violating these preconditions receive undefined behavior.
-
-#### Scenario: AVX2 path assumes alignment
-- **WHEN** the AVX2 code path is active
-- **THEN** aligned load and store instructions are used with no remainder loop or safety checks
-
 ### Requirement: ISA units provide vector function implementations
-Vector function implementations SHALL be provided by ISA-specific compilation units under `arch/math/<isa>/`. The compilation unit provides strong definitions of the public `fun_math_*` vector functions, selected at link time by which `arch/math/<isa>/` directory is included in the build. No runtime dispatch layer and no function-pointer fallback SHALL exist.
+Vector function implementations SHALL be provided by ISA-specific compilation units under `arch/math/<isa>/` (`scalar`, `avx2`, `avx512`). Each unit defines the public `fun_math_*` vector functions for one ISA. The implementation that executes is selected at link time by which units are compiled and linked into the binary. There is no runtime dispatch layer and no function-pointer fallback for choosing among CPU ISAs; CPU feature detection is never used to select an implementation.
 
-#### Scenario: AVX2 unit linked
-- **WHEN** `arch/math/avx2/vector.c` is compiled and linked into the binary
-- **THEN** all four vector functions (silu_f32, swiglu_f32, rms_norm_f32, softmax_f32) execute AVX2-optimized code paths without runtime branching
+The scalar unit SHALL provide strong definitions used when no SIMD unit is linked. The AVX2 unit SHALL define its kernels with weak linkage (`__attribute__((weak))`) so a build may link the AVX-512 unit alongside it and resolve each function to the AVX-512 implementation. Backend-level selection (CPU vs. accelerator) is a separate, opt-in mechanism governed by the "Backend registry" requirement and SHALL NOT be used to choose among CPU ISA implementations.
 
-#### Scenario: non-AVX2 build
-- **WHEN** the AVX2 unit is not part of the build
-- **THEN** the build must provide another ISA unit or fail to link; no implicit scalar fallback exists
+#### Scenario: AVX-512 build resolves to AVX-512
+- **WHEN** `arch/math/avx512/vector.c` and `arch/math/avx2/vector.c` are both compiled and linked into the binary
+- **THEN** the weak AVX2 definitions defer to the AVX-512 definitions at link time and the vector functions execute AVX-512 code paths with no runtime branching
+
+#### Scenario: AVX2 unit linked alone
+- **WHEN** only `arch/math/avx2/vector.c` (with its MXFP4 unit) is linked
+- **THEN** the vector functions execute AVX2-optimized code paths without runtime branching
+
+#### Scenario: Scalar-only build
+- **WHEN** only `arch/math/scalar/vector.c` is linked
+- **THEN** the vector functions execute the portable scalar implementations
+
+#### Scenario: no runtime dispatch
+- **WHEN** a built-in `fun_math_*` vector function is called
+- **THEN** the executed implementation is fixed at link time; the call never branches on CPUID results or a function-pointer table to choose among CPU ISA implementations
 
 ### Requirement: Vector-safe vector API
-The AVX2 vector implementations SHALL accept unaligned buffers and any `n`. The vectorized main loop SHALL use unaligned loads/stores (`_mm256_loadu_ps`/`_mm256_storeu_ps`), and a scalar tail loop SHALL process the remaining `n % 8` elements.
+The SIMD vector implementations SHALL accept unaligned buffers and any `n`. The vectorized main loop SHALL use unaligned loads/stores (`_mm256_loadu_ps`/`_mm256_storeu_ps`), and a scalar tail loop SHALL process the remaining `n % 8` elements.
 
 #### Scenario: unaligned buffers
-- **WHEN** the AVX2 code path processes buffers not aligned to 32 bytes
+- **WHEN** a SIMD code path processes buffers not aligned to 32 bytes
 - **THEN** unaligned load/store instructions are used and results remain correct
 
 #### Scenario: tail remainder
@@ -438,11 +425,11 @@ The AVX2 vector implementations SHALL accept unaligned buffers and any `n`. The 
 - **THEN** the remaining `n % 8` elements are processed by the scalar tail loop without out-of-bounds access
 
 #### Scenario: vectorized correctness
-- **WHEN** AVX2 results are compared with scalar `fun_math_*` results
+- **WHEN** SIMD results are compared with scalar `fun_math_*` results
 - **THEN** each element matches within tolerance (1e-4 relative, 1e-3 absolute) and golden expected values
 
 ### Requirement: Public API vector additions
-The system SHALL extend `include/fundamental/math/math.h` with declarations for matrix-vector multiplication, dot product, and batched transcendental functions, following the existing `fun_math_*_f32` naming convention.
+The system SHALL extend `include/fundamental/math/math.h` with declarations for matrix-vector multiplication, dot product, batched transcendental functions, and elementwise binary and reduction kernels, following the existing `fun_math_*_f32` naming convention.
 
 #### Scenario: Header declares matrix-vector and dot functions
 - **WHEN** the header is included
@@ -451,6 +438,10 @@ The system SHALL extend `include/fundamental/math/math.h` with declarations for 
 #### Scenario: Header declares batched transcendentals
 - **WHEN** the header is included
 - **THEN** the following functions are declared: `fun_math_exp_f32(const float *x, float *out, size_t n)`, `fun_math_log_f32(const float *x, float *out, size_t n)`, `fun_math_sin_f32(const float *x, float *out, size_t n)`, and `fun_math_cos_f32(const float *x, float *out, size_t n)`
+
+#### Scenario: Header declares elementwise binary and reduction kernels
+- **WHEN** the header is included
+- **THEN** the following functions are declared: `fun_math_add_f32(const float *a, const float *b, float *out, size_t n)`, `fun_math_mul_f32(const float *a, const float *b, float *out, size_t n)`, `fun_math_sum_f32(const float *x, size_t n)`, and `fun_math_max_f32(const float *x, size_t n)`
 
 ### Requirement: matrix_vector_f32 implementation
 The system SHALL implement `fun_math_matrix_vector_f32` so that for each row `r` in `[0, rows)`, `out[r]` equals `bias[r]` (when `bias` is not NULL, otherwise 0) plus the dot product of row `r` of `w` (elements `w[r*cols + c]`) with `x[c]`, within tolerance of a scalar reference computation. The implementation SHALL process the vectorized main loop with SIMD and handle the remaining `cols % 8` elements with a scalar tail loop.
@@ -727,3 +718,134 @@ using the ×2-scaled integer lookup table with an exponent-shifted scale.
 - **WHEN** `n_rows == 0`
 - **THEN** the function returns without accessing input or output memory
 
+### Requirement: Backend registry
+The system SHALL provide a backend registry for the math module with a getter and setter. The default backend SHALL be the built-in CPU backend that forwards to the built-in `fun_math_*` kernels (including the elementwise binary and reduction kernels added by this change). Setting a custom backend SHALL replace the backend used by subsequent dispatches; passing NULL SHALL restore the default CPU backend.
+
+#### Scenario: Default backend is the CPU
+- **WHEN** `fun_math_backend_get()` is called before any backend is set
+- **THEN** it returns the built-in CPU backend
+
+#### Scenario: Set and restore a custom backend
+- **WHEN** a caller calls `fun_math_backend_set(custom)`
+- **THEN** `fun_math_backend_get()` returns `custom`
+- **WHEN** the caller subsequently calls `fun_math_backend_set(NULL)`
+- **THEN** `fun_math_backend_get()` returns the default CPU backend
+
+#### Scenario: Backend set outside concurrent dispatch
+- **WHEN** `fun_math_backend_set` is called during single-threaded startup before any dispatch
+- **THEN** the registry is a process-global slot and subsequent dispatches use the selected backend
+
+### Requirement: Data type enumeration
+The system SHALL define a data type enumeration `FunMathDtype` with an `F32` member that is implemented, and `F16` and `F64` members that are reserved for future backends.
+
+#### Scenario: F32 is available
+- **WHEN** a dispatch is invoked with `FUN_MATH_DTYPE_F32`
+- **THEN** the operation executes on the float32 data
+
+#### Scenario: Reserved dtypes are unsupported
+- **WHEN** a dispatch is invoked with `FUN_MATH_DTYPE_F16` or `FUN_MATH_DTYPE_F64`
+- **THEN** the operation is a no-op and the output is left unmodified
+
+### Requirement: Operation enumeration
+The system SHALL define an operation enumeration `FunMathOp` covering unary elementwise operations (sqrt, exp, log, sin, cos, tanh, sigmoid, silu), binary elementwise operations (add, mul), and single-input reductions (sum, max).
+
+#### Scenario: Operation codes are enumerated
+- **WHEN** a dispatch is invoked with any unary, binary, or reduction op code
+- **THEN** the corresponding operation is applied to the input tensor(s)
+
+### Requirement: Strided tensor descriptor
+The system SHALL define a tensor descriptor `FunMathTensor` carrying a data pointer, an element count `n`, and a stride in elements. A stride of 1 SHALL denote a contiguous tensor.
+
+#### Scenario: Contiguous tensor
+- **WHEN** a dispatch is invoked with a tensor whose stride is 1 and count is `n`
+- **THEN** the operation reads or writes `n` contiguous elements starting at `data`
+
+#### Scenario: Strided tensor
+- **WHEN** a dispatch is invoked with a tensor whose stride is `s`
+- **THEN** the operation accesses elements `data[i * s]` for `i` in `[0, n)`
+
+### Requirement: Generic unary dispatch
+The system SHALL provide `fun_math_unary(op, dtype, in, out)` that applies a unary elementwise operation to each element of the strided input tensor and writes the result to the output tensor, which is itself a `FunMathTensor` whose stride is honored. For `F32`, output SHALL match the corresponding scalar function within tolerance, and NaN inputs SHALL produce NaN outputs.
+
+#### Scenario: Unary exp over a contiguous tensor
+- **WHEN** `fun_math_unary(FUN_MATH_OP_EXP, FUN_MATH_DTYPE_F32, in, out)` is called with a contiguous input and output
+- **THEN** `out[i]` equals `exp(in[i])` within 1e-4 relative or 1e-5 absolute tolerance for every `i`
+
+#### Scenario: Unary over a strided output tensor
+- **WHEN** `fun_math_unary` is called with an output tensor whose stride is `s`
+- **THEN** the result is written at `out[i * s]` for every `i`
+
+#### Scenario: All unary ops match their scalar reference
+- **WHEN** `fun_math_unary(op, FUN_MATH_DTYPE_F32, in, out)` is called for each op in sqrt, exp, log, sin, cos, tanh, sigmoid, and silu
+- **THEN** `out[i]` matches the corresponding scalar `fun_math_*` function within 1e-4 relative or 1e-5 absolute tolerance for every `i`
+
+#### Scenario: NaN propagation
+- **WHEN** `fun_math_unary` is called with a NaN element
+- **THEN** the corresponding output element is NaN
+
+### Requirement: Generic binary dispatch
+The system SHALL provide `fun_math_binary(op, dtype, a, b, out)` that applies a binary elementwise operation (add or mul) to the two strided input tensors and writes the result to the output tensor, honoring each tensor's stride.
+
+#### Scenario: Binary add
+- **WHEN** `fun_math_binary(FUN_MATH_OP_ADD, FUN_MATH_DTYPE_F32, a, b, out)` is called
+- **THEN** `out[i * out.stride]` equals `a[i * a.stride] + b[i * b.stride]` for every `i`
+
+#### Scenario: Binary mul
+- **WHEN** `fun_math_binary(FUN_MATH_OP_MUL, FUN_MATH_DTYPE_F32, a, b, out)` is called
+- **THEN** `out[i * out.stride]` equals `a[i * a.stride] * b[i * b.stride]` for every `i`
+
+### Requirement: Generic reduction dispatch
+The system SHALL provide `fun_math_reduce(op, dtype, in, out)` that reduces a strided input tensor to a single scalar written through `out`, a pointer to a scalar of the dtype. For `sum` it SHALL compute the sum of the elements, and for `max` it SHALL compute the maximum element.
+
+#### Scenario: Sum reduction
+- **WHEN** `fun_math_reduce(FUN_MATH_OP_SUM, FUN_MATH_DTYPE_F32, in, out)` is called
+- **THEN** `out` equals the sum of all `n` input elements within tolerance
+
+#### Scenario: Max reduction
+- **WHEN** `fun_math_reduce(FUN_MATH_OP_MAX, FUN_MATH_DTYPE_F32, in, out)` is called
+- **THEN** `out` equals the maximum of all `n` input elements
+
+#### Scenario: Zero-length reduction
+- **WHEN** `fun_math_reduce` is called with a tensor whose `n` is 0
+- **THEN** it writes 0.0 to `out` for both `sum` and `max`
+
+### Requirement: Structured kernel backend dispatch
+The system SHALL route the structured kernels matrix-vector product, dot product, RMS norm, softmax, and rotary rotation through the current backend. Each SHALL have a dispatch function that calls the backend's entry when set, and otherwise falls back to the corresponding built-in `fun_math_*` kernel.
+
+#### Scenario: Default falls back to built-in kernel
+- **WHEN** `fun_math_softmax_f32_dispatch(x, n)` is called with the default CPU backend
+- **THEN** the result matches `fun_math_softmax_f32(x, n)` exactly
+
+#### Scenario: Custom backend intercepts
+- **WHEN** a custom backend provides a softmax entry and is set as the current backend
+- **THEN** `fun_math_softmax_f32_dispatch` calls that entry instead of the built-in kernel
+
+### Requirement: Portable elementwise binary and reduction kernels
+The system SHALL provide portable `fun_math_add_f32`, `fun_math_mul_f32`, `fun_math_sum_f32`, and `fun_math_max_f32` kernels that operate over contiguous float32 arrays. These SHALL be the implementations the default CPU backend uses for the contiguous case of the generic binary and reduction dispatch.
+
+#### Scenario: add_f32
+- **WHEN** `fun_math_add_f32(a, b, out, n)` is called
+- **THEN** `out[i]` equals `a[i] + b[i]` for every `i` in `[0, n)`
+
+#### Scenario: mul_f32
+- **WHEN** `fun_math_mul_f32(a, b, out, n)` is called
+- **THEN** `out[i]` equals `a[i] * b[i]` for every `i` in `[0, n)`
+
+#### Scenario: sum_f32
+- **WHEN** `fun_math_sum_f32(x, n)` is called
+- **THEN** it returns the sum of `x[0]` through `x[n-1]`
+
+#### Scenario: max_f32
+- **WHEN** `fun_math_max_f32(x, n)` is called
+- **THEN** it returns the largest element of `x`
+
+### Requirement: Backend interface is GPU-ready
+The system SHALL define the backend as a set of function-pointer entries (unary, binary, reduction, and the listed structured kernels) that a future accelerator backend can implement and install with `fun_math_backend_set`. The backend struct SHALL be extensible so additional kernel entries can be appended without breaking existing backends. No GPU backend SHALL be implemented in this change.
+
+#### Scenario: Backend contract is expressible
+- **WHEN** a future backend implements the unary, binary, reduction, and structured entries
+- **THEN** it can be installed with `fun_math_backend_set` and used by the dispatch call sites
+
+#### Scenario: Extensible for additional kernels
+- **WHEN** additional kernels (for example swiglu or quantized matrix-vector) are added to the backend in a future change
+- **THEN** their entries are appended to the struct without breaking existing backends

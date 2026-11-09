@@ -26,6 +26,11 @@ void fun_math_matrix_vector_f32(const float *w, const float *x,
 								size_t cols);
 float fun_math_dot_f32(const float *a, const float *b, size_t n);
 
+void fun_math_add_f32(const float *a, const float *b, float *out, size_t n);
+void fun_math_mul_f32(const float *a, const float *b, float *out, size_t n);
+float fun_math_sum_f32(const float *x, size_t n);
+float fun_math_max_f32(const float *x, size_t n);
+
 void fun_math_exp_f32(const float *x, float *out, size_t n);
 void fun_math_log_f32(const float *x, float *out, size_t n);
 void fun_math_sin_f32(const float *x, float *out, size_t n);
