@@ -106,8 +106,8 @@ static TestCount test_mat_vec_accuracy(void)
 			for (size_t i = 0; i < rows; i++)
 				bias[i] = _math_test_lcg_float(&rng, -0.5f, 0.5f);
 
-			fun_math_matrix_vector_f32(w, x, bias, got, rows, cols);
-			fun_math_matrix_vector_f32(w, x, NULL, want, rows, cols);
+			fun_math_matrix_vector_f32_cpu(w, x, bias, got, rows, cols);
+			fun_math_matrix_vector_f32_cpu(w, x, NULL, want, rows, cols);
 			for (size_t r = 0; r < rows; r++) {
 				float ref = 0.0f;
 				for (size_t c = 0; c < cols; c++)
@@ -175,7 +175,7 @@ static TestCount test_dot_accuracy(void)
 			float ref = 0.0f;
 			for (size_t i = 0; i < n; i++)
 				ref += a[i] * b[i];
-			float got = fun_math_dot_f32(a, b, n);
+			float got = fun_math_dot_f32_cpu(a, b, n);
 			int ok = _math_test_check_float(got, ref, 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
 			if (!ok) {
@@ -253,7 +253,7 @@ static TestCount test_rotary_accuracy(void)
 
 		rotary_scalar_ref(x, c, s, want, nh, half);
 
-		fun_math_rotary_f32(x, c, s, got, nh, half);
+		fun_math_rotary_f32_cpu(x, c, s, got, nh, half);
 		for (size_t i = 0; i < n; i++) {
 			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
@@ -276,7 +276,7 @@ static TestCount test_rotary_accuracy(void)
 		}
 
 		fun_memory_copy(x, got, n * sizeof(float));
-		fun_math_rotary_f32(got, c, s, got, nh, half);
+		fun_math_rotary_f32_cpu(got, c, s, got, nh, half);
 		for (size_t i = 0; i < n; i++) {
 			int ok = _math_test_check_float(got[i], want[i], 1e-4f, 1e-3f);
 			math_test_count_add(&tc, ok);
@@ -505,9 +505,9 @@ TestCount test_vector_accuracy(void)
 				tc.failed += n;
 				continue;
 			}
-			fun_math_rms_norm_f32(rms_norm_f32_cases[ci].x,
-								  rms_norm_f32_cases[ci].weight, out, n,
-								  rms_norm_f32_cases[ci].eps);
+			fun_math_rms_norm_f32_cpu(rms_norm_f32_cases[ci].x,
+									  rms_norm_f32_cases[ci].weight, out, n,
+									  rms_norm_f32_cases[ci].eps);
 			for (int j = 0; j < n; j++) {
 				int ok = _math_test_check_float(
 					out[j], rms_norm_f32_cases[ci].expected[j], 1e-4f, 1e-3f);
@@ -578,7 +578,7 @@ TestCount test_vector_accuracy(void)
 			}
 			fun_memory_copy((Memory)softmax_f32_cases[ci].input, (Memory)x,
 							n * sizeof(float));
-			fun_math_softmax_f32(x, n);
+			fun_math_softmax_f32_cpu(x, n);
 
 			float sum = 0.0f;
 			for (int j = 0; j < n; j++) {
@@ -706,9 +706,9 @@ TestCount test_vector_accuracy(void)
 				tc.failed += (int)n;
 				continue;
 			}
-			fun_math_rotary_f32(rotary_f32_cases[ci].x,
-								rotary_f32_cases[ci].cosv,
-								rotary_f32_cases[ci].sinv, out, nh, half);
+			fun_math_rotary_f32_cpu(rotary_f32_cases[ci].x,
+									rotary_f32_cases[ci].cosv,
+									rotary_f32_cases[ci].sinv, out, nh, half);
 			for (size_t j = 0; j < n; j++) {
 				int ok = _math_test_check_float(
 					out[j], rotary_f32_cases[ci].expected[j], 1e-4f, 1e-3f);

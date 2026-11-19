@@ -77,7 +77,8 @@ static inline float __attribute__((always_inline)) _mm256_hsum_ps(__m256 v)
 	return _mm_cvtss_f32(sum);
 }
 
-__attribute__((weak)) void fun_math_silu_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_silu_f32(const float *x, float *out,
+											 size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -88,8 +89,8 @@ __attribute__((weak)) void fun_math_silu_f32(const float *x, float *out, size_t 
 		out[i] = fun_math_silu(x[i]);
 }
 
-__attribute__((weak)) void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
-						 size_t n)
+__attribute__((weak)) void
+fun_math_swiglu_f32(const float *gate, const float *up, float *out, size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -104,8 +105,10 @@ __attribute__((weak)) void fun_math_swiglu_f32(const float *gate, const float *u
 	}
 }
 
-__attribute__((weak)) void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-						   size_t n, float eps)
+__attribute__((weak)) void fun_math_rms_norm_f32_cpu(const float *x,
+													 const float *weight,
+													 float *out, size_t n,
+													 float eps)
 {
 	__m256 ss = _mm256_setzero_ps();
 	size_t i = 0;
@@ -128,7 +131,7 @@ __attribute__((weak)) void fun_math_rms_norm_f32(const float *x, const float *we
 		out[i] = x[i] * scale * weight[i];
 }
 
-__attribute__((weak)) void fun_math_softmax_f32(float *x, size_t n)
+__attribute__((weak)) void fun_math_softmax_f32_cpu(float *x, size_t n)
 {
 	if (n == 0)
 		return;
@@ -228,9 +231,10 @@ static inline __m256 __attribute__((always_inline)) _mm256_sin_ps(__m256 x)
 							negate);
 }
 
-__attribute__((weak)) void fun_math_matrix_vector_f32(const float *w, const float *x,
-								const float *bias, float *out, size_t rows,
-								size_t cols)
+__attribute__((weak)) void
+fun_math_matrix_vector_f32_cpu(const float *w, const float *x,
+							   const float *bias, float *out, size_t rows,
+							   size_t cols)
 {
 	for (size_t r = 0; r < rows; r++) {
 		const float *wr = w + r * cols;
@@ -246,7 +250,8 @@ __attribute__((weak)) void fun_math_matrix_vector_f32(const float *w, const floa
 	}
 }
 
-__attribute__((weak)) float fun_math_dot_f32(const float *a, const float *b, size_t n)
+__attribute__((weak)) float fun_math_dot_f32_cpu(const float *a, const float *b,
+												 size_t n)
 {
 	__m256 sum = _mm256_setzero_ps();
 	size_t i = 0;
@@ -259,7 +264,8 @@ __attribute__((weak)) float fun_math_dot_f32(const float *a, const float *b, siz
 	return s;
 }
 
-__attribute__((weak)) void fun_math_exp_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_exp_f32(const float *x, float *out,
+											size_t n)
 {
 	size_t i = 0;
 	__m256 lo = _mm256_set1_ps(-87.3365f);
@@ -284,7 +290,8 @@ __attribute__((weak)) void fun_math_exp_f32(const float *x, float *out, size_t n
 		out[i] = fun_math_exp(x[i]);
 }
 
-__attribute__((weak)) void fun_math_log_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_log_f32(const float *x, float *out,
+											size_t n)
 {
 	size_t i = 0;
 	__m256 pneginf = _mm256_castsi256_ps(_mm256_set1_epi32(0xFF800000));
@@ -312,7 +319,8 @@ __attribute__((weak)) void fun_math_log_f32(const float *x, float *out, size_t n
 		out[i] = fun_math_log(x[i]);
 }
 
-__attribute__((weak)) void fun_math_sin_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_sin_f32(const float *x, float *out,
+											size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8)
@@ -321,7 +329,8 @@ __attribute__((weak)) void fun_math_sin_f32(const float *x, float *out, size_t n
 		out[i] = fun_math_sin(x[i]);
 }
 
-__attribute__((weak)) void fun_math_cos_f32(const float *x, float *out, size_t n)
+__attribute__((weak)) void fun_math_cos_f32(const float *x, float *out,
+											size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -333,8 +342,9 @@ __attribute__((weak)) void fun_math_cos_f32(const float *x, float *out, size_t n
 		out[i] = fun_math_cos(x[i]);
 }
 
-__attribute__((weak)) void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
-						 float *out, size_t n_heads, size_t half)
+__attribute__((weak)) void
+fun_math_rotary_f32_cpu(const float *x, const float *cosv, const float *sinv,
+						float *out, size_t n_heads, size_t half)
 {
 	for (size_t h = 0; h < n_heads; h++) {
 		const float *xh = x + h * 2 * half;
@@ -359,9 +369,10 @@ __attribute__((weak)) void fun_math_rotary_f32(const float *x, const float *cosv
 	}
 }
 
-__attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
-						   size_t n_rows, size_t row_len, size_t row_stride,
-						   float scale)
+__attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x,
+												 float *out, size_t n_rows,
+												 size_t row_len,
+												 size_t row_stride, float scale)
 {
 	__m256 s256 = _mm256_set1_ps(scale);
 	for (size_t t = 0; t < n_rows; t++) {
@@ -378,27 +389,28 @@ __attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x,
 	}
 }
 
-__attribute__((weak)) void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
-                               size_t n_rows, size_t row_len, size_t row_stride)
+__attribute__((weak)) void
+fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
+						  size_t n_rows, size_t row_len, size_t row_stride)
 {
-    size_t d = 0;
-    for (; d + 8 <= row_len; d += 8)
-        _mm256_storeu_ps(out + d, _mm256_setzero_ps());
-    for (; d < row_len; d++)
-        out[d] = 0.0f;
+	size_t d = 0;
+	for (; d + 8 <= row_len; d += 8)
+		_mm256_storeu_ps(out + d, _mm256_setzero_ps());
+	for (; d < row_len; d++)
+		out[d] = 0.0f;
 
-    for (size_t t = 0; t < n_rows; t++) {
-        __m256 w = _mm256_set1_ps(wgt[t]);
-        const float *xr = x + t * row_stride;
-        d = 0;
-        for (; d + 8 <= row_len; d += 8) {
-            __m256 acc = _mm256_loadu_ps(out + d);
-            acc = _mm256_fmadd_ps(w, _mm256_loadu_ps(xr + d), acc);
-            _mm256_storeu_ps(out + d, acc);
-        }
-        for (; d < row_len; d++)
-            out[d] += wgt[t] * xr[d];
-    }
+	for (size_t t = 0; t < n_rows; t++) {
+		__m256 w = _mm256_set1_ps(wgt[t]);
+		const float *xr = x + t * row_stride;
+		d = 0;
+		for (; d + 8 <= row_len; d += 8) {
+			__m256 acc = _mm256_loadu_ps(out + d);
+			acc = _mm256_fmadd_ps(w, _mm256_loadu_ps(xr + d), acc);
+			_mm256_storeu_ps(out + d, acc);
+		}
+		for (; d < row_len; d++)
+			out[d] += wgt[t] * xr[d];
+	}
 }
 
 void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)

@@ -70,8 +70,7 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
 		/* 16-lane accumulator: lane i sums elements i and i+16 of each
 		 * 32-element block, keeping 16 independent partial sums reduced once
 		 * per row instead of once per block. */
-		for (size_t b = 0; b < blocks;
-			 b++, bp += FUN_MATH_MXFP4_BLOCK_BYTES) {
+		for (size_t b = 0; b < blocks; b++, bp += FUN_MATH_MXFP4_BLOCK_BYTES) {
 			uint8_t scale = bp[0];
 			if (scale == 0)
 				continue;
@@ -175,14 +174,12 @@ static inline __m512 __attribute__((always_inline)) _mm512_sigmoid_ps(__m512 x)
 {
 	__m512 one = _mm512_set1_ps(1.0f);
 	__m512 zero = _mm512_setzero_ps();
-	__mmask16 pos_hi =
-		_mm512_cmp_ps_mask(x, _mm512_set1_ps(20.0f), _CMP_GE_OQ);
+	__mmask16 pos_hi = _mm512_cmp_ps_mask(x, _mm512_set1_ps(20.0f), _CMP_GE_OQ);
 	__mmask16 neg_hi =
 		_mm512_cmp_ps_mask(x, _mm512_set1_ps(-20.0f), _CMP_LE_OQ);
 
 	__m512 nx = _mm512_sub_ps(zero, x);
-	__m512 ex_neg =
-		_mm512_div_ps(one, _mm512_add_ps(one, _mm512_exp_ps(nx)));
+	__m512 ex_neg = _mm512_div_ps(one, _mm512_add_ps(one, _mm512_exp_ps(nx)));
 
 	__m512 result = _mm512_mask_blend_ps(pos_hi, ex_neg, one);
 	result = _mm512_mask_blend_ps(neg_hi, result, zero);
@@ -199,12 +196,12 @@ static inline __m512 __attribute__((always_inline)) _mm512_log_ps(__m512 x)
 {
 	__m512i bits = _mm512_castps_si512(x);
 
-	__m512i exp_field = _mm512_and_si512(_mm512_srli_epi32(bits, 23),
-										 _mm512_set1_epi32(0xFF));
+	__m512i exp_field =
+		_mm512_and_si512(_mm512_srli_epi32(bits, 23), _mm512_set1_epi32(0xFF));
 	__m512i exp_int = _mm512_sub_epi32(exp_field, _mm512_set1_epi32(127));
-	__m512i mant_bits = _mm512_or_si512(
-		_mm512_and_si512(bits, _mm512_set1_epi32(0x7FFFFF)),
-		_mm512_set1_epi32(0x3F800000));
+	__m512i mant_bits =
+		_mm512_or_si512(_mm512_and_si512(bits, _mm512_set1_epi32(0x7FFFFF)),
+						_mm512_set1_epi32(0x3F800000));
 	__m512 m = _mm512_castsi512_ps(mant_bits);
 
 	__m512 one = _mm512_set1_ps(1.0f);
@@ -227,19 +224,16 @@ static inline __m512 __attribute__((always_inline)) _mm512_sin_ps(__m512 x)
 	__m512 nf = _mm512_add_ps(_mm512_mul_ps(x, _mm512_set1_ps(1.0f / TWOPI)),
 							  _mm512_set1_ps(0.5f));
 	__m512i n = _mm512_cvttps_epi32(nf);
-	__mmask16 less =
-		_mm512_cmp_ps_mask(nf, _mm512_cvtepi32_ps(n), _CMP_LT_OQ);
+	__mmask16 less = _mm512_cmp_ps_mask(nf, _mm512_cvtepi32_ps(n), _CMP_LT_OQ);
 	n = _mm512_add_epi32(n, _mm512_srai_epi32(_mm512_movm_epi32(less), 31));
 	__m512 xr =
 		_mm512_fnmadd_ps(_mm512_cvtepi32_ps(n), _mm512_set1_ps(TWOPI), x);
 
-	__mmask16 negate =
-		_mm512_cmp_ps_mask(xr, _mm512_setzero_ps(), _CMP_LT_OQ);
-	__m512 ax = _mm512_mask_blend_ps(
-		negate, xr, _mm512_sub_ps(_mm512_setzero_ps(), xr));
+	__mmask16 negate = _mm512_cmp_ps_mask(xr, _mm512_setzero_ps(), _CMP_LT_OQ);
+	__m512 ax = _mm512_mask_blend_ps(negate, xr,
+									 _mm512_sub_ps(_mm512_setzero_ps(), xr));
 
-	__mmask16 is_big =
-		_mm512_cmp_ps_mask(ax, _mm512_set1_ps(PI), _CMP_GT_OQ);
+	__mmask16 is_big = _mm512_cmp_ps_mask(ax, _mm512_set1_ps(PI), _CMP_GT_OQ);
 	ax = _mm512_mask_blend_ps(is_big, ax,
 							  _mm512_sub_ps(_mm512_set1_ps(TWOPI), ax));
 	__mmask16 is_hi =
@@ -257,8 +251,8 @@ static inline __m512 __attribute__((always_inline)) _mm512_sin_ps(__m512 x)
 	result = _mm512_fnmadd_ps(x7, _mm512_set1_ps(0.0001984126984f), result);
 	result = _mm512_fmadd_ps(x9, _mm512_set1_ps(0.000002755731922f), result);
 
-	return _mm512_mask_blend_ps(
-		negate, result, _mm512_sub_ps(_mm512_setzero_ps(), result));
+	return _mm512_mask_blend_ps(negate, result,
+								_mm512_sub_ps(_mm512_setzero_ps(), result));
 }
 
 void fun_math_silu_f32(const float *x, float *out, size_t n)
@@ -286,8 +280,8 @@ void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
 	}
 }
 
-void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-						   size_t n, float eps)
+void fun_math_rms_norm_f32_cpu(const float *x, const float *weight, float *out,
+							   size_t n, float eps)
 {
 	__m512 ss = _mm512_setzero_ps();
 	size_t i = 0;
@@ -310,7 +304,7 @@ void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
 		out[i] = x[i] * scale * weight[i];
 }
 
-void fun_math_softmax_f32(float *x, size_t n)
+void fun_math_softmax_f32_cpu(float *x, size_t n)
 {
 	if (n == 0)
 		return;
@@ -348,9 +342,9 @@ void fun_math_softmax_f32(float *x, size_t n)
 		x[i] /= sum;
 }
 
-void fun_math_matrix_vector_f32(const float *w, const float *x,
-								const float *bias, float *out, size_t rows,
-								size_t cols)
+void fun_math_matrix_vector_f32_cpu(const float *w, const float *x,
+									const float *bias, float *out, size_t rows,
+									size_t cols)
 {
 	for (size_t r = 0; r < rows; r++) {
 		const float *wr = w + r * cols;
@@ -366,7 +360,7 @@ void fun_math_matrix_vector_f32(const float *w, const float *x,
 	}
 }
 
-float fun_math_dot_f32(const float *a, const float *b, size_t n)
+float fun_math_dot_f32_cpu(const float *a, const float *b, size_t n)
 {
 	__m512 sum = _mm512_setzero_ps();
 	size_t i = 0;
@@ -412,8 +406,8 @@ void fun_math_log_f32(const float *x, float *out, size_t n)
 		__m512 v = _mm512_loadu_ps(x + i);
 		__m512 e = _mm512_log_ps(v);
 		__m512i bits = _mm512_castps_si512(v);
-		__mmask16 is_zero = _mm512_cmpeq_epi32_mask(
-			_mm512_slli_epi32(bits, 1), _mm512_setzero_si512());
+		__mmask16 is_zero = _mm512_cmpeq_epi32_mask(_mm512_slli_epi32(bits, 1),
+													_mm512_setzero_si512());
 		__mmask16 is_neg =
 			_mm512_cmpgt_epi32_mask(_mm512_setzero_si512(), bits);
 		__mmask16 is_pos_inf = _mm512_cmpeq_epi32_mask(
@@ -451,8 +445,9 @@ void fun_math_cos_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_cos(x[i]);
 }
 
-void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
-						 float *out, size_t n_heads, size_t half)
+void fun_math_rotary_f32_cpu(const float *x, const float *cosv,
+							 const float *sinv, float *out, size_t n_heads,
+							 size_t half)
 {
 	for (size_t h = 0; h < n_heads; h++) {
 		const float *xh = x + h * 2 * half;
@@ -497,8 +492,7 @@ void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 }
 
 void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
-							   size_t n_rows, size_t row_len,
-							   size_t row_stride)
+							   size_t n_rows, size_t row_len, size_t row_stride)
 {
 	size_t d = 0;
 	for (; d + 16 <= row_len; d += 16)

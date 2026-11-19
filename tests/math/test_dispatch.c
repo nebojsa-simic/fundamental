@@ -321,8 +321,8 @@ static TestCount test_structured_wrappers(void)
 	for (size_t i = 0; i < cols; i++)
 		xv[i] = _math_test_lcg_float(&rng, -1.0f, 1.0f);
 
-	fun_math_matrix_vector_f32_dispatch(w, xv, NULL, mv1, rows, cols);
-	fun_math_matrix_vector_f32(w, xv, NULL, mv2, rows, cols);
+	fun_math_matrix_vector_f32(w, xv, NULL, mv1, rows, cols);
+	fun_math_matrix_vector_f32_cpu(w, xv, NULL, mv2, rows, cols);
 	for (size_t i = 0; i < rows; i++)
 		math_test_count_add(&tc, mv1[i] == mv2[i]);
 
@@ -330,8 +330,8 @@ static TestCount test_structured_wrappers(void)
 		rx[i] = _math_test_lcg_float(&rng, -2.0f, 2.0f);
 		rw[i] = _math_test_lcg_float(&rng, 0.5f, 1.5f);
 	}
-	fun_math_rms_norm_f32_dispatch(rx, rw, rn1, n, 1e-5f);
-	fun_math_rms_norm_f32(rx, rw, rn2, n, 1e-5f);
+	fun_math_rms_norm_f32(rx, rw, rn1, n, 1e-5f);
+	fun_math_rms_norm_f32_cpu(rx, rw, rn2, n, 1e-5f);
 	for (size_t i = 0; i < n; i++)
 		math_test_count_add(&tc, rn1[i] == rn2[i]);
 
@@ -341,8 +341,8 @@ static TestCount test_structured_wrappers(void)
 		cosv[i] = _math_test_lcg_float(&rng, -1.0f, 1.0f);
 		sinv[i] = _math_test_lcg_float(&rng, -1.0f, 1.0f);
 	}
-	fun_math_rotary_f32_dispatch(rotx, cosv, sinv, rt1, 2, n / 2);
-	fun_math_rotary_f32(rotx, cosv, sinv, rt2, 2, n / 2);
+	fun_math_rotary_f32(rotx, cosv, sinv, rt1, 2, n / 2);
+	fun_math_rotary_f32_cpu(rotx, cosv, sinv, rt2, 2, n / 2);
 	for (size_t i = 0; i < 2 * n; i++)
 		math_test_count_add(&tc, rt1[i] == rt2[i]);
 
@@ -375,13 +375,13 @@ static TestCount test_backend_swap(void)
 	math_test_count_add(&tc, fun_math_backend_get() == &g_stub_backend);
 
 	float x[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
-	fun_math_softmax_f32_dispatch(x, 4);
+	fun_math_softmax_f32(x, 4);
 	math_test_count_add(&tc, g_stub_softmax_called == 1);
 
 	/* structured entries not provided by the stub fall back to the CPU */
 	float a[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float b[4] = { 2.0f, 3.0f, 4.0f, 5.0f };
-	float d = fun_math_dot_f32_dispatch(a, b, 4);
+	float d = fun_math_dot_f32(a, b, 4);
 	math_test_count_add(&tc, d == 14.0f);
 
 	/* generic entries left NULL by the stub also fall back to the CPU */

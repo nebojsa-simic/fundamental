@@ -132,11 +132,11 @@ TestCount test_edge_cases(void)
 		float buf = 0.0f;
 		fun_math_silu_f32(&buf, &buf, 0);
 		check_int(1, &tc, "silu_f32(n=0) should return");
-		fun_math_rms_norm_f32(&buf, &buf, &buf, 0, 0.0f);
+		fun_math_rms_norm_f32_cpu(&buf, &buf, &buf, 0, 0.0f);
 		check_int(1, &tc, "rms_norm_f32(n=0) should return");
 		fun_math_swiglu_f32(&buf, &buf, &buf, 0);
 		check_int(1, &tc, "swiglu_f32(n=0) should return");
-		fun_math_softmax_f32(&buf, 0);
+		fun_math_softmax_f32_cpu(&buf, 0);
 		check_int(1, &tc, "softmax_f32(n=0) should return");
 		fun_math_exp_f32(&buf, &buf, 0);
 		check_int(1, &tc, "exp_f32(n=0) should return");
@@ -146,9 +146,9 @@ TestCount test_edge_cases(void)
 		check_int(1, &tc, "sin_f32(n=0) should return");
 		fun_math_cos_f32(&buf, &buf, 0);
 		check_int(1, &tc, "cos_f32(n=0) should return");
-		fun_math_rotary_f32(&buf, &buf, &buf, &buf, 0, 0);
+		fun_math_rotary_f32_cpu(&buf, &buf, &buf, &buf, 0, 0);
 		check_int(1, &tc, "rotary_f32(n_heads=0) should return");
-		fun_math_rotary_f32(&buf, &buf, &buf, &buf, 1, 0);
+		fun_math_rotary_f32_cpu(&buf, &buf, &buf, &buf, 1, 0);
 		check_int(1, &tc, "rotary_f32(half=0) should return");
 		fun_math_rows_dot_f32(&buf, &buf, &buf, 0, 0, 0, 1.0f);
 		check_int(1, &tc, "rows_dot_f32(n_rows=0) should return");
@@ -158,7 +158,7 @@ TestCount test_edge_cases(void)
 		check_int(1, &tc, "weighted_sum_f32(n_rows=0) should return");
 		fun_math_weighted_sum_f32(&buf, &buf, &buf, 1, 0, 0);
 		check_int(1, &tc, "weighted_sum_f32(row_len=0) should return");
-		check_int(fun_math_dot_f32(&buf, &buf, 0) == 0.0f, &tc,
+		check_int(fun_math_dot_f32_cpu(&buf, &buf, 0) == 0.0f, &tc,
 				  "dot_f32(n=0) should return 0");
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
 	}
@@ -228,18 +228,18 @@ TestCount test_edge_cases(void)
 		float bias[2] = { 0.5f, -0.5f };
 		float out[2];
 
-		fun_math_matrix_vector_f32(w, x, NULL, out, 2, 2);
+		fun_math_matrix_vector_f32_cpu(w, x, NULL, out, 2, 2);
 		check_int(out[0] == 3.0f && out[1] == 7.0f, &tc,
 				  "matrix_vector no bias");
-		fun_math_matrix_vector_f32(w, x, bias, out, 2, 2);
+		fun_math_matrix_vector_f32_cpu(w, x, bias, out, 2, 2);
 		check_int(out[0] == 3.5f && out[1] == 6.5f, &tc,
 				  "matrix_vector with bias");
 
 		float zero_out[2] = { 99.0f, 99.0f };
-		fun_math_matrix_vector_f32(w, x, bias, zero_out, 2, 0);
+		fun_math_matrix_vector_f32_cpu(w, x, bias, zero_out, 2, 0);
 		check_int(zero_out[0] == 0.5f && zero_out[1] == -0.5f, &tc,
 				  "matrix_vector cols=0 yields bias only");
-		fun_math_matrix_vector_f32(w, x, NULL, zero_out, 0, 2);
+		fun_math_matrix_vector_f32_cpu(w, x, NULL, zero_out, 0, 2);
 		check_int(1, &tc, "matrix_vector rows=0 should return");
 		printf("%d ok\n", (tc.passed + tc.failed) - start);
 	}
@@ -298,7 +298,7 @@ TestCount test_edge_cases(void)
 		float s[2] = { 0.0f, 1.0f };
 		float out[4];
 
-		fun_math_rotary_f32(x, c, s, out, 1, 2);
+		fun_math_rotary_f32_cpu(x, c, s, out, 1, 2);
 		check_int(out[0] == 1.0f && out[1] == -4.0f && out[2] == 3.0f &&
 					  out[3] == 2.0f,
 				  &tc, "rotary half=2 matches rotation formula");
@@ -307,13 +307,13 @@ TestCount test_edge_cases(void)
 		float c1[1] = { 1.0f };
 		float s1[1] = { 0.0f };
 		float out1[2];
-		fun_math_rotary_f32(one, c1, s1, out1, 1, 1);
+		fun_math_rotary_f32_cpu(one, c1, s1, out1, 1, 1);
 		check_int(out1[0] == 5.0f && out1[1] == 6.0f, &tc,
 				  "rotary half=1 with cos=1/sin=0 is identity");
 
 		float two_heads[8] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
 		float outm[8];
-		fun_math_rotary_f32(two_heads, c, s, outm, 2, 2);
+		fun_math_rotary_f32_cpu(two_heads, c, s, outm, 2, 2);
 		check_int(outm[0] == 1.0f && outm[1] == -4.0f && outm[2] == 3.0f &&
 					  outm[3] == 2.0f,
 				  &tc, "rotary head 0 does not touch head 1 data");

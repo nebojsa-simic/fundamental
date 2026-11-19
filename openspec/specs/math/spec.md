@@ -142,7 +142,7 @@ When a SIMD implementation is compiled alongside a scalar reference, the system 
 - **THEN** every output element matches within 1e-5 absolute tolerance
 
 #### Scenario: rms_norm_f32 SIMD vs scalar consistency
-- **WHEN** the consistency test generates 100 random input/weight arrays of length 4096 and calls both `fun_math_rms_norm_f32` (SIMD) and the scalar tail function on each
+- **WHEN** the consistency test generates 100 random input/weight arrays of length 4096 and calls both `fun_math_rms_norm_f32_cpu` (SIMD) and the scalar tail function on each
 - **THEN** every output element matches within 1e-5 absolute tolerance
 
 ### Requirement: Harness self-test
@@ -161,7 +161,7 @@ The system SHALL provide `include/fundamental/math/math.h` that declares all sca
 
 #### Scenario: Header declares vector functions
 - **WHEN** the header is included
-- **THEN** the following functions are declared: `fun_math_silu_f32`, `fun_math_rms_norm_f32`, `fun_math_swiglu_f32`, `fun_math_softmax_f32`
+- **THEN** the following functions are declared: `fun_math_silu_f32`, `fun_math_rms_norm_f32_cpu`, `fun_math_swiglu_f32`, `fun_math_softmax_f32_cpu`
 
 ### Requirement: sqrt implementation
 The system SHALL implement `fun_math_sqrt` using fast inverse square root with Newton-Raphson refinement, achieving relative error below 1e-4 across the positive input range.
@@ -356,7 +356,7 @@ The system SHALL implement `fun_math_silu_f32` using AVX2 SIMD when available, a
 - **THEN** every element matches within 1e-5 absolute tolerance
 
 ### Requirement: rms_norm_f32 AVX2 implementation
-The system SHALL implement `fun_math_rms_norm_f32` using AVX2 SIMD when available, computing RMS normalization over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
+The system SHALL implement `fun_math_rms_norm_f32_cpu` using AVX2 SIMD when available, computing RMS normalization over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: rms_norm_f32 accuracy
 - **WHEN** rms_norm_f32 is called with arrays of length 4096 against precomputed golden values
@@ -382,7 +382,7 @@ The system SHALL implement `fun_math_swiglu_f32` using AVX2 SIMD when available,
 - **THEN** it returns immediately without accessing input or output arrays
 
 ### Requirement: softmax_f32 AVX2 implementation
-The system SHALL implement `fun_math_softmax_f32` using AVX2 SIMD when available, computing in-place softmax over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
+The system SHALL implement `fun_math_softmax_f32_cpu` using AVX2 SIMD when available, computing in-place softmax over float32 arrays with unaligned loads/stores and a scalar tail for any `n`.
 
 #### Scenario: softmax_f32 accuracy
 - **WHEN** softmax_f32 is called with arrays of length 32 against precomputed golden values
@@ -433,7 +433,7 @@ The system SHALL extend `include/fundamental/math/math.h` with declarations for 
 
 #### Scenario: Header declares matrix-vector and dot functions
 - **WHEN** the header is included
-- **THEN** the following functions are declared: `fun_math_matrix_vector_f32(const float *w, const float *x, const float *bias, float *out, size_t rows, size_t cols)` and `fun_math_dot_f32(const float *a, const float *b, size_t n)`
+- **THEN** the following functions are declared: `fun_math_matrix_vector_f32_cpu(const float *w, const float *x, const float *bias, float *out, size_t rows, size_t cols)` and `fun_math_dot_f32_cpu(const float *a, const float *b, size_t n)`
 
 #### Scenario: Header declares batched transcendentals
 - **WHEN** the header is included
@@ -444,7 +444,7 @@ The system SHALL extend `include/fundamental/math/math.h` with declarations for 
 - **THEN** the following functions are declared: `fun_math_add_f32(const float *a, const float *b, float *out, size_t n)`, `fun_math_mul_f32(const float *a, const float *b, float *out, size_t n)`, `fun_math_sum_f32(const float *x, size_t n)`, and `fun_math_max_f32(const float *x, size_t n)`
 
 ### Requirement: matrix_vector_f32 implementation
-The system SHALL implement `fun_math_matrix_vector_f32` so that for each row `r` in `[0, rows)`, `out[r]` equals `bias[r]` (when `bias` is not NULL, otherwise 0) plus the dot product of row `r` of `w` (elements `w[r*cols + c]`) with `x[c]`, within tolerance of a scalar reference computation. The implementation SHALL process the vectorized main loop with SIMD and handle the remaining `cols % 8` elements with a scalar tail loop.
+The system SHALL implement `fun_math_matrix_vector_f32_cpu` so that for each row `r` in `[0, rows)`, `out[r]` equals `bias[r]` (when `bias` is not NULL, otherwise 0) plus the dot product of row `r` of `w` (elements `w[r*cols + c]`) with `x[c]`, within tolerance of a scalar reference computation. The implementation SHALL process the vectorized main loop with SIMD and handle the remaining `cols % 8` elements with a scalar tail loop.
 
 #### Scenario: matrix-vector accuracy
 - **WHEN** matrix_vector_f32 is called with a matrix of rows x cols against a naive scalar reference
@@ -463,7 +463,7 @@ The system SHALL implement `fun_math_matrix_vector_f32` so that for each row `r`
 - **THEN** all output elements are correct (tail elements processed without out-of-bounds access)
 
 ### Requirement: dot_f32 implementation
-The system SHALL implement `fun_math_dot_f32` so that it returns the sum of `a[i] * b[i]` for `i` in `[0, n)` within tolerance of a scalar reference, using a SIMD main loop with a scalar tail for `n % 8`.
+The system SHALL implement `fun_math_dot_f32_cpu` so that it returns the sum of `a[i] * b[i]` for `i` in `[0, n)` within tolerance of a scalar reference, using a SIMD main loop with a scalar tail for `n % 8`.
 
 #### Scenario: dot product accuracy
 - **WHEN** dot_f32 is called with two arrays of length n against a naive scalar reference
@@ -542,36 +542,36 @@ The new vector functions SHALL handle special values and degenerate sizes consis
 - **THEN** every output element matches within 1e-4 absolute or 1e-3 relative tolerance
 
 ### Requirement: Rotary Rotation
-The system SHALL provide `fun_math_rotary_f32` that applies the rotation
+The system SHALL provide `fun_math_rotary_f32_cpu` that applies the rotation
 `out[j] = x[j]*cosv[j] - x[j+half]*sinv[j]` and
 `out[j+half] = x[j]*sinv[j] + x[j+half]*cosv[j]` for every pair `(j, j+half)`
 in each of `n_heads` contiguous head blocks of length `2*half`.
 
 #### Scenario: Rotate a single head
 - **GIVEN** x of 2*half floats, cosv and sinv of half floats
-- **WHEN** fun_math_rotary_f32 is called with n_heads=1
+- **WHEN** fun_math_rotary_f32_cpu is called with n_heads=1
 - **THEN** first half of out matches x[j]*cosv[j] - x[j+half]*sinv[j]
 - **AND** second half of out matches x[j]*sinv[j] + x[j+half]*cosv[j]
 
 #### Scenario: Rotate multiple heads with shared tables
 - **GIVEN** x with n_heads contiguous blocks of 2*half floats
-- **WHEN** fun_math_rotary_f32 is called with n_heads>1 and shared cosv/sinv
+- **WHEN** fun_math_rotary_f32_cpu is called with n_heads>1 and shared cosv/sinv
 - **THEN** every head block is rotated identically
 - **AND** no element crosses a head boundary (pairs stay within a block)
 
 #### Scenario: In-place rotation
-- **WHEN** fun_math_rotary_f32 is called with out aliasing x
+- **WHEN** fun_math_rotary_f32_cpu is called with out aliasing x
 - **THEN** the result matches the out-of-place result within tolerance
 
 #### Scenario: Half values not multiple of 8
 - **GIVEN** half such that half % 8 != 0 (e.g. 7, 9, 31, 33)
-- **WHEN** fun_math_rotary_f32 is called
+- **WHEN** fun_math_rotary_f32_cpu is called
 - **THEN** all elements match the scalar rotation formula
 - **AND** the scalar tail covers the remaining lanes
 
 #### Scenario: Edge sizes
 - **GIVEN** n_heads=0 or half=0
-- **WHEN** fun_math_rotary_f32 is called
+- **WHEN** fun_math_rotary_f32_cpu is called
 - **THEN** the function returns without accessing memory
 
 ### Requirement: Rotary Numerical Accuracy
@@ -579,7 +579,7 @@ The system SHALL match the scalar reference rotation within tolerance.
 
 #### Scenario: Golden value match
 - **GIVEN** golden cases generated from the scalar reference formula
-- **WHEN** fun_math_rotary_f32 processes each case
+- **WHEN** fun_math_rotary_f32_cpu processes each case
 - **THEN** every output element is within 1e-4 absolute / 1e-3 relative
   tolerance of the golden expected value
 
@@ -592,7 +592,7 @@ The gpt-demo SHALL use the primitive for its RoPE rotation.
 - **THEN** the theta series is computed once from the precomputed rope_pre
   table (not per head)
 - **AND** cos/sin are computed once and shared by all heads
-- **AND** the rotation uses fun_math_rotary_f32 for q and k
+- **AND** the rotation uses fun_math_rotary_f32_cpu for q and k
 
 #### Scenario: Demo output preserved
 - **GIVEN** the same prompt and model
@@ -813,12 +813,12 @@ The system SHALL provide `fun_math_reduce(op, dtype, in, out)` that reduces a st
 The system SHALL route the structured kernels matrix-vector product, dot product, RMS norm, softmax, and rotary rotation through the current backend. Each SHALL have a dispatch function that calls the backend's entry when set, and otherwise falls back to the corresponding built-in `fun_math_*` kernel.
 
 #### Scenario: Default falls back to built-in kernel
-- **WHEN** `fun_math_softmax_f32_dispatch(x, n)` is called with the default CPU backend
-- **THEN** the result matches `fun_math_softmax_f32(x, n)` exactly
+- **WHEN** `fun_math_softmax_f32(x, n)` is called with the default CPU backend
+- **THEN** the result matches `fun_math_softmax_f32_cpu(x, n)` exactly
 
 #### Scenario: Custom backend intercepts
 - **WHEN** a custom backend provides a softmax entry and is set as the current backend
-- **THEN** `fun_math_softmax_f32_dispatch` calls that entry instead of the built-in kernel
+- **THEN** `fun_math_softmax_f32` calls that entry instead of the built-in kernel
 
 ### Requirement: Portable elementwise binary and reduction kernels
 The system SHALL provide portable `fun_math_add_f32`, `fun_math_mul_f32`, `fun_math_sum_f32`, and `fun_math_max_f32` kernels that operate over contiguous float32 arrays. These SHALL be the implementations the default CPU backend uses for the contiguous case of the generic binary and reduction dispatch.

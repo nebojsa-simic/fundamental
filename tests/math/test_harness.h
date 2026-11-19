@@ -137,24 +137,25 @@ float fun_math_sigmoid(float x);
 float fun_math_silu(float x);
 
 void fun_math_silu_f32(const float *x, float *out, size_t n);
-void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-						   size_t n, float eps);
+void fun_math_rms_norm_f32_cpu(const float *x, const float *weight, float *out,
+							   size_t n, float eps);
 void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
 						 size_t n);
-void fun_math_softmax_f32(float *x, size_t n);
+void fun_math_softmax_f32_cpu(float *x, size_t n);
 
-void fun_math_matrix_vector_f32(const float *w, const float *x,
-								const float *bias, float *out, size_t rows,
-								size_t cols);
-float fun_math_dot_f32(const float *a, const float *b, size_t n);
+void fun_math_matrix_vector_f32_cpu(const float *w, const float *x,
+									const float *bias, float *out, size_t rows,
+									size_t cols);
+float fun_math_dot_f32_cpu(const float *a, const float *b, size_t n);
 
 void fun_math_exp_f32(const float *x, float *out, size_t n);
 void fun_math_log_f32(const float *x, float *out, size_t n);
 void fun_math_sin_f32(const float *x, float *out, size_t n);
 void fun_math_cos_f32(const float *x, float *out, size_t n);
 
-void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
-						 float *out, size_t n_heads, size_t half);
+void fun_math_rotary_f32_cpu(const float *x, const float *cosv,
+							 const float *sinv, float *out, size_t n_heads,
+							 size_t half);
 
 void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 						   size_t n_rows, size_t row_len, size_t row_stride,

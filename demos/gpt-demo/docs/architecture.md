@@ -84,7 +84,7 @@ GPT-OSS-20B MoE model inference on CPU using the Fundamental library.
 ```ascii
   Operation                FLOPs         %      Vectorized
   ──────────────────────────────────────────────────────
-  Q/K/V matvecs            ~30M          2%     AVX2 (fun_math_matrix_vector_f32)
+  Q/K/V matvecs            ~30M          2%     AVX2 (fun_math_matrix_vector_f32_cpu)
   O projection             ~24M          1%     AVX2
   Attention scores/total   ~14M         <1%     AVX2 (fun_math_rows_dot_f32)
   Expert MXFP4 matvecs    ~995M         78%     AVX2 (fun_math_matrix_vector_mxfp4_f32)

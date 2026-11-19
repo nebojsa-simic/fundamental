@@ -106,11 +106,11 @@ static const FunMathBackend g_cpu_backend = {
 	.unary = _cpu_unary,
 	.binary = _cpu_binary,
 	.reduce = _cpu_reduce,
-	.matrix_vector_f32 = fun_math_matrix_vector_f32,
-	.dot_f32 = fun_math_dot_f32,
-	.rms_norm_f32 = fun_math_rms_norm_f32,
-	.softmax_f32 = fun_math_softmax_f32,
-	.rotary_f32 = fun_math_rotary_f32,
+	.matrix_vector_f32 = fun_math_matrix_vector_f32_cpu,
+	.dot_f32 = fun_math_dot_f32_cpu,
+	.rms_norm_f32 = fun_math_rms_norm_f32_cpu,
+	.softmax_f32 = fun_math_softmax_f32_cpu,
+	.rotary_f32 = fun_math_rotary_f32_cpu,
 };
 
 void fun_math_backend_set(const FunMathBackend *backend)
@@ -153,51 +153,50 @@ void fun_math_reduce(FunMathOp op, FunMathDtype dtype, const FunMathTensor *in,
 		g_cpu_backend.reduce(op, dtype, in, out);
 }
 
-void fun_math_matrix_vector_f32_dispatch(const float *w, const float *x,
-										 const float *bias, float *out,
-										 size_t rows, size_t cols)
+void fun_math_matrix_vector_f32(const float *w, const float *x,
+								const float *bias, float *out, size_t rows,
+								size_t cols)
 {
 	const FunMathBackend *b = fun_math_backend_get();
 	if (b->matrix_vector_f32)
 		b->matrix_vector_f32(w, x, bias, out, rows, cols);
 	else
-		fun_math_matrix_vector_f32(w, x, bias, out, rows, cols);
+		fun_math_matrix_vector_f32_cpu(w, x, bias, out, rows, cols);
 }
 
-float fun_math_dot_f32_dispatch(const float *a, const float *b, size_t n)
+float fun_math_dot_f32(const float *a, const float *b, size_t n)
 {
 	const FunMathBackend *bk = fun_math_backend_get();
 	if (bk->dot_f32)
 		return bk->dot_f32(a, b, n);
-	return fun_math_dot_f32(a, b, n);
+	return fun_math_dot_f32_cpu(a, b, n);
 }
 
-void fun_math_rms_norm_f32_dispatch(const float *x, const float *weight,
-									float *out, size_t n, float eps)
+void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
+						   size_t n, float eps)
 {
 	const FunMathBackend *b = fun_math_backend_get();
 	if (b->rms_norm_f32)
 		b->rms_norm_f32(x, weight, out, n, eps);
 	else
-		fun_math_rms_norm_f32(x, weight, out, n, eps);
+		fun_math_rms_norm_f32_cpu(x, weight, out, n, eps);
 }
 
-void fun_math_softmax_f32_dispatch(float *x, size_t n)
+void fun_math_softmax_f32(float *x, size_t n)
 {
 	const FunMathBackend *b = fun_math_backend_get();
 	if (b->softmax_f32)
 		b->softmax_f32(x, n);
 	else
-		fun_math_softmax_f32(x, n);
+		fun_math_softmax_f32_cpu(x, n);
 }
 
-void fun_math_rotary_f32_dispatch(const float *x, const float *cosv,
-								  const float *sinv, float *out, size_t n_heads,
-								  size_t half)
+void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
+						 float *out, size_t n_heads, size_t half)
 {
 	const FunMathBackend *b = fun_math_backend_get();
 	if (b->rotary_f32)
 		b->rotary_f32(x, cosv, sinv, out, n_heads, half);
 	else
-		fun_math_rotary_f32(x, cosv, sinv, out, n_heads, half);
+		fun_math_rotary_f32_cpu(x, cosv, sinv, out, n_heads, half);
 }

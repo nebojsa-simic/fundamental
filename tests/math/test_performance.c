@@ -200,7 +200,7 @@ static void bench_dot(const char *name, int n, int reps)
 
 	for (int r = 0; r < reps; r++) {
 		uint64_t t0 = _math_test_rdtsc();
-		fun_math_dot_f32(a, b, n);
+		fun_math_dot_f32_cpu(a, b, n);
 		uint64_t t1 = _math_test_rdtsc();
 		uint64_t elapsed = t1 - t0;
 		if (elapsed < best)
@@ -246,7 +246,7 @@ static void bench_mat_vec(const char *name, int rows, int cols, int reps)
 
 	for (int r = 0; r < reps; r++) {
 		uint64_t t0 = _math_test_rdtsc();
-		fun_math_matrix_vector_f32(w, x, bias, out, rows, cols);
+		fun_math_matrix_vector_f32_cpu(w, x, bias, out, rows, cols);
 		uint64_t t1 = _math_test_rdtsc();
 		uint64_t elapsed = t1 - t0;
 		if (elapsed < best)
@@ -329,7 +329,7 @@ TestCount test_performance(void)
 	fun_console_write_line("    Vector (n=65536, best of 10000):");
 	bench_noop();
 	bench_vector("silu_f32", fun_math_silu_f32, 65536, 10000);
-	bench_vector_rms("rms_norm", fun_math_rms_norm_f32, 65536, 1000, 1e-5f);
+	bench_vector_rms("rms_norm", fun_math_rms_norm_f32_cpu, 65536, 1000, 1e-5f);
 	bench_vector_swiglu("swiglu_f32", fun_math_swiglu_f32, 65536, 1000);
 	bench_vector("exp_f32", fun_math_exp_f32, 65536, 1000);
 	bench_vector("log_f32", fun_math_log_f32, 65536, 1000);
@@ -350,7 +350,7 @@ TestCount test_performance(void)
 				for (int i = 0; i < 64; i++)
 					xcopy[i] = x[i];
 				uint64_t t0 = _math_test_rdtsc();
-				fun_math_softmax_f32(xcopy, 64);
+				fun_math_softmax_f32_cpu(xcopy, 64);
 				uint64_t t1 = _math_test_rdtsc();
 				if (t1 - t0 < best)
 					best = t1 - t0;

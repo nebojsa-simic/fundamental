@@ -17,8 +17,8 @@ void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
 		out[i] = gate[i] * fun_math_sigmoid(gate[i]) * up[i];
 }
 
-void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
-						   size_t n, float eps)
+void fun_math_rms_norm_f32_cpu(const float *x, const float *weight, float *out,
+							   size_t n, float eps)
 {
 	float ss = 0.0f;
 	for (size_t i = 0; i < n; i++)
@@ -28,7 +28,7 @@ void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
 		out[i] = x[i] * scale * weight[i];
 }
 
-void fun_math_softmax_f32(float *x, size_t n)
+void fun_math_softmax_f32_cpu(float *x, size_t n)
 {
 	if (n == 0)
 		return;
@@ -46,9 +46,9 @@ void fun_math_softmax_f32(float *x, size_t n)
 		x[i] /= sum;
 }
 
-void fun_math_matrix_vector_f32(const float *w, const float *x,
-								const float *bias, float *out, size_t rows,
-								size_t cols)
+void fun_math_matrix_vector_f32_cpu(const float *w, const float *x,
+									const float *bias, float *out, size_t rows,
+									size_t cols)
 {
 	for (size_t r = 0; r < rows; r++) {
 		const float *wr = w + r * cols;
@@ -59,7 +59,7 @@ void fun_math_matrix_vector_f32(const float *w, const float *x,
 	}
 }
 
-float fun_math_dot_f32(const float *a, const float *b, size_t n)
+float fun_math_dot_f32_cpu(const float *a, const float *b, size_t n)
 {
 	float s = 0.0f;
 	for (size_t i = 0; i < n; i++)
@@ -91,8 +91,9 @@ void fun_math_cos_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_cos(x[i]);
 }
 
-void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
-						 float *out, size_t n_heads, size_t half)
+void fun_math_rotary_f32_cpu(const float *x, const float *cosv,
+							 const float *sinv, float *out, size_t n_heads,
+							 size_t half)
 {
 	for (size_t h = 0; h < n_heads; h++) {
 		const float *xh = x + h * 2 * half;

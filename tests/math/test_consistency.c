@@ -61,7 +61,7 @@ static TestCount test_rms_consistency(void)
 			ss += x[i] * x[i];
 		}
 
-		fun_math_rms_norm_f32(x, w, simd, n, eps);
+		fun_math_rms_norm_f32_cpu(x, w, simd, n, eps);
 
 		float inv_rms = 1.0f / fun_math_sqrt(ss / (float)n + eps);
 		for (int i = 0; i < n; i++)
