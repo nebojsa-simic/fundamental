@@ -125,7 +125,7 @@ static void parse_chunk(char *buffer, uint64_t bytes_read, LogStats *stats,
 	}
 }
 
-int main(int argc, char **argv)
+int cli_main(int argc, const char **argv)
 {
 	if (argc < 2 || fun_string_compare(argv[1], "--help") == 0) {
 		fun_console_write_line("=== Log Analyzer Demo ===");

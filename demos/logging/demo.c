@@ -7,8 +7,11 @@
 
 #include "fundamental/logging/logging.h"
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	log_info("Application started", NULL, 0);
 
 	StringTemplateParam debug_params[] = { { "value", { .intValue = 42 } } };

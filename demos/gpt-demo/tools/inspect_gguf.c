@@ -108,8 +108,11 @@ static void write_u64(char *buf, size_t buf_size, uint64_t v)
 	fun_string_from_int((int64_t)v, 10, buf, buf_size);
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	MemoryResult mem = fun_memory_allocate(HEADER_READ_SIZE);
 	if (fun_error_is_error(mem.error)) {
 		fun_console_error_line("Failed to allocate memory");

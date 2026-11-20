@@ -21,8 +21,11 @@ static void print_count(const char *label, int64_t count)
 	fun_console_write_line(buf);
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	// --- Allocate buffer for stream + JSON parser ---
 	MemoryResult mem = fun_memory_allocate(BUF_SIZE);
 	if (fun_error_is_error(mem.error)) {

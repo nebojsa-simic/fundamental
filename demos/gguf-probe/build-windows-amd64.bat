@@ -1,6 +1,9 @@
 @echo off
-gcc --std=c17 -Os -I ../../include ^
+gcc --std=c17 -Os -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    -I ../../include ^
     main.c ^
+    ../../arch/startup/windows-amd64/windows.c ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
     ../../src/math/math_scalar.c ^
@@ -11,5 +14,6 @@ gcc --std=c17 -Os -I ../../include ^
     ../../src/string/stringConversion.c ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringTemplate.c ^
+    -lkernel32 ^
     -o gguf-probe.exe
 if %ERRORLEVEL% EQU 0 echo Build complete: gguf-probe.exe

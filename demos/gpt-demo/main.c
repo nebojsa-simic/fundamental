@@ -31,9 +31,8 @@ static int read_prompt_file(const char *path, char *out, size_t out_size)
 		return -1;
 	Memory buffer = buf_res.value;
 
-	AsyncResult open_res = fun_stream_create_file_read(path, buffer,
-													   CHUNK_SIZE,
-													   FILE_MODE_AUTO);
+	AsyncResult open_res =
+		fun_stream_create_file_read(path, buffer, CHUNK_SIZE, FILE_MODE_AUTO);
 	fun_async_await(&open_res, -1);
 	if (fun_error_is_error(open_res.error)) {
 		fun_memory_free(&buffer);
@@ -74,7 +73,7 @@ static int read_prompt_file(const char *path, char *out, size_t out_size)
  *   4. print the detokenized response and timing stats.
  *
  * Vocab size is hard-coded to 201088 (see tokenizer.c VOCAB_SIZE). */
-int main(int argc, char **argv)
+int cli_main(int argc, const char **argv)
 {
 	if (argc < 2) {
 		fun_console_write_line(
@@ -110,8 +109,8 @@ int main(int argc, char **argv)
 
 	char prompt_buf[MAX_PROMPT_BYTES];
 	if (prompt_file) {
-		if (read_prompt_file(prompt_file, prompt_buf,
-							 sizeof(prompt_buf)) != 0) {
+		if (read_prompt_file(prompt_file, prompt_buf, sizeof(prompt_buf)) !=
+			0) {
 			fun_console_error_line("Cannot read prompt file");
 			return 1;
 		}
@@ -154,12 +153,12 @@ int main(int argc, char **argv)
 	char output[512];
 
 	double t1 = (double)fun_timing_now_ns() / 1e9;
-	StringTemplateParam loaded_params[] = {
-    	{ "count", { .doubleValue = t1 - t0 } }
-	};
-	fun_string_template("Loaded in %{count} seconds", loaded_params, 1, output, 512);
+	StringTemplateParam loaded_params[] = { { "count",
+											  { .doubleValue = t1 - t0 } } };
+	fun_string_template("Loaded in %{count} seconds", loaded_params, 1, output,
+						512);
 	fun_console_write_line(output);
-	
+
 	int tokens[MAX_SEQ];
 	int n_tokens = tokenizer_encode(&tok, prompt, tokens, MAX_SEQ);
 	if (n_tokens == 0) {
@@ -167,10 +166,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	StringTemplateParam token_params[] = {
-    	{ "tokens", { .intValue = n_tokens } }
-	};
-	fun_string_template("Prompt tokens: #{tokens}", token_params, 1, output, 512);
+	StringTemplateParam token_params[] = { { "tokens",
+											 { .intValue = n_tokens } } };
+	fun_string_template("Prompt tokens: #{tokens}", token_params, 1, output,
+						512);
 	fun_console_write_line(output);
 	fun_console_write("  Prompt: ");
 	fun_console_write_line(prompt);
@@ -211,7 +210,7 @@ int main(int argc, char **argv)
 		if (resp_len + 32 < sizeof(response)) {
 			fun_string_copy(token_str, response + resp_len,
 							sizeof(response) - resp_len);
-			resp_len += (size_t)fun_string_length(token_str);			
+			resp_len += (size_t)fun_string_length(token_str);
 		}
 	}
 	fun_memory_free((Memory *)&logits_buf);
@@ -228,9 +227,12 @@ int main(int argc, char **argv)
 	StringTemplateParam final_params[] = {
 		{ "seconds", { .doubleValue = eval_s } },
 		{ "generated", { .intValue = generated } },
-		{ "toks_per_sec", { .doubleValue = eval_s > 0.0 ? (double)generated / eval_s : 0.0 } }
+		{ "toks_per_sec",
+		  { .doubleValue = eval_s > 0.0 ? (double)generated / eval_s : 0.0 } }
 	};
-	fun_string_template("  Time (seconds): %{seconds}, Tokens: #{generated}, tok/s: %{toks_per_sec}", final_params, 3, output, 512);
+	fun_string_template(
+		"  Time (seconds): %{seconds}, Tokens: #{generated}, tok/s: %{toks_per_sec}",
+		final_params, 3, output, 512);
 	fun_console_write_line(output);
 
 	if (do_trace) {

@@ -3,8 +3,11 @@
 
 #include "fundamental/console/console.h"
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	fun_console_write_line("=== Console Demo ===");
 	fun_console_write_line("Hello from Fundamental Library!");
 	fun_console_write_line("This demonstrates basic console output.");

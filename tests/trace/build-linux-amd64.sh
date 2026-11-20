@@ -7,6 +7,7 @@ gcc \
     ../../arch/memory/linux-amd64/memory.c \
     ../../src/trace/trace.c \
     ../../arch/timing/linux-amd64/timing.c \
+    ../../arch/tls/linux-amd64/tls.c \
     ../../src/string/stringConversion.c \
     ../../src/string/stringOperations.c \
     ../../src/string/stringTemplate.c \

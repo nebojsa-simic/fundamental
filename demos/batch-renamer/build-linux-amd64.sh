@@ -2,7 +2,9 @@
 # Batch Renamer Demo - Build Script
 # Dependencies: filesystem, string, console, array, memory
 
-gcc --std=c17 -Os -I ../../include demo.c \
+gcc --std=c17 -Os -nostdlib -ffreestanding -I ../../include demo.c \
+    ../../arch/startup/linux-amd64/linux.c \
+    ../../arch/config/linux-amd64/env.c \
     ../../src/filesystem/directory.c \
     ../../src/filesystem/path.c \
     ../../src/filesystem/file_exists.c \

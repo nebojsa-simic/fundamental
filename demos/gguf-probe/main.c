@@ -86,8 +86,11 @@ static void print_q8(const uint8_t *base, uint64_t abs_off, String label)
 	fun_console_write_line(buf);
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	char buf[256];
 	fun_console_write_line("GGUF probe");
 

@@ -2,7 +2,10 @@
 REM Batch Renamer Demo - Build Script
 REM Dependencies: filesystem, string, console, array, memory
 
-gcc --std=c17 -Os -I ../../include demo.c ^
+gcc --std=c17 -Os -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    -I ../../include demo.c ^
+    ../../arch/startup/windows-amd64/windows.c ^
     ../../src/filesystem/directory.c ^
     ../../src/filesystem/path.c ^
     ../../src/filesystem/file_exists.c ^

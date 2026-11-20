@@ -2,7 +2,9 @@
 # Log Analyzer Demo - Build Script
 # Dependencies: file (read), string, console, hashmap, memory, async
 
-gcc --std=c17 -Os -I ../../include demo.c \
+gcc --std=c17 -Os -nostdlib -ffreestanding -I ../../include demo.c \
+    ../../arch/startup/linux-amd64/linux.c \
+    ../../arch/config/linux-amd64/env.c \
     ../../arch/file/linux-amd64/fileRead.c \
     ../../arch/file/linux-amd64/fileReadMmap.c \
     ../../arch/file/linux-amd64/fileReadRing.c \

@@ -2,7 +2,8 @@
 # glTF Parser Demo (Streaming) — Build Script
 # Dependencies: stream, string, console, async, memory, json
 
-gcc --std=c17 -Os -I ../../include demo.c \
+gcc --std=c17 -Os -nostdlib -ffreestanding -I ../../include demo.c \
+    ../../arch/startup/linux-amd64/linux.c \
     ../../src/json/tokenizer.c \
     ../../src/stream/streamFile.c \
     ../../src/stream/streamLifecycle_linux.c \

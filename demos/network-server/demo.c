@@ -131,8 +131,11 @@ static void on_client_connected(TcpNetworkConnection conn, Memory state)
 	fun_console_write_line("client disconnected");
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	BrokerState bs;
 	bs.topic_count = 0;
 

@@ -2,7 +2,8 @@
 # Shutdown Framework Demo - Build Script
 # Dependencies: shutdown, console, memory, file, string, async, startup
 
-gcc --std=c17 -Os -I ../../include demo.c \
+gcc --std=c17 -Os -nostdlib -ffreestanding -I ../../include demo.c \
+    ../../arch/startup/linux-amd64/linux.c \
     ../../src/shutdown/shutdown.c \
     ../../src/startup/startup.c \
     ../../src/console/console.c \

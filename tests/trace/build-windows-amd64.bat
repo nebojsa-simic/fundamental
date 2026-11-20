@@ -7,6 +7,7 @@ gcc ^
     ../../arch/memory/windows-amd64/memory.c ^
     ../../src/trace/trace.c ^
     ../../arch/timing/windows-amd64/timing.c ^
+    ../../arch/tls/windows-amd64/tls.c ^
     ../../src/string/stringConversion.c ^
     ../../src/string/stringOperations.c ^
     ../../src/string/stringTemplate.c ^

@@ -1,4 +1,5 @@
 #include "fundamental/trace/trace.h"
+#include "fundamental/arch/tls.h"
 #include "fundamental/memory/memory.h"
 #include "fundamental/string/string.h"
 #include "fundamental/timing/timing.h"
@@ -31,7 +32,6 @@ typedef struct {
 } FunTracerInternal;
 
 static FunTracerInternal *g_tracer = NULL;
-static _Thread_local uint64_t _trace_t0 = 0;
 
 size_t fun_trace_memory_required(int max_spans)
 {
@@ -81,7 +81,7 @@ void fun_trace_span_begin(FunSpanId id)
 {
 	if (!g_tracer)
 		return;
-	_trace_t0 = fun_timing_now_ns();
+	fun_tls_u64_set(fun_timing_now_ns());
 	(void)id;
 }
 
@@ -89,7 +89,7 @@ void fun_trace_span_end(FunSpanId id)
 {
 	if (!g_tracer || id == 0 || (int)id > g_tracer->n_spans)
 		return;
-	uint64_t dt = fun_timing_now_ns() - _trace_t0;
+	uint64_t dt = fun_timing_now_ns() - fun_tls_u64_get();
 	int idx = (int)id - 1;
 	__atomic_fetch_add(&g_tracer->slots[idx].total_ns, dt, __ATOMIC_RELAXED);
 	__atomic_fetch_add(&g_tracer->slots[idx].call_count, 1, __ATOMIC_RELAXED);

@@ -20,8 +20,11 @@ static uint16_t le16(const uint8_t *p)
 	return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	GGufFileHandleResult gr =
 		fun_gguf_open("../../models/openai_gpt-oss-20b-MXFP4.gguf");
 	if (fun_error_is_error(gr.error)) {

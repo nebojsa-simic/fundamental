@@ -5,10 +5,11 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..\..
 
 set CC=gcc
-set CFLAGS=-I%PROJECT_ROOT%\include -Wall -Wextra -g -O0
+set CFLAGS=-I%PROJECT_ROOT%\include -Wall -Wextra -g -O0 -nostdlib -ffreestanding -mno-stack-arg-probe -Wl,--subsystem,console
 
 set SOURCES=^
     %SCRIPT_DIR%demo.c ^
+    %PROJECT_ROOT%\arch\startup\windows-amd64\windows.c ^
     %PROJECT_ROOT%\src\json\tokenizer.c ^
     %PROJECT_ROOT%\arch\file\windows-amd64\fileRead.c ^
     %PROJECT_ROOT%\arch\file\windows-amd64\fileReadMmap.c ^
@@ -31,6 +32,6 @@ set SOURCES=^
     %PROJECT_ROOT%\arch\config\windows-amd64\env.c
 
 echo Building glTF parser demo...
-%CC% %CFLAGS% %SOURCES% -o %SCRIPT_DIR%demo.exe
+%CC% %CFLAGS% %SOURCES% -lkernel32 -o %SCRIPT_DIR%demo.exe
 
 echo Build complete: demo.exe

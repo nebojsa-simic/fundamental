@@ -7,7 +7,7 @@
 #include "fundamental/filesystem/filesystem.h"
 #include "fundamental/filesystem/path.h"
 
-int main(int argc, char **argv)
+int cli_main(int argc, const char **argv)
 {
 	if (argc < 4) {
 		fun_console_write_line("=== Batch Renamer Demo ===");

@@ -2,7 +2,10 @@
 REM Shutdown Framework Demo - Build Script
 REM Dependencies: shutdown, console, memory, file, string, async, startup
 
-gcc --std=c17 -Os -I ../../include demo.c ^
+gcc --std=c17 -Os -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    -I ../../include demo.c ^
+    ../../arch/startup/windows-amd64/windows.c ^
     ../../src/shutdown/shutdown.c ^
     ../../src/startup/startup.c ^
     ../../src/platform/platform.c ^

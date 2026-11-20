@@ -1,8 +1,10 @@
 #!/bin/bash
-gcc -c --std=c17 -Os -fno-math-errno -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -ffreestanding -I ../../include model.c -o model.o
 
-gcc --std=c17 -Os -fno-math-errno -I ../../include \
+gcc --std=c17 -Os -fno-math-errno -nostdlib -ffreestanding -I ../../include \
     main.c tokenizer.c \
+    ../../arch/startup/linux-amd64/linux.c \
+    ../../arch/config/linux-amd64/env.c \
     model.o \
     ../../src/compute/compute_graph.c \
     ../../src/thread_pool/thread_pool.c \
@@ -10,6 +12,7 @@ gcc --std=c17 -Os -fno-math-errno -I ../../include \
     ../../arch/sync/linux-amd64/sync.c \
     ../../src/trace/trace.c \
     ../../arch/timing/linux-amd64/timing.c \
+    ../../arch/tls/linux-amd64/tls.c \
     ../../src/gguf/gguf.c \
     ../../src/gguf/gguf_dequant.c \
     ../../arch/gguf/linux-amd64/mmap.c \

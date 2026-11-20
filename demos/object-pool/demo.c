@@ -200,8 +200,11 @@ static void on_connected(TcpNetworkConnection conn, Memory state_ptr)
 	state->next_session_id++;
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	ServerState state;
 	state.next_session_id = 1;
 

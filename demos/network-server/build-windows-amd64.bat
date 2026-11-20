@@ -3,9 +3,11 @@
 set PROJECT_ROOT=..\..
 
 gcc ^
-    --std=c17 -Os ^
+    --std=c17 -Os -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
     -I %PROJECT_ROOT%/include ^
     demo.c ^
+    %PROJECT_ROOT%/arch/startup/windows-amd64/windows.c ^
     %PROJECT_ROOT%/src/network/server/server.c ^
     %PROJECT_ROOT%/src/network/network.c ^
     %PROJECT_ROOT%/arch/network/windows-amd64/network.c ^
@@ -29,7 +31,7 @@ gcc ^
     %PROJECT_ROOT%/src/string/stringConversion.c ^
     %PROJECT_ROOT%/src/string/stringOperations.c ^
     %PROJECT_ROOT%/src/string/stringValidation.c ^
-    -lws2_32 ^
+    -lkernel32 -lws2_32 ^
     -o demo.exe
 
 strip --strip-unneeded demo.exe

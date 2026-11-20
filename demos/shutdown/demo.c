@@ -36,8 +36,11 @@ static void app_cleanup(void)
 	}
 }
 
-int main(void)
+int cli_main(int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	/* Register cleanup BEFORE startup */
 	shutdown_register_cleanup(SHUTDOWN_PHASE_APP, app_cleanup);
 

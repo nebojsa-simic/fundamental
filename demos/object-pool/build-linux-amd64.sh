@@ -3,9 +3,10 @@
 PROJECT_ROOT="../.."
 
 gcc \
-    --std=c17 -Os \
+    --std=c17 -Os -nostdlib -ffreestanding \
     -I $PROJECT_ROOT/include \
     demo.c \
+    $PROJECT_ROOT/arch/startup/linux-amd64/linux.c \
     $PROJECT_ROOT/src/object-pool/object-pool.c \
     $PROJECT_ROOT/src/network/server/server.c \
     $PROJECT_ROOT/src/network/network.c \

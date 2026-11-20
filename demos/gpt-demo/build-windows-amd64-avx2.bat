@@ -1,14 +1,17 @@
 @echo off
-gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -ffreestanding -mno-stack-arg-probe -mavx2 -mfma -I ../../include model.c -o model.o
 
-gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
+gcc -c --std=c17 -Os -fno-math-errno -ffreestanding -mno-stack-arg-probe -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector.c -o vector_avx2.o
 
-gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
+gcc -c --std=c17 -Os -fno-math-errno -ffreestanding -mno-stack-arg-probe -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector_mxfp4.c -o vector_avx2_mxfp4.o
 
-gcc --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
+gcc --std=c17 -Os -fno-math-errno -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    -mavx2 -mfma -I ../../include ^
     main.c tokenizer.c ^
+    ../../arch/startup/windows-amd64/windows.c ^
     model.o ^
     ../../src/compute/compute_graph.c ^
     ../../src/thread_pool/thread_pool.c ^
@@ -16,6 +19,7 @@ gcc --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
     ../../arch/sync/windows-amd64/sync.c ^
     ../../src/trace/trace.c ^
     ../../arch/timing/windows-amd64/timing.c ^
+    ../../arch/tls/windows-amd64/tls.c ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
     ../../arch/gguf/windows-amd64/mmap.c ^
@@ -42,5 +46,6 @@ gcc --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
     ../../arch/async/windows-amd64/async.c ^
     vector_avx2.o ^
     vector_avx2_mxfp4.o ^
+    -lkernel32 ^
     -o demo.exe
 if %ERRORLEVEL% EQU 0 echo Build complete: demo.exe

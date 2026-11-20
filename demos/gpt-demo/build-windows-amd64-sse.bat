@@ -1,8 +1,11 @@
 @echo off
-gcc -c --std=c17 -Os -fno-math-errno -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -ffreestanding -mno-stack-arg-probe -I ../../include model.c -o model.o
 
-gcc --std=c17 -Os -fno-math-errno -I ../../include ^
+gcc --std=c17 -Os -fno-math-errno -nostdlib -ffreestanding -mno-stack-arg-probe ^
+    -Wl,--subsystem,console ^
+    -I ../../include ^
     main.c tokenizer.c ^
+    ../../arch/startup/windows-amd64/windows.c ^
     model.o ^
     ../../src/compute/compute_graph.c ^
     ../../src/thread_pool/thread_pool.c ^
@@ -10,6 +13,7 @@ gcc --std=c17 -Os -fno-math-errno -I ../../include ^
     ../../arch/sync/windows-amd64/sync.c ^
     ../../src/trace/trace.c ^
     ../../arch/timing/windows-amd64/timing.c ^
+    ../../arch/tls/windows-amd64/tls.c ^
     ../../src/gguf/gguf.c ^
     ../../src/gguf/gguf_dequant.c ^
     ../../arch/gguf/windows-amd64/mmap.c ^
@@ -36,5 +40,6 @@ gcc --std=c17 -Os -fno-math-errno -I ../../include ^
     ../../arch/file/windows-amd64/fileReadRing.c ^
     ../../src/async/async.c ^
     ../../arch/async/windows-amd64/async.c ^
+    -lkernel32 ^
     -o demo.exe
 if %ERRORLEVEL% EQU 0 echo Build complete: demo.exe
