@@ -1,6 +1,6 @@
 @echo off
 gcc ^
-    --std=c17 -Os ^
+    --std=c17 -Os -fno-math-errno ^
     -I ../../include ^
     test_main.c ^
     test_scalar_accuracy.c ^
@@ -21,7 +21,6 @@ gcc ^
     ../../arch/memory/windows-amd64/memory.c ^
     ../../src/string/stringConversion.c ^
     ../../src/string/stringOperations.c ^
-    -lm ^
     -o test.exe
 
 if %ERRORLEVEL% EQU 0 echo Build complete: test.exe

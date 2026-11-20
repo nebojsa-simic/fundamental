@@ -35,9 +35,13 @@ typedef enum {
 	FUN_MATH_OP_SIGMOID,
 	FUN_MATH_OP_SILU,
 	FUN_MATH_OP_ADD,
+	FUN_MATH_OP_SUB,
 	FUN_MATH_OP_MUL,
+	FUN_MATH_OP_DIV,
 	FUN_MATH_OP_SUM,
 	FUN_MATH_OP_MAX,
+	FUN_MATH_OP_MIN,
+	FUN_MATH_OP_MEAN,
 	FUN_MATH_OP_COUNT
 } FunMathOp;
 
@@ -64,6 +68,23 @@ struct FunMathBackend {
 	void (*softmax_f32)(float *x, size_t n);
 	void (*rotary_f32)(const float *x, const float *cosv, const float *sinv,
 					   float *out, size_t n_heads, size_t half);
+	void (*swiglu_f32)(const float *gate, const float *up, float *out,
+					   size_t n);
+	void (*matrix_vector_mxfp4_f32)(const uint8_t *w, const float *x,
+									const float *bias, float *out, size_t rows,
+									size_t cols);
+	void (*matrix_vector_mxfp4_f32_strided)(const uint8_t *w, const float *x,
+											const float *bias, float *out,
+											size_t rows, size_t cols,
+											size_t row_stride_bytes);
+	void (*q8_matrix_vector_f32)(const uint8_t *w, const float *x, float *out,
+								 size_t rows, size_t cols);
+	void (*q8_dequant_row_f32)(const uint8_t *src, float *out, size_t n);
+	void (*rows_dot_f32)(const float *q, const float *x, float *out,
+						 size_t n_rows, size_t row_len, size_t row_stride,
+						 float scale);
+	void (*weighted_sum_f32)(const float *wgt, const float *x, float *out,
+							 size_t n_rows, size_t row_len, size_t row_stride);
 };
 
 void fun_math_backend_set(const FunMathBackend *backend);
@@ -85,5 +106,24 @@ void fun_math_rms_norm_f32(const float *x, const float *weight, float *out,
 void fun_math_softmax_f32(float *x, size_t n);
 void fun_math_rotary_f32(const float *x, const float *cosv, const float *sinv,
 						 float *out, size_t n_heads, size_t half);
+
+void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
+						 size_t n);
+void fun_math_matrix_vector_mxfp4_f32(const uint8_t *w, const float *x,
+									  const float *bias, float *out,
+									  size_t rows, size_t cols);
+void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
+											  const float *bias, float *out,
+											  size_t rows, size_t cols,
+											  size_t row_stride_bytes);
+void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
+								   size_t rows, size_t cols);
+void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n);
+void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
+						   size_t n_rows, size_t row_len, size_t row_stride,
+						   float scale);
+void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
+							   size_t n_rows, size_t row_len,
+							   size_t row_stride);
 
 #endif

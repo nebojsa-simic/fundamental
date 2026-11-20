@@ -1,13 +1,13 @@
 @echo off
-gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include model.c -o model.o
 
-gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ^
+gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector.c -o vector_avx2.o
 
-gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ^
+gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
     ../../arch/math/avx2/vector_mxfp4.c -o vector_avx2_mxfp4.o
 
-gcc --std=c17 -Os -mavx2 -mfma -I ../../include ^
+gcc --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ^
     main.c tokenizer.c ^
     model.o ^
     ../../src/compute/compute_graph.c ^
@@ -42,5 +42,5 @@ gcc --std=c17 -Os -mavx2 -mfma -I ../../include ^
     ../../arch/async/windows-amd64/async.c ^
     vector_avx2.o ^
     vector_avx2_mxfp4.o ^
-    -lm -o demo.exe
+    -o demo.exe
 if %ERRORLEVEL% EQU 0 echo Build complete: demo.exe

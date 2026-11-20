@@ -17,17 +17,19 @@ static float mxfp4_scale_f(uint8_t scale)
 	return *(float *)&(uint32_t){ (uint32_t)(scale - 1) << 23 };
 }
 
-void fun_math_matrix_vector_mxfp4_f32(const uint8_t *w, const float *x,
-									  const float *bias, float *out,
-									  size_t rows, size_t cols)
+void fun_math_matrix_vector_mxfp4_f32_cpu(const uint8_t *w, const float *x,
+										  const float *bias, float *out,
+										  size_t rows, size_t cols)
 {
-	fun_math_matrix_vector_mxfp4_f32_strided(w, x, bias, out, rows, cols, 0);
+	fun_math_matrix_vector_mxfp4_f32_strided_cpu(w, x, bias, out, rows, cols,
+												 0);
 }
 
-void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
-											  const float *bias, float *out,
-											  size_t rows, size_t cols,
-											  size_t row_stride_bytes)
+void fun_math_matrix_vector_mxfp4_f32_strided_cpu(const uint8_t *w,
+												  const float *x,
+												  const float *bias, float *out,
+												  size_t rows, size_t cols,
+												  size_t row_stride_bytes)
 {
 	const size_t blocks = cols / FUN_MATH_MXFP4_BLOCK_ELEMS;
 	const size_t row_bytes = blocks * FUN_MATH_MXFP4_BLOCK_BYTES;

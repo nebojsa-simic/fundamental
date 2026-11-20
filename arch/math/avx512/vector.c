@@ -43,17 +43,19 @@ _mxfp4_scale_broadcast512(uint8_t scale, __m512 sv_scale1)
 		_mm512_set1_epi32(((uint32_t)(scale - 1)) << 23));
 }
 
-void fun_math_matrix_vector_mxfp4_f32(const uint8_t *w, const float *x,
-									  const float *bias, float *out,
-									  size_t rows, size_t cols)
+void fun_math_matrix_vector_mxfp4_f32_cpu(const uint8_t *w, const float *x,
+										  const float *bias, float *out,
+										  size_t rows, size_t cols)
 {
-	fun_math_matrix_vector_mxfp4_f32_strided(w, x, bias, out, rows, cols, 0);
+	fun_math_matrix_vector_mxfp4_f32_strided_cpu(w, x, bias, out, rows, cols,
+												 0);
 }
 
-void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
-											  const float *bias, float *out,
-											  size_t rows, size_t cols,
-											  size_t row_stride_bytes)
+void fun_math_matrix_vector_mxfp4_f32_strided_cpu(const uint8_t *w,
+												  const float *x,
+												  const float *bias, float *out,
+												  size_t rows, size_t cols,
+												  size_t row_stride_bytes)
 {
 	const size_t blocks = cols / FUN_MATH_MXFP4_BLOCK_ELEMS;
 	const size_t row_bytes = blocks * FUN_MATH_MXFP4_BLOCK_BYTES;
@@ -96,8 +98,8 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
  * scaling the block dot product by the fp16 scale. Processes 16 elements per
  * 512-bit op (twice the AVX2 throughput), accelerating the attention and
  * output projections that dominate single-token decode. */
-void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
-								   size_t rows, size_t cols)
+void fun_math_q8_matrix_vector_f32_cpu(const uint8_t *w, const float *x,
+									   float *out, size_t rows, size_t cols)
 {
 	const size_t blocks = cols / FUN_MATH_Q8_BLOCK_ELEMS;
 	for (size_t r = 0; r < rows; r++) {
@@ -264,8 +266,8 @@ void fun_math_silu_f32(const float *x, float *out, size_t n)
 		out[i] = fun_math_silu(x[i]);
 }
 
-void fun_math_swiglu_f32(const float *gate, const float *up, float *out,
-						 size_t n)
+void fun_math_swiglu_f32_cpu(const float *gate, const float *up, float *out,
+							 size_t n)
 {
 	size_t i = 0;
 	for (; i + 16 <= n; i += 16) {
@@ -327,7 +329,7 @@ void fun_math_softmax_f32_cpu(float *x, size_t n)
 		sum += _mm512_reduce_add_ps(e);
 	}
 	for (; i < n; i++) {
-		float e = __builtin_expf(x[i] - m);
+		float e = fun_math_exp(x[i] - m);
 		if (e != e)
 			e = 0.0f;
 		x[i] = e;
@@ -472,9 +474,9 @@ void fun_math_rotary_f32_cpu(const float *x, const float *cosv,
 	}
 }
 
-void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
-						   size_t n_rows, size_t row_len, size_t row_stride,
-						   float scale)
+void fun_math_rows_dot_f32_cpu(const float *q, const float *x, float *out,
+							   size_t n_rows, size_t row_len, size_t row_stride,
+							   float scale)
 {
 	__m512 s512 = _mm512_set1_ps(scale);
 	for (size_t t = 0; t < n_rows; t++) {
@@ -491,8 +493,9 @@ void fun_math_rows_dot_f32(const float *q, const float *x, float *out,
 	}
 }
 
-void fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
-							   size_t n_rows, size_t row_len, size_t row_stride)
+void fun_math_weighted_sum_f32_cpu(const float *wgt, const float *x, float *out,
+								   size_t n_rows, size_t row_len,
+								   size_t row_stride)
 {
 	size_t d = 0;
 	for (; d + 16 <= row_len; d += 16)

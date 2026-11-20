@@ -89,8 +89,9 @@ __attribute__((weak)) void fun_math_silu_f32(const float *x, float *out,
 		out[i] = fun_math_silu(x[i]);
 }
 
-__attribute__((weak)) void
-fun_math_swiglu_f32(const float *gate, const float *up, float *out, size_t n)
+__attribute__((weak)) void fun_math_swiglu_f32_cpu(const float *gate,
+												   const float *up, float *out,
+												   size_t n)
 {
 	size_t i = 0;
 	for (; i + 8 <= n; i += 8) {
@@ -154,7 +155,7 @@ __attribute__((weak)) void fun_math_softmax_f32_cpu(float *x, size_t n)
 		sum += _mm256_hsum_ps(e);
 	}
 	for (; i < n; i++) {
-		float e = __builtin_expf(x[i] - m);
+		float e = fun_math_exp(x[i] - m);
 		if (e != e)
 			e = 0.0f;
 		x[i] = e;
@@ -369,10 +370,10 @@ fun_math_rotary_f32_cpu(const float *x, const float *cosv, const float *sinv,
 	}
 }
 
-__attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x,
-												 float *out, size_t n_rows,
-												 size_t row_len,
-												 size_t row_stride, float scale)
+__attribute__((weak)) void
+fun_math_rows_dot_f32_cpu(const float *q, const float *x, float *out,
+						  size_t n_rows, size_t row_len, size_t row_stride,
+						  float scale)
 {
 	__m256 s256 = _mm256_set1_ps(scale);
 	for (size_t t = 0; t < n_rows; t++) {
@@ -390,8 +391,8 @@ __attribute__((weak)) void fun_math_rows_dot_f32(const float *q, const float *x,
 }
 
 __attribute__((weak)) void
-fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
-						  size_t n_rows, size_t row_len, size_t row_stride)
+fun_math_weighted_sum_f32_cpu(const float *wgt, const float *x, float *out,
+							  size_t n_rows, size_t row_len, size_t row_stride)
 {
 	size_t d = 0;
 	for (; d + 8 <= row_len; d += 8)
@@ -413,7 +414,7 @@ fun_math_weighted_sum_f32(const float *wgt, const float *x, float *out,
 	}
 }
 
-void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)
+void fun_math_q8_dequant_row_f32_cpu(const uint8_t *src, float *out, size_t n)
 {
 	size_t blocks = n / FUN_MATH_Q8_BLOCK_ELEMS;
 	for (size_t b = 0; b < blocks; b++) {
@@ -431,8 +432,8 @@ void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n)
  * both objects are linked; the AVX2 build links this object alone and uses
  * this version. */
 __attribute__((weak)) void
-fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
-							  size_t rows, size_t cols)
+fun_math_q8_matrix_vector_f32_cpu(const uint8_t *w, const float *x, float *out,
+								  size_t rows, size_t cols)
 {
 	const size_t blocks = cols / FUN_MATH_Q8_BLOCK_ELEMS;
 	for (size_t r = 0; r < rows; r++) {

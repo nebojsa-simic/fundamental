@@ -1,10 +1,10 @@
 @echo off
-gcc -c --std=c17 -Os -mavx512f -mavx512bw -mavx512dq -mavx512vl -mfma -I ../../include ../../arch/math/avx512/vector.c -o vector_avx512.o
+gcc -c --std=c17 -Os -fno-math-errno -mavx512f -mavx512bw -mavx512dq -mavx512vl -mfma -I ../../include ../../arch/math/avx512/vector.c -o vector_avx512.o
 
-gcc -c --std=c17 -Os -mavx2 -mfma -I ../../include ../../arch/math/avx2/vector.c -o vector_avx2.o
+gcc -c --std=c17 -Os -fno-math-errno -mavx2 -mfma -I ../../include ../../arch/math/avx2/vector.c -o vector_avx2.o
 
 gcc ^
-    --std=c17 -Os -mavx512f -mavx512bw -mavx512dq -mavx512vl -mfma ^
+    --std=c17 -Os -fno-math-errno -mavx512f -mavx512bw -mavx512dq -mavx512vl -mfma ^
     -I ../../include ^
     test_main.c ^
     test_scalar_accuracy.c ^
@@ -25,7 +25,6 @@ gcc ^
     ../../src/string/stringOperations.c ^
     vector_avx512.o ^
     vector_avx2.o ^
-    -lm ^
     -o test.exe
 
 if %ERRORLEVEL% EQU 0 echo Build complete: test.exe

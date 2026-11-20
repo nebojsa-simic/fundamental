@@ -1,7 +1,7 @@
 #!/bin/bash
-gcc -c --std=c17 -Os -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -I ../../include model.c -o model.o
 
-gcc --std=c17 -Os -I ../../include \
+gcc --std=c17 -Os -fno-math-errno -I ../../include \
     main.c tokenizer.c \
     model.o \
     ../../src/compute/compute_graph.c \
@@ -36,6 +36,6 @@ gcc --std=c17 -Os -I ../../include \
     ../../arch/file/linux-amd64/fileReadRing.c \
     ../../src/async/async.c \
     ../../arch/async/linux-amd64/async.c \
-    -lm -o demo
+    -o demo
 
 if [ $? -eq 0 ]; then echo "Build complete: demo"; fi

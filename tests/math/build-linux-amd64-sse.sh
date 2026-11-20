@@ -1,6 +1,6 @@
 #!/bin/bash
 gcc \
-    --std=c17 -Os \
+    --std=c17 -Os -fno-math-errno \
     -I ../../include \
     test_main.c \
     test_scalar_accuracy.c \
@@ -21,7 +21,6 @@ gcc \
     ../../arch/memory/linux-amd64/memory.c \
     ../../src/string/stringConversion.c \
     ../../src/string/stringOperations.c \
-    -lm \
     -o test
 
 if [ $? -eq 0 ]; then echo "Build complete: test"; fi

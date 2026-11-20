@@ -1,7 +1,7 @@
 @echo off
-gcc -c --std=c17 -Os -I ../../include model.c -o model.o
+gcc -c --std=c17 -Os -fno-math-errno -I ../../include model.c -o model.o
 
-gcc --std=c17 -Os -I ../../include ^
+gcc --std=c17 -Os -fno-math-errno -I ../../include ^
     main.c tokenizer.c ^
     model.o ^
     ../../src/compute/compute_graph.c ^
@@ -36,5 +36,5 @@ gcc --std=c17 -Os -I ../../include ^
     ../../arch/file/windows-amd64/fileReadRing.c ^
     ../../src/async/async.c ^
     ../../arch/async/windows-amd64/async.c ^
-    -lm -o demo.exe
+    -o demo.exe
 if %ERRORLEVEL% EQU 0 echo Build complete: demo.exe

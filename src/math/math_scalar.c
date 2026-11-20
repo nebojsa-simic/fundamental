@@ -230,6 +230,48 @@ float fun_math_fp16_to_f32(uint16_t h)
 	return *(float *)&f32;
 }
 
+uint16_t fun_math_f32_to_fp16(float x)
+{
+	uint32_t f = *(uint32_t *)&x;
+	uint32_t sign = (f >> 16) & 0x8000u;
+	uint32_t mant = f & 0x7FFFFFu;
+	int exp = (int)((f >> 23) & 0xFFu) - 127 + 15;
+
+	if (((f >> 23) & 0xFFu) == 0xFFu) {
+		if (mant)
+			return (uint16_t)(sign | 0x7E00u);
+		return (uint16_t)(sign | 0x7C00u);
+	}
+
+	if (exp >= 31)
+		return (uint16_t)(sign | 0x7C00u);
+	if (exp <= 0) {
+		if (exp < -10)
+			return (uint16_t)sign;
+		mant |= 0x800000u;
+		int shift = 14 - exp;
+		uint16_t half = (uint16_t)(mant >> shift);
+		uint32_t rem = mant & ((1u << shift) - 1u);
+		uint32_t halfway = 1u << (shift - 1);
+		if (rem > halfway || (rem == halfway && (half & 1u)))
+			half++;
+		return (uint16_t)(sign | half);
+	}
+
+	uint16_t half = (uint16_t)(mant >> 13);
+	uint32_t rem = mant & 0x1FFFu;
+	if (rem > 0x1000u || (rem == 0x1000u && (half & 1u))) {
+		half++;
+		if (half == 0x400u) {
+			half = 0;
+			exp++;
+			if (exp >= 31)
+				return (uint16_t)(sign | 0x7C00u);
+		}
+	}
+	return (uint16_t)(sign | ((uint32_t)exp << 10) | half);
+}
+
 void _math_bench_noop(const float *x, float *out, size_t n)
 {
 	for (size_t i = 0; i < n; i++)
@@ -242,10 +284,22 @@ void fun_math_add_f32(const float *a, const float *b, float *out, size_t n)
 		out[i] = a[i] + b[i];
 }
 
+void fun_math_sub_f32(const float *a, const float *b, float *out, size_t n)
+{
+	for (size_t i = 0; i < n; i++)
+		out[i] = a[i] - b[i];
+}
+
 void fun_math_mul_f32(const float *a, const float *b, float *out, size_t n)
 {
 	for (size_t i = 0; i < n; i++)
 		out[i] = a[i] * b[i];
+}
+
+void fun_math_div_f32(const float *a, const float *b, float *out, size_t n)
+{
+	for (size_t i = 0; i < n; i++)
+		out[i] = a[i] / b[i];
 }
 
 float fun_math_sum_f32(const float *x, size_t n)
@@ -265,4 +319,22 @@ float fun_math_max_f32(const float *x, size_t n)
 		if (x[i] > m)
 			m = x[i];
 	return m;
+}
+
+float fun_math_min_f32(const float *x, size_t n)
+{
+	if (n == 0)
+		return 0.0f;
+	float m = x[0];
+	for (size_t i = 1; i < n; i++)
+		if (x[i] < m)
+			m = x[i];
+	return m;
+}
+
+float fun_math_mean_f32(const float *x, size_t n)
+{
+	if (n == 0)
+		return 0.0f;
+	return fun_math_sum_f32(x, n) / (float)n;
 }

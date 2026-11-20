@@ -179,9 +179,35 @@ void fun_math_matrix_vector_mxfp4_f32_strided(const uint8_t *w, const float *x,
 #define FUN_MATH_Q8_BLOCK_BYTES 34u
 
 float fun_math_fp16_to_f32(uint16_t h);
+uint16_t fun_math_f32_to_fp16(float x);
 void fun_math_q8_dequant_row_f32(const uint8_t *src, float *out, size_t n);
 void fun_math_q8_matrix_vector_f32(const uint8_t *w, const float *x, float *out,
 								   size_t rows, size_t cols);
+
+void fun_math_sub_f32(const float *a, const float *b, float *out, size_t n);
+void fun_math_div_f32(const float *a, const float *b, float *out, size_t n);
+float fun_math_min_f32(const float *x, size_t n);
+float fun_math_mean_f32(const float *x, size_t n);
+
+void fun_math_swiglu_f32_cpu(const float *gate, const float *up, float *out,
+							 size_t n);
+void fun_math_rows_dot_f32_cpu(const float *q, const float *x, float *out,
+							   size_t n_rows, size_t row_len, size_t row_stride,
+							   float scale);
+void fun_math_weighted_sum_f32_cpu(const float *wgt, const float *x, float *out,
+								   size_t n_rows, size_t row_len,
+								   size_t row_stride);
+void fun_math_matrix_vector_mxfp4_f32_cpu(const uint8_t *w, const float *x,
+										  const float *bias, float *out,
+										  size_t rows, size_t cols);
+void fun_math_matrix_vector_mxfp4_f32_strided_cpu(const uint8_t *w,
+												  const float *x,
+												  const float *bias, float *out,
+												  size_t rows, size_t cols,
+												  size_t row_stride_bytes);
+void fun_math_q8_dequant_row_f32_cpu(const uint8_t *src, float *out, size_t n);
+void fun_math_q8_matrix_vector_f32_cpu(const uint8_t *w, const float *x,
+									   float *out, size_t rows, size_t cols);
 
 void _math_bench_noop(const float *x, float *out, size_t n);
 
