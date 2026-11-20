@@ -49,6 +49,27 @@ This skill provides:
 
 **Skipping these steps guarantees wasted time.**
 
+## 🚨 Pre-Push Checklist (Vendor + Smoke Test)
+
+**Before `git push` for ANY change**, vendor the library into
+`../fundamental-cli` and run its smoke tests there to verify the vendored
+library doesn't break `fundamental-cli`:
+
+1. **Vendor** the latest sources into `fundamental-cli/vendor/fundamental/`:
+   - Windows: `cd ..\fundamental-cli && vendor-fundamental.bat`
+   - Linux:   `cd ../fundamental-cli && ./vendor-fundamental.sh`
+
+   ⚠️ `xcopy`/`cp` do NOT delete removed files — manually remove any stale
+   files from `fundamental-cli/vendor/fundamental/` after vendoring.
+
+2. **Run smoke tests** (full `fun init` → vendor → `fun build` → run cycle):
+   - Windows: `smoke-test-windows-amd64.bat`
+   - Linux:   `./smoke-test-linux-amd64.sh`
+
+Both must pass before pushing. This catches library changes that break the
+vendored build — new/removed source files, symbol changes, or freestanding
+/stdlib regressions.
+
 ## Build Commands
 
 ### Full Test Suite
