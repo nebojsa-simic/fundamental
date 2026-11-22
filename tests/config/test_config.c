@@ -62,6 +62,12 @@ static void set_mock_env(const char *key, const char *value)
 
 extern void fun_arch_set_envp(const char **envp);
 
+/* INI parser entry point (internal, defined in src/config/iniParser.c) */
+extern ErrorResult fun_ini_parse(char *content, size_t content_len,
+								 HashMap *out_pairs);
+extern uint64_t config_map_hash_string(const void *key);
+extern bool config_map_equals_string(const void *k1, const void *k2);
+
 #define GREEN_CHECK "\033[0;32m✓\033[0m"
 #define RED_CROSS "\033[0;31m✗\033[0m"
 
@@ -231,6 +237,81 @@ static void test_config_ini_malformed_lines(void)
 	int ok = (sr.error.code == ERROR_CODE_NO_ERROR);
 	fun_config_destroy(&result.value);
 	print_result("test_config_ini_malformed_lines", ok);
+}
+
+/* ------------------------------------------------------------------
+ * INI parser regression tests (fun_ini_parse directly)
+ * ------------------------------------------------------------------ */
+
+static int ini_test_lookup(HashMap *map, const char *key, const char *expected)
+{
+	const char *k = key;
+	char *value = NULL;
+	if (fun_error_is_error(fun_hashmap_get(map, &k, &value)))
+		return 0;
+	if (!value)
+		return 0;
+	return fun_string_compare(value, expected) == 0;
+}
+
+static void test_config_ini_parse_multiple_keys(void)
+{
+	/* LF-only content: regression test for only-first-key-stored bug */
+	char content[] = "; comment\n"
+					 "name = fun\n"
+					 "version = 0.1.0\n"
+					 "\n"
+					 "[dependencies]\n"
+					 "fundamental = local\n"
+					 "\n"
+					 "[build]\n"
+					 "standard = -nostdlib\n"
+					 "flags = -fno-builtin\n"
+					 "cpu = avx512\n";
+
+	HashMapResult map_result =
+		fun_hashmap_create(sizeof(char *), sizeof(char *), 16,
+						   config_map_hash_string, config_map_equals_string);
+	if (fun_error_is_error(map_result.error)) {
+		print_result("test_config_ini_parse_multiple_keys", 0);
+		return;
+	}
+	HashMap map = map_result.value;
+
+	ErrorResult parse_err = fun_ini_parse(content, sizeof(content) - 1, &map);
+	int ok = fun_error_is_ok(parse_err) && fun_hashmap_size(&map) == 6 &&
+			 ini_test_lookup(&map, "name", "fun") &&
+			 ini_test_lookup(&map, "version", "0.1.0") &&
+			 ini_test_lookup(&map, "fundamental", "local") &&
+			 ini_test_lookup(&map, "standard", "-nostdlib") &&
+			 ini_test_lookup(&map, "flags", "-fno-builtin") &&
+			 ini_test_lookup(&map, "cpu", "avx512");
+
+	fun_hashmap_destroy(&map);
+	print_result("test_config_ini_parse_multiple_keys", ok);
+}
+
+static void test_config_ini_parse_crlf(void)
+{
+	/* Windows line endings must keep parsing every line */
+	char content[] = "a = 1\r\nb = 2\r\nc = 3\r\n";
+
+	HashMapResult map_result =
+		fun_hashmap_create(sizeof(char *), sizeof(char *), 16,
+						   config_map_hash_string, config_map_equals_string);
+	if (fun_error_is_error(map_result.error)) {
+		print_result("test_config_ini_parse_crlf", 0);
+		return;
+	}
+	HashMap map = map_result.value;
+
+	ErrorResult parse_err = fun_ini_parse(content, sizeof(content) - 1, &map);
+	int ok = fun_error_is_ok(parse_err) && fun_hashmap_size(&map) == 3 &&
+			 ini_test_lookup(&map, "a", "1") &&
+			 ini_test_lookup(&map, "b", "2") && ini_test_lookup(&map, "c", "3");
+
+	fun_hashmap_destroy(&map);
+	print_result("test_config_ini_parse_crlf", ok);
 }
 
 /* ------------------------------------------------------------------
@@ -713,6 +794,8 @@ int main(void)
 	test_config_ini_whitespace();
 	test_config_ini_quoted_values();
 	test_config_ini_malformed_lines();
+	test_config_ini_parse_multiple_keys();
+	test_config_ini_parse_crlf();
 
 	/* Env vars */
 	test_config_get_from_env();

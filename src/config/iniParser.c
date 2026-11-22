@@ -93,13 +93,18 @@ ErrorResult fun_ini_parse(char *content, size_t content_len, HashMap *out_pairs)
 
 		/* Null-terminate the line at newline (or end of buffer) */
 		char *line_end = newline;
+		bool has_newline = (newline < end && *newline == '\n');
 		/* Remove trailing \r for Windows line endings */
 		if (line_end > line_start && *(line_end - 1) == '\r')
 			line_end--;
 		*line_end = '\0';
 
-		/* Advance past the newline for next iteration */
-		pos = (*newline == '\n') ? newline + 1 : newline;
+		/*
+		 * Advance past the newline for next iteration. The newline may
+		 * already have been overwritten above (LF-only files), so use the
+		 * flag captured before null-termination.
+		 */
+		pos = has_newline ? newline + 1 : newline;
 
 		/* Trim leading whitespace to check first char */
 		char *line = line_start;

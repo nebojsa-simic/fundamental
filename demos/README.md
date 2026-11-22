@@ -85,6 +85,7 @@ cd demos/logging
 |------|---------------------|------------|-------------|
 | **console** | Console I/O | Beginner | `cd demos/console && .\build-windows-amd64.bat && .\demo.exe` |
 | **logging** | Logging, String templates | Beginner | `cd demos/logging && .\build-windows-amd64.bat && .\demo.exe` |
+| **ini-config** | Config (multi-key INI parsing), Console | Beginner | `cd demos/ini-config && .\build-windows-amd64.bat && .\demo.exe` |
 | **shutdown** | Shutdown, File I/O, Startup, Signals | Intermediate | `cd demos/shutdown && .\build-windows-amd64.bat && .\demo.exe` |
 | **batch-renamer** | Filesystem, String, Console, Array | Intermediate | `cd demos/batch-renamer && .\build-windows-amd64.bat && .\demo.exe` |
 | **log-analyzer** | File I/O (streaming), String, Hashmap, Async | Intermediate | `cd demos/log-analyzer && .\build-windows-amd64.bat && .\demo.exe` |
@@ -285,6 +286,7 @@ These demos are **tested and verified** to compile and run:
 
 - ✅ **console** - Tested on Windows AMD64 (MinGW 15.2.0)
 - ✅ **logging** - Tested on Windows AMD64 (MinGW 15.2.0)
+- ✅ **ini-config** - Tested on Windows AMD64 (MinGW 15.2.0)
 - ✅ **shutdown** - Tested on Windows AMD64 (MinGW 15.2.0)
 - ✅ **batch-renamer** - Tested on Windows AMD64 (MinGW 15.2.0)
 - ✅ **log-analyzer** - Tested on Windows AMD64 (MinGW 15.2.0)
