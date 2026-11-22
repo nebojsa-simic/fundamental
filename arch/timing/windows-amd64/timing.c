@@ -1,6 +1,16 @@
 #include <stdint.h>
 #include <windows.h>
 
+int64_t fun_timing_now_unix(void)
+{
+	FILETIME ft;
+	GetSystemTimeAsFileTime(&ft);
+	uint64_t ticks = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+	const uint64_t epoch_diff =
+		116444736000000000ULL; /* 1601-01-01 -> 1970-01-01, 100ns */
+	return (int64_t)((ticks - epoch_diff) / 10000000ULL);
+}
+
 uint64_t fun_timing_now_ns(void)
 {
 	static LARGE_INTEGER freq = { .QuadPart = 0 };

@@ -145,14 +145,67 @@ int fun_crypto_ecdsa_verify(const uint8_t hash[32],
  * X.509 certificate parsing
  * ------------------------------------------------------------------ */
 
+#define FUN_CRYPTO_X509_MAX_SAN_DNS 16
+
+#define FUN_CRYPTO_X509_SIG_UNKNOWN 0
+#define FUN_CRYPTO_X509_SIG_ECDSA_SHA256 1
+
+/*
+ * Parsed view of a DER-encoded X.509 certificate.
+ *
+ * All pointers reference the caller's DER buffer; the structure does not
+ * own or copy any data and is only valid while that buffer is alive.
+ */
 typedef struct {
 	const uint8_t *der;
 	size_t der_len;
+
+	/* TBSCertificate, used as the signed message. */
+	const uint8_t *tbs;
+	size_t tbs_len;
+
+	/* Full DER-encoded Name (RDNSequence) blobs. */
+	const uint8_t *issuer;
+	size_t issuer_len;
+	const uint8_t *subject;
+	size_t subject_len;
+
+	/* Validity period, seconds since the Unix epoch (UTC). */
+	int64_t not_before;
+	int64_t not_after;
+
+	/* Basic Constraints extension. */
+	int has_basic_constraints;
+	int is_ca;
+	int path_length; /* -1 when absent */
+
+	/* Subject Alternative Name dNSName entries (not NUL-terminated). */
+	int has_san;
+	const char *san_dns[FUN_CRYPTO_X509_MAX_SAN_DNS];
+	size_t san_dns_len[FUN_CRYPTO_X509_MAX_SAN_DNS];
+	size_t num_san_dns;
+
+	/* Common names (OID 2.5.4.3), not NUL-terminated. */
+	const char *common_name;
+	size_t common_name_len;
+	const char *issuer_common_name;
+	size_t issuer_common_name_len;
+
+	/* Subject public key. Only NIST P-256 EC keys are supported. */
+	fun_crypto_ec_point public_key;
+	int public_key_valid;
+
+	/* Signature algorithm and raw signature (BIT STRING contents). */
+	int signature_algorithm;
+	const uint8_t *signature;
+	size_t signature_len;
 } fun_crypto_x509_cert;
 
 /*
  * Parse a DER-encoded X.509 certificate.
- * Returns 0 on success, non-zero on parse error.
+ * Returns 0 on success, ERROR_CODE_X509_PARSE_ERROR on malformed input.
+ * Certificates using an unsupported public key or signature algorithm are
+ * rejected as well (only P-256 EC keys and ecdsa-with-SHA256 are supported).
  */
 int fun_crypto_x509_parse(const uint8_t *der, size_t der_len,
 						  fun_crypto_x509_cert *cert);
@@ -163,13 +216,27 @@ int fun_crypto_x509_parse(const uint8_t *der, size_t der_len,
  * num_certs: number of certificates in the chain.
  * trusted_roots: array of trusted root certificates.
  * num_roots: number of trusted roots.
- * hostname: expected hostname for SAN/CN matching.
- * Returns 0 on success, non-zero error code on failure.
+ * hostname: expected hostname for SAN/CN matching (NULL skips the check).
+ * Returns 0 on success, or one of:
+ *   ERROR_CODE_TLS_CERTIFICATE_EXPIRED
+ *   ERROR_CODE_TLS_CERTIFICATE_INVALID
+ *   ERROR_CODE_TLS_HOSTNAME_MISMATCH
+ * The current wall-clock time is used for validity checks.
  */
 int fun_crypto_x509_validate_chain(const fun_crypto_x509_cert *certs,
 								   size_t num_certs,
 								   const fun_crypto_x509_cert *trusted_roots,
 								   size_t num_roots, const char *hostname);
+
+/*
+ * Same as fun_crypto_x509_validate_chain, but checks certificate validity
+ * against an explicit `now_unix` timestamp. Useful for deterministic tests.
+ */
+int fun_crypto_x509_validate_chain_at(const fun_crypto_x509_cert *certs,
+									  size_t num_certs,
+									  const fun_crypto_x509_cert *trusted_roots,
+									  size_t num_roots, const char *hostname,
+									  int64_t now_unix);
 
 /* ------------------------------------------------------------------
  * PEM parsing
@@ -177,12 +244,14 @@ int fun_crypto_x509_validate_chain(const fun_crypto_x509_cert *certs,
 
 /*
  * Parse a PEM file containing X.509 certificates.
- * pem_data: raw PEM file content.
+ * pem_data: raw PEM file content (need not be NUL-terminated).
  * pem_len: length of PEM data.
- * der_outputs: caller-provided buffer for DER certificate data.
- * der_sizes: caller-provided buffer for DER certificate sizes.
- * max_certs: maximum number of certificates to extract (size of der_outputs array).
- * Returns the number of certificates extracted, or -1 on parse error.
+ * der_outputs: caller-provided array of DER output buffers.
+ * der_sizes: capacity of each der_outputs[i] on input; on output the
+ *   number of DER bytes written to that buffer.
+ * max_certs: number of entries in der_outputs / der_sizes.
+ * Returns the number of certificates extracted, or -1 on parse error
+ * (malformed PEM or an output buffer too small).
  */
 int fun_crypto_pem_parse(const char *pem_data, size_t pem_len,
 						 uint8_t *der_outputs[], size_t der_sizes[],

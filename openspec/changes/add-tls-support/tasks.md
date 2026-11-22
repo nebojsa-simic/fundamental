@@ -8,8 +8,8 @@
 - [x] 1.4 AES-GCM authenticated encryption + decryption (`src/crypto/aes_gcm.c`): CTR mode + GHASH (GF(2^128) multiplier)
 - [x] 1.5 Variable-width big-number module (`include/fundamental/bignumber/`, `src/bignumber/`): add, subtract, compare, wide multiply, modular add/subtract/multiply (NIST P-256 fast reduction + generic reduction for any prime modulus), modular inverse (Fermat)
 - [x] 1.6 ECDH/ECDSA on P-256 (`src/crypto/ec_p256.c`): point add/double (affine), scalar multiply (double-and-add), public-key validation, ECDH shared secret, ECDSA verify (mod group order n)
-- [ ] 1.7 X.509 DER parser (`src/crypto/x509.c`): ASN.1 parser, certificate structure extraction, chain validation, SAN/CN hostname matching
-- [ ] 1.8 PEM parser (`src/crypto/pem.c`): Base64 decode, certificate extraction
+- [x] 1.7 X.509 DER parser (`src/crypto/x509.c`): ASN.1 parser, certificate structure extraction, chain validation, SAN/CN hostname matching
+- [x] 1.8 PEM parser (`src/crypto/pem.c`): Base64 decode, certificate extraction
 
 ## 2. TLS module
 
@@ -32,11 +32,11 @@
 
 ## 5. Error codes
 
-- [ ] 5.1 Register TLS/crypto error codes in `include/fundamental/error/error.h` (600–621)
+- [x] 5.1 Register TLS/crypto error codes in `include/fundamental/error/error.h` (600–621)
 
 ## 6. Testing
 
-- [x] 6.1 Crypto unit tests (`tests/crypto/`): SHA-256 (NIST vectors incl. 448-bit), HMAC (RFC 4231), AES (FIPS-197 + zero), AES-GCM (CAVP + 64-byte/AAD round-trip + bad-tag zeroing), bignumber (incl. modinv), ec_p256 (2*G), ECDH, ECDSA (valid + tampered)
+- [x] 6.1 Crypto unit tests (`tests/crypto/`): SHA-256 (NIST vectors incl. 448-bit), HMAC (RFC 4231), AES (FIPS-197 + zero), AES-GCM (CAVP + 64-byte/AAD round-trip + bad-tag zeroing), bignumber (incl. modinv), ec_p256 (2*G), ECDH, ECDSA (valid + tampered), PEM (single/bundle/malformed), X.509 (parse leaf/root, chain valid/mismatch/expired/wrong root/tampered)
 - [ ] 6.2 TLS integration tests (`tests/tls/`): handshake against local test server, GitHub TLS verification
 - [x] 6.3 Build scripts for crypto + bignumber test directories (Windows + Linux)
 

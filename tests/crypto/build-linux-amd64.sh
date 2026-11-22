@@ -11,8 +11,11 @@ gcc --std=c17 -Os \
     "$ROOT/src/crypto/aes.c" \
     "$ROOT/src/crypto/aes_gcm.c" \
     "$ROOT/src/crypto/ec_p256.c" \
+    "$ROOT/src/crypto/x509.c" \
+    "$ROOT/src/crypto/pem.c" \
     "$ROOT/src/bignumber/bignumber.c" \
     "$ROOT/arch/memory/linux-amd64/memory.c" \
+    "$ROOT/arch/timing/linux-amd64/timing.c" \
     "$ROOT/src/console/console.c" \
     "$ROOT/arch/console/linux-amd64/console.c" \
     "$ROOT/src/string/stringConversion.c" \

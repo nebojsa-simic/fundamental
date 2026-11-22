@@ -2,6 +2,9 @@
 #include "fundamental/bignumber/bignumber.h"
 #include "fundamental/console/console.h"
 #include "fundamental/crypto/crypto.h"
+#include "fundamental/error/error.h"
+
+#include "test_certs.h"
 
 #define GREEN_CHECK "\033[0;32m\u2713\033[0m"
 
@@ -406,6 +409,189 @@ int main(void)
 			expect(fun_crypto_ecdsa_verify(hash, &Q, r, alt_s) == 0,
 				   "test_ecdsa_high_s_malleability");
 		}
+	}
+
+	/* ---- PEM parsing ---- */
+	{
+		uint8_t buf[1024];
+		uint8_t *outs[1] = { buf };
+		size_t sizes[1] = { sizeof(buf) };
+		size_t count = 0;
+		int r = fun_crypto_pem_parse(test_leaf_pem, sizeof(test_leaf_pem) - 1,
+									 outs, sizes, &count, 1);
+		expect(r == 1 && count == 1 && sizes[0] == sizeof(test_leaf_der) &&
+				   bytes_eq(buf, test_leaf_der, sizeof(test_leaf_der)),
+			   "test_pem_parse_single");
+	}
+	{
+		uint8_t b0[1024], b1[1024], b2[1024];
+		uint8_t *outs[3] = { b0, b1, b2 };
+		size_t sizes[3] = { sizeof(b0), sizeof(b1), sizeof(b2) };
+		size_t count = 0;
+		int r = fun_crypto_pem_parse(test_bundle_pem,
+									 sizeof(test_bundle_pem) - 1, outs, sizes,
+									 &count, 3);
+		expect(r == 3 && count == 3 && sizes[0] == sizeof(test_root_der) &&
+				   sizes[1] == sizeof(test_intermediate_der) &&
+				   sizes[2] == sizeof(test_leaf_der) &&
+				   bytes_eq(b0, test_root_der, sizeof(test_root_der)) &&
+				   bytes_eq(b1, test_intermediate_der,
+							sizeof(test_intermediate_der)) &&
+				   bytes_eq(b2, test_leaf_der, sizeof(test_leaf_der)),
+			   "test_pem_parse_bundle");
+	}
+	{
+		static const char bad[] = "-----BEGIN CERTIFICATE-----\nAAAA\n";
+		uint8_t buf[64];
+		uint8_t *outs[1] = { buf };
+		size_t sizes[1] = { sizeof(buf) };
+		size_t count = 0;
+		int r =
+			fun_crypto_pem_parse(bad, sizeof(bad) - 1, outs, sizes, &count, 1);
+		expect(r == -1, "test_pem_reject_missing_end");
+	}
+	{
+		static const char bad[] = "-----BEGIN CERTIFICATE-----\n!!!!\n"
+								  "-----END CERTIFICATE-----\n";
+		uint8_t buf[64];
+		uint8_t *outs[1] = { buf };
+		size_t sizes[1] = { sizeof(buf) };
+		size_t count = 0;
+		int r =
+			fun_crypto_pem_parse(bad, sizeof(bad) - 1, outs, sizes, &count, 1);
+		expect(r == -1, "test_pem_reject_bad_base64");
+	}
+
+	/* ---- X.509 parsing ---- */
+	{
+		fun_crypto_x509_cert leaf;
+		int r =
+			fun_crypto_x509_parse(test_leaf_der, sizeof(test_leaf_der), &leaf);
+		expect(r == 0 && leaf.public_key_valid &&
+				   leaf.not_after > leaf.not_before &&
+				   leaf.common_name_len == 11 &&
+				   bytes_eq((const uint8_t *)leaf.common_name,
+							(const uint8_t *)"example.com", 11) &&
+				   leaf.has_san && leaf.num_san_dns == 2 &&
+				   leaf.san_dns_len[0] == 11 &&
+				   bytes_eq((const uint8_t *)leaf.san_dns[0],
+							(const uint8_t *)"example.com", 11) &&
+				   bytes_eq((const uint8_t *)leaf.san_dns[1],
+							(const uint8_t *)"www.example.com", 15) &&
+				   leaf.has_basic_constraints && !leaf.is_ca &&
+				   leaf.signature_algorithm ==
+					   FUN_CRYPTO_X509_SIG_ECDSA_SHA256 &&
+				   leaf.signature_len > 0,
+			   "test_x509_parse_leaf");
+	}
+	{
+		fun_crypto_x509_cert root;
+		int r =
+			fun_crypto_x509_parse(test_root_der, sizeof(test_root_der), &root);
+		expect(r == 0 && root.public_key_valid && root.has_basic_constraints &&
+				   root.is_ca && root.path_length == 1 && !root.has_san &&
+				   root.common_name_len == 24 &&
+				   bytes_eq((const uint8_t *)root.common_name,
+							(const uint8_t *)"Fundamental Test Root CA", 24),
+			   "test_x509_parse_root");
+	}
+	{
+		fun_crypto_x509_cert leaf;
+		int r = fun_crypto_x509_parse(test_leaf_der, sizeof(test_leaf_der) - 10,
+									  &leaf);
+		expect(r == ERROR_CODE_X509_PARSE_ERROR, "test_x509_reject_truncated");
+	}
+
+	/* ---- X.509 chain validation ---- */
+	{
+		fun_crypto_x509_cert leaf, intermediate, root, other_root;
+		fun_crypto_x509_cert chain[2];
+		fun_crypto_x509_cert roots[1];
+		int ok = fun_crypto_x509_parse(test_leaf_der, sizeof(test_leaf_der),
+									   &leaf) == 0 &&
+				 fun_crypto_x509_parse(test_intermediate_der,
+									   sizeof(test_intermediate_der),
+									   &intermediate) == 0 &&
+				 fun_crypto_x509_parse(test_root_der, sizeof(test_root_der),
+									   &root) == 0 &&
+				 fun_crypto_x509_parse(test_other_root_der,
+									   sizeof(test_other_root_der),
+									   &other_root) == 0;
+		int64_t now = leaf.not_before + 86400;
+		chain[0] = leaf;
+		chain[1] = intermediate;
+		roots[0] = root;
+
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 2, roots, 1,
+													   "example.com", now) == 0,
+			   "test_x509_chain_valid");
+		expect(ok && fun_crypto_x509_validate_chain_at(
+						 chain, 2, roots, 1, "www.example.com", now) == 0,
+			   "test_x509_chain_san_match");
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 2, roots, 1,
+													   "other.com", now) ==
+						 ERROR_CODE_TLS_HOSTNAME_MISMATCH,
+			   "test_x509_chain_hostname_mismatch");
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 2, roots, 1,
+													   "example.com",
+													   leaf.not_after + 1) ==
+						 ERROR_CODE_TLS_CERTIFICATE_EXPIRED,
+			   "test_x509_chain_expired");
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 2, roots, 1,
+													   "example.com",
+													   leaf.not_before - 1) ==
+						 ERROR_CODE_TLS_CERTIFICATE_EXPIRED,
+			   "test_x509_chain_not_yet_valid");
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 2, &other_root, 1,
+													   "example.com", now) ==
+						 ERROR_CODE_TLS_CERTIFICATE_INVALID,
+			   "test_x509_chain_wrong_root");
+		expect(ok && fun_crypto_x509_validate_chain_at(chain, 1, roots, 1,
+													   "example.com", now) ==
+						 ERROR_CODE_TLS_CERTIFICATE_INVALID,
+			   "test_x509_chain_missing_intermediate");
+
+		/* CN fallback when the certificate has no SAN extension. */
+		expect(ok && fun_crypto_x509_validate_chain_at(
+						 &root, 1, &root, 1, "FUNDAMENTAL TEST ROOT CA", now) ==
+						 0,
+			   "test_x509_chain_cn_fallback");
+	}
+	{
+		/* Flip a byte in the signature: the chain must be rejected. */
+		fun_crypto_x509_cert leaf, intermediate, root;
+		uint8_t tampered[sizeof(test_leaf_der)];
+		fun_crypto_x509_cert chain[2];
+		fun_crypto_x509_cert roots[1];
+		size_t i;
+		size_t off = 0;
+
+		for (i = 0; i < sizeof(test_leaf_der); i++)
+			tampered[i] = test_leaf_der[i];
+
+		int ok = fun_crypto_x509_parse(test_leaf_der, sizeof(test_leaf_der),
+									   &leaf) == 0 &&
+				 fun_crypto_x509_parse(test_intermediate_der,
+									   sizeof(test_intermediate_der),
+									   &intermediate) == 0 &&
+				 fun_crypto_x509_parse(test_root_der, sizeof(test_root_der),
+									   &root) == 0;
+		if (ok) {
+			off = (size_t)(leaf.signature - leaf.der);
+			tampered[off + leaf.signature_len - 1] ^= 0x01;
+		}
+
+		fun_crypto_x509_cert bad_leaf;
+		int parsed =
+			fun_crypto_x509_parse(tampered, sizeof(tampered), &bad_leaf);
+		chain[0] = bad_leaf;
+		chain[1] = intermediate;
+		roots[0] = root;
+		expect(ok && parsed == 0 &&
+				   fun_crypto_x509_validate_chain_at(chain, 2, roots, 1, NULL,
+													 leaf.not_before + 86400) ==
+					   ERROR_CODE_TLS_CERTIFICATE_INVALID,
+			   "test_x509_chain_tampered_signature");
 	}
 
 	fun_console_flush();

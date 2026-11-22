@@ -10,8 +10,11 @@ gcc ^
     ../../src/crypto/aes.c ^
     ../../src/crypto/aes_gcm.c ^
     ../../src/crypto/ec_p256.c ^
+    ../../src/crypto/x509.c ^
+    ../../src/crypto/pem.c ^
     ../../src/bignumber/bignumber.c ^
     ../../arch/memory/windows-amd64/memory.c ^
+    ../../arch/timing/windows-amd64/timing.c ^
     ../../src/console/console.c ^
     ../../arch/console/windows-amd64/console.c ^
     ../../src/string/stringConversion.c ^
