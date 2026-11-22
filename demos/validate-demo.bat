@@ -20,41 +20,47 @@ IF NOT EXIST build-windows-amd64.bat (
     SET /A ERROR_COUNT+=1
 )
 
-REM Extract source files from build script and verify they exist
+REM Extract source files from build script and verify they exist.
+REM Use delayed expansion: build scripts continue lines with ^, and expanding
+REM %%L directly inside a FOR set lets that caret escape the closing paren.
 echo [INFO] Checking source file references...
-FOR /F "tokens=*" %%L IN ('findstr /R "\\.c" build-windows-amd64.bat 2^>nul') DO (
-    FOR %%S IN (%%L) DO (
-        IF /I "%%~xS"==".c" (
-            IF NOT EXIST "%%S" (
-                echo [ERROR] Source file not found: %%S
-                SET /A ERROR_COUNT+=1
+IF EXIST build-windows-amd64.bat (
+    FOR /F "usebackq tokens=*" %%L IN (`findstr /R "\.c" build-windows-amd64.bat`) DO (
+        SET "LINE=%%L"
+        SET "LINE=!LINE:^=!"
+        FOR %%S IN (!LINE!) DO (
+            IF /I "%%~xS"==".c" (
+                IF NOT EXIST "%%S" (
+                    echo [ERROR] Source file not found: %%S
+                    SET /A ERROR_COUNT+=1
+                )
             )
         )
     )
 )
 
-REM Check for common wrong patterns in demo.c
-IF EXIST demo.c (
-    findstr /C:"fun_file_read(" demo.c >nul 2>&1
-    IF NOT ERRORLEVEL 1 (
-        echo [ERROR] Wrong API: fun_file_read^() - use fun_read_file_in_memory^(Read^)
-        echo [HINT] See include/fundamental/file/file.h
-        SET /A ERROR_COUNT+=1
-    )
-    
-    findstr /C:"src/file/file.c" demo.c >nul 2>&1
-    IF NOT ERRORLEVEL 1 (
-        echo [ERROR] Wrong path: src/file/file.c does not exist
-        echo [HINT] File I/O is in arch/file/^<platform^>/
-        SET /A ERROR_COUNT+=1
-    )
-    
-    findstr /C:"arch/filesystem/windows-amd64/file.c" demo.c >nul 2>&1
-    IF NOT ERRORLEVEL 1 (
-        echo [ERROR] Wrong path: arch/filesystem/windows-amd64/file.c does not exist
-        echo [HINT] Use arch/file/windows-amd64/fileRead.c
-        SET /A ERROR_COUNT+=1
-    )
+REM Check for common wrong patterns in demo.c. These checks deliberately run
+REM outside a parenthesized IF block: the literal "(" in the findstr pattern
+REM would otherwise be treated as a block delimiter and break cmd's parser.
+findstr /C:"fun_file_read(" demo.c >nul 2>&1
+IF NOT ERRORLEVEL 1 (
+    echo [ERROR] Wrong API: fun_file_read^(^) - use fun_read_file_in_memory^(Read^)
+    echo [HINT] See include/fundamental/file/file.h
+    SET /A ERROR_COUNT+=1
+)
+
+findstr /C:"src/file/file.c" demo.c >nul 2>&1
+IF NOT ERRORLEVEL 1 (
+    echo [ERROR] Wrong path: src/file/file.c does not exist
+    echo [HINT] File I/O is in arch/file/^<platform^>/
+    SET /A ERROR_COUNT+=1
+)
+
+findstr /C:"arch/filesystem/windows-amd64/file.c" demo.c >nul 2>&1
+IF NOT ERRORLEVEL 1 (
+    echo [ERROR] Wrong path: arch/filesystem/windows-amd64/file.c does not exist
+    echo [HINT] Use arch/file/windows-amd64/fileRead.c
+    SET /A ERROR_COUNT+=1
 )
 
 REM Check headers referenced in demo.c exist
@@ -71,7 +77,7 @@ REM Summary
 echo.
 IF %ERROR_COUNT% GTR 0 (
     echo ========================================================
-    echo [FAILED] %ERROR_COUNT% error^((s^) found - FIX BEFORE BUILDING
+    echo [FAILED] %ERROR_COUNT% error^(s^) found - FIX BEFORE BUILDING
     echo ========================================================
     echo.
     echo [HINT] Read the checklist in AGENTS.md section:

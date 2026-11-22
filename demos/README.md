@@ -90,6 +90,7 @@ cd demos/logging
 | **batch-renamer** | Filesystem, String, Console, Array | Intermediate | `cd demos/batch-renamer && .\build-windows-amd64.bat && .\demo.exe` |
 | **log-analyzer** | File I/O (streaming), String, Hashmap, Async | Intermediate | `cd demos/log-analyzer && .\build-windows-amd64.bat && .\demo.exe` |
 | **network-server** | Network (TCP server), String, Console, Hashmap, Async, Config | Advanced | `cd demos/network-server && .\build-windows-amd64.bat && .\demo.exe` |
+| **pem-inspect** | File I/O, Filesystem, Crypto (PEM/X.509/SHA-256), Console | Intermediate | `cd demos/pem-inspect && .\build-windows-amd64.bat && .\pem-inspect.exe sample.pem` |
 
 ### Using the Network Server Demo
 

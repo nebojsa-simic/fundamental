@@ -55,14 +55,15 @@ if [ -f demo.c ]; then
     fi
 fi
 
-# Check headers referenced in demo.c exist
+# Check headers referenced in demo.c exist.
+# Use process substitution (not a pipe) so ERROR_COUNT updates in this shell.
 if [ -f demo.c ]; then
-    grep -oE 'fundamental/[^">]+' demo.c 2>/dev/null | while read -r header; do
+    while IFS= read -r header; do
         if [ ! -f "../../include/$header" ]; then
             echo "[ERROR] Header not found: ../../include/$header"
             ERROR_COUNT=$((ERROR_COUNT + 1))
         fi
-    done
+    done < <(grep -oE 'fundamental/[^">]+' demo.c 2>/dev/null)
 fi
 
 # Summary
